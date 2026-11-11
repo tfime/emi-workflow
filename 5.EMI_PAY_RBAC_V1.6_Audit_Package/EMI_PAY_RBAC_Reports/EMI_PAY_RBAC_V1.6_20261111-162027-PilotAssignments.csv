@@ -1,0 +1,5 @@
+﻿"ListGuid","ListTitle","PrincipalId","PrincipalName","PrincipalLogin","PrincipalType","Roles"
+"60bb23f6-4702-4aed-b36f-b2b20b09e74d","Danh mục loại hồ sơ thanh toán","3","cecm Chủ sở hữu","cecm Chủ sở hữu","SharePointGroup","Kiểm soát Đầy đủ"
+"60bb23f6-4702-4aed-b36f-b2b20b09e74d","Danh mục loại hồ sơ thanh toán","11","GR-PAY-SYSADM","GR-PAY-SYSADM","SharePointGroup","Kiểm soát Đầy đủ"
+"60bb23f6-4702-4aed-b36f-b2b20b09e74d","Danh mục loại hồ sơ thanh toán","12","GR-PAY-FLOW-SVC","GR-PAY-FLOW-SVC","SharePointGroup","Kiểm soát Đầy đủ"
+"60bb23f6-4702-4aed-b36f-b2b20b09e74d","Danh mục loại hồ sơ thanh toán","13","GR-PAY-PROCADM","GR-PAY-PROCADM","SharePointGroup","Đóng góp"

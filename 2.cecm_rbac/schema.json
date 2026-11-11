@@ -1,0 +1,1338 @@
+{
+  "schemaVersion": "1.1-vi-display",
+  "siteUrl": "https://emicomvn.sharepoint.com/sites/cecm",
+  "notes": "Tên hiển thị của Lists/Libraries/Columns bằng tiếng Việt; mã kỹ thuật và giá trị trạng thái Choice vẫn ổn định bằng tiếng Anh cho Power Automate/SPFx. Script CHỈ tạo schema, chưa cấu hình RBAC, flow, giao diện.",
+  "components": [
+    {
+      "name": "EMI_PAY_OrgUnits",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "OUCode",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã phòng ban"
+        },
+        {
+          "name": "OUName",
+          "type": "Text",
+          "displayName": "Tên phòng ban"
+        },
+        {
+          "name": "HomeLECode",
+          "type": "Text",
+          "displayName": "Mã pháp nhân"
+        },
+        {
+          "name": "ManagerUPN",
+          "type": "Text",
+          "displayName": "Tài khoản trưởng phòng"
+        },
+        {
+          "name": "EntraGroupId",
+          "type": "Text",
+          "displayName": "Mã nhóm Entra"
+        },
+        {
+          "name": "IsActive",
+          "type": "Boolean",
+          "displayName": "Đang sử dụng"
+        }
+      ],
+      "displayName": "Danh mục phòng ban"
+    },
+    {
+      "name": "EMI_PAY_OrgMembers",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "OUCode",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã phòng ban"
+        },
+        {
+          "name": "MemberUPN",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Tài khoản nhân sự"
+        },
+        {
+          "name": "IsActive",
+          "type": "Boolean",
+          "displayName": "Đang sử dụng"
+        }
+      ],
+      "displayName": "Nhân sự thuộc phòng ban"
+    },
+    {
+      "name": "EMI_PAY_PaymentTypes",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "PaymentTypeCode",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã loại hồ sơ"
+        },
+        {
+          "name": "ChecklistVersion",
+          "type": "Number",
+          "displayName": "Phiên bản checklist"
+        },
+        {
+          "name": "WorkflowCode",
+          "type": "Text",
+          "displayName": "Mã quy trình"
+        },
+        {
+          "name": "IsActive",
+          "type": "Boolean",
+          "displayName": "Đang sử dụng"
+        }
+      ],
+      "displayName": "Danh mục loại hồ sơ thanh toán"
+    },
+    {
+      "name": "EMI_PAY_WorkflowVersions",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "WorkflowCode",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã quy trình"
+        },
+        {
+          "name": "VersionNo",
+          "type": "Number",
+          "displayName": "Số phiên bản"
+        },
+        {
+          "name": "Lifecycle",
+          "type": "Choice",
+          "choices": [
+            "Draft",
+            "Published",
+            "Retired"
+          ],
+          "displayName": "Tình trạng ban hành"
+        },
+        {
+          "name": "PublishedAt",
+          "type": "DateTime",
+          "displayName": "Ngày ban hành"
+        },
+        {
+          "name": "EffectiveAt",
+          "type": "DateTime",
+          "displayName": "Ngày hiệu lực"
+        }
+      ],
+      "displayName": "Phiên bản quy trình"
+    },
+    {
+      "name": "EMI_PAY_WorkflowSteps",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "WorkflowCode",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã quy trình"
+        },
+        {
+          "name": "VersionNo",
+          "type": "Number",
+          "displayName": "Số phiên bản"
+        },
+        {
+          "name": "StepKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa bước xử lý"
+        },
+        {
+          "name": "StepOrder",
+          "type": "Number",
+          "displayName": "Thứ tự bước"
+        },
+        {
+          "name": "StepName",
+          "type": "Text",
+          "displayName": "Tên bước xử lý"
+        },
+        {
+          "name": "StepKind",
+          "type": "Choice",
+          "choices": [
+            "Initiator",
+            "Department",
+            "Approval",
+            "Payment",
+            "System"
+          ],
+          "displayName": "Loại bước xử lý"
+        },
+        {
+          "name": "IsActive",
+          "type": "Boolean",
+          "displayName": "Đang sử dụng"
+        }
+      ],
+      "displayName": "Các bước xử lý quy trình"
+    },
+    {
+      "name": "EMI_PAY_StepRecipients",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "WorkflowCode",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã quy trình"
+        },
+        {
+          "name": "VersionNo",
+          "type": "Number",
+          "displayName": "Số phiên bản"
+        },
+        {
+          "name": "StepKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa bước xử lý"
+        },
+        {
+          "name": "OUCode",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã phòng ban"
+        },
+        {
+          "name": "IsDefault",
+          "type": "Boolean",
+          "displayName": "Phòng tiếp nhận mặc định"
+        }
+      ],
+      "displayName": "Phòng ban tiếp nhận theo bước"
+    },
+    {
+      "name": "EMI_PAY_ChecklistTemplates",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "PaymentTypeCode",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã loại hồ sơ"
+        },
+        {
+          "name": "VersionNo",
+          "type": "Number",
+          "displayName": "Số phiên bản"
+        },
+        {
+          "name": "ItemCode",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã mục checklist"
+        },
+        {
+          "name": "ItemLabel",
+          "type": "Text",
+          "displayName": "Tên tài liệu yêu cầu"
+        },
+        {
+          "name": "IsRequired",
+          "type": "Boolean",
+          "displayName": "Bắt buộc"
+        },
+        {
+          "name": "MinFileCount",
+          "type": "Number",
+          "displayName": "Số tệp tối thiểu"
+        },
+        {
+          "name": "DisplayOrder",
+          "type": "Number",
+          "displayName": "Thứ tự hiển thị"
+        }
+      ],
+      "displayName": "Cấu hình checklist tài liệu"
+    },
+    {
+      "name": "EMI_PAY_Requests",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "RequestCode",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã hồ sơ"
+        },
+        {
+          "name": "CreatedOUCode",
+          "type": "Text",
+          "displayName": "Mã đơn vị khởi tạo"
+        },
+        {
+          "name": "CreatorUPN",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Tài khoản người khởi tạo"
+        },
+        {
+          "name": "PaymentTypeCode",
+          "type": "Text",
+          "displayName": "Mã loại hồ sơ"
+        },
+        {
+          "name": "Amount",
+          "type": "Currency",
+          "displayName": "Tổng số tiền đề nghị"
+        },
+        {
+          "name": "Explanation",
+          "type": "Note",
+          "displayName": "Diễn giải hồ sơ"
+        },
+        {
+          "name": "WorkflowCode",
+          "type": "Text",
+          "displayName": "Mã quy trình"
+        },
+        {
+          "name": "WorkflowVersion",
+          "type": "Number",
+          "displayName": "Phiên bản quy trình áp dụng"
+        },
+        {
+          "name": "ChecklistVersion",
+          "type": "Number",
+          "displayName": "Phiên bản checklist"
+        },
+        {
+          "name": "ReviewRound",
+          "type": "Number",
+          "displayName": "Lượt xử lý"
+        },
+        {
+          "name": "CurrentStepKey",
+          "type": "Text",
+          "displayName": "Bước xử lý hiện tại"
+        },
+        {
+          "name": "CurrentStepInstanceKey",
+          "type": "Text",
+          "displayName": "Lượt bước xử lý hiện tại"
+        },
+        {
+          "name": "CurrentOUCode",
+          "type": "Text",
+          "displayName": "Mã phòng đang xử lý"
+        },
+        {
+          "name": "Status",
+          "type": "Choice",
+          "indexed": true,
+          "choices": [
+            "Draft",
+            "WaitingAcceptance",
+            "InReview",
+            "AwaitManager",
+            "Returned",
+            "Approved",
+            "PendingPayment",
+            "PaymentConfirmed",
+            "Archiving",
+            "ArchiveFailed",
+            "Completed",
+            "Cancelled",
+            "CancellationArchiving"
+          ],
+          "displayName": "Trạng thái hồ sơ"
+        },
+        {
+          "name": "IsLocked",
+          "type": "Boolean",
+          "displayName": "Đã khóa chỉnh sửa"
+        },
+        {
+          "name": "ArchiveStatus",
+          "type": "Choice",
+          "choices": [
+            "NotStarted",
+            "Pending",
+            "InProgress",
+            "Failed",
+            "Completed"
+          ],
+          "displayName": "Trạng thái lưu trữ"
+        },
+        {
+          "name": "FirstSubmittedAt",
+          "type": "DateTime",
+          "displayName": "Ngày gửi hồ sơ lần đầu"
+        },
+        {
+          "name": "PaidAt",
+          "type": "DateTime",
+          "displayName": "Ngày xác nhận thanh toán"
+        },
+        {
+          "name": "ArchivedAt",
+          "type": "DateTime",
+          "displayName": "Ngày lưu trữ"
+        }
+      ],
+      "displayName": "Hồ sơ thanh toán"
+    },
+    {
+      "name": "EMI_PAY_ChecklistItems",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "ChecklistItemKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa mục checklist"
+        },
+        {
+          "name": "ItemCode",
+          "type": "Text",
+          "displayName": "Mã mục checklist"
+        },
+        {
+          "name": "ItemLabel",
+          "type": "Text",
+          "displayName": "Tên tài liệu yêu cầu"
+        },
+        {
+          "name": "IsRequired",
+          "type": "Boolean",
+          "displayName": "Bắt buộc"
+        },
+        {
+          "name": "MinFileCount",
+          "type": "Number",
+          "displayName": "Số tệp tối thiểu"
+        },
+        {
+          "name": "UploadedCount",
+          "type": "Number",
+          "displayName": "Số tệp đã tải lên"
+        },
+        {
+          "name": "ItemStatus",
+          "type": "Choice",
+          "choices": [
+            "Missing",
+            "Uploaded",
+            "NeedsReplacement"
+          ],
+          "displayName": "Trạng thái tài liệu"
+        },
+        {
+          "name": "IsLocked",
+          "type": "Boolean",
+          "displayName": "Đã khóa chỉnh sửa"
+        }
+      ],
+      "displayName": "Checklist tài liệu hồ sơ"
+    },
+    {
+      "name": "EMI_PAY_WorkItems",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "StepInstanceKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa lượt bước xử lý"
+        },
+        {
+          "name": "ReviewRound",
+          "type": "Number",
+          "displayName": "Lượt xử lý"
+        },
+        {
+          "name": "StepKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa bước xử lý"
+        },
+        {
+          "name": "StepOrder",
+          "type": "Number",
+          "displayName": "Thứ tự bước"
+        },
+        {
+          "name": "StepKind",
+          "type": "Choice",
+          "choices": [
+            "Department",
+            "Approval",
+            "Payment"
+          ],
+          "displayName": "Loại bước xử lý"
+        },
+        {
+          "name": "ResponsibleOUCode",
+          "type": "Text",
+          "displayName": "Mã phòng chịu trách nhiệm"
+        },
+        {
+          "name": "ManagerUPN",
+          "type": "Text",
+          "displayName": "Tài khoản trưởng phòng"
+        },
+        {
+          "name": "State",
+          "type": "Choice",
+          "indexed": true,
+          "choices": [
+            "WaitingAcceptance",
+            "InReview",
+            "AwaitManager",
+            "Completed",
+            "Returned",
+            "Recalled",
+            "Cancelled"
+          ],
+          "displayName": "Trạng thái xử lý"
+        },
+        {
+          "name": "AcceptedByUPN",
+          "type": "Text",
+          "displayName": "Người tiếp nhận"
+        },
+        {
+          "name": "AcceptedAt",
+          "type": "DateTime",
+          "displayName": "Thời gian tiếp nhận"
+        },
+        {
+          "name": "DueAt",
+          "type": "DateTime",
+          "displayName": "Hạn hoàn thành"
+        },
+        {
+          "name": "ClosedAt",
+          "type": "DateTime",
+          "displayName": "Thời gian kết thúc bước"
+        },
+        {
+          "name": "Decision",
+          "type": "Choice",
+          "choices": [
+            "Pending",
+            "Accepted",
+            "Returned",
+            "Approved",
+            "Rejected"
+          ],
+          "displayName": "Quyết định"
+        },
+        {
+          "name": "DecisionNote",
+          "type": "Note",
+          "displayName": "Nhận xét quyết định"
+        }
+      ],
+      "displayName": "Công việc xử lý hồ sơ"
+    },
+    {
+      "name": "EMI_PAY_Assignments",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "StepInstanceKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa lượt bước xử lý"
+        },
+        {
+          "name": "StaffUPN",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Tài khoản nhân sự được giao"
+        },
+        {
+          "name": "AssignedByUPN",
+          "type": "Text",
+          "displayName": "Người phân công"
+        },
+        {
+          "name": "AssignedAt",
+          "type": "DateTime",
+          "displayName": "Ngày phân công"
+        },
+        {
+          "name": "RemovedAt",
+          "type": "DateTime",
+          "displayName": "Ngày thôi phân công"
+        },
+        {
+          "name": "IsActive",
+          "type": "Boolean",
+          "displayName": "Đang sử dụng"
+        }
+      ],
+      "displayName": "Phân công nhân sự xử lý"
+    },
+    {
+      "name": "EMI_PAY_StepReviews",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "StepInstanceKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa lượt bước xử lý"
+        },
+        {
+          "name": "ReviewRound",
+          "type": "Number",
+          "displayName": "Lượt xử lý"
+        },
+        {
+          "name": "ChecklistItemKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa mục checklist"
+        },
+        {
+          "name": "Result",
+          "type": "Choice",
+          "choices": [
+            "Pending",
+            "Pass",
+            "Fail"
+          ],
+          "displayName": "Kết quả đánh giá"
+        },
+        {
+          "name": "Reason",
+          "type": "Note",
+          "displayName": "Lý do"
+        },
+        {
+          "name": "ReviewedByUPN",
+          "type": "Text",
+          "displayName": "Người đánh giá"
+        },
+        {
+          "name": "ReviewedAt",
+          "type": "DateTime",
+          "displayName": "Thời gian đánh giá"
+        }
+      ],
+      "displayName": "Kết quả kiểm tra tài liệu"
+    },
+    {
+      "name": "EMI_PAY_DocumentIndex",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "DocumentKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa tài liệu"
+        },
+        {
+          "name": "StepInstanceKey",
+          "type": "Text",
+          "displayName": "Khóa lượt bước xử lý"
+        },
+        {
+          "name": "ChecklistItemKey",
+          "type": "Text",
+          "displayName": "Khóa mục checklist"
+        },
+        {
+          "name": "DocClass",
+          "type": "Choice",
+          "choices": [
+            "Checklist",
+            "StepAttachment",
+            "UNC"
+          ],
+          "displayName": "Nhóm tài liệu"
+        },
+        {
+          "name": "Visibility",
+          "type": "Choice",
+          "choices": [
+            "Internal",
+            "Published"
+          ],
+          "displayName": "Phạm vi hiển thị"
+        },
+        {
+          "name": "FileName",
+          "type": "Text",
+          "displayName": "Tên tệp"
+        },
+        {
+          "name": "LibraryName",
+          "type": "Text",
+          "displayName": "Tên thư viện"
+        },
+        {
+          "name": "DriveItemId",
+          "type": "Text",
+          "displayName": "Mã tệp SharePoint"
+        },
+        {
+          "name": "FileUrl",
+          "type": "URL",
+          "displayName": "Đường dẫn tệp"
+        },
+        {
+          "name": "UploadedByUPN",
+          "type": "Text",
+          "displayName": "Người tải lên"
+        },
+        {
+          "name": "UploadedAt",
+          "type": "DateTime",
+          "displayName": "Thời gian tải lên"
+        },
+        {
+          "name": "IsCurrent",
+          "type": "Boolean",
+          "displayName": "Phiên bản hiện hành"
+        },
+        {
+          "name": "IsArchived",
+          "type": "Boolean",
+          "displayName": "Đã lưu trữ"
+        },
+        {
+          "name": "ArchiveLocation",
+          "type": "URL",
+          "displayName": "Vị trí lưu trữ"
+        }
+      ],
+      "displayName": "Danh mục tài liệu đính kèm"
+    },
+    {
+      "name": "EMI_PAY_ActivityPublic",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "ActivityKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa sự kiện"
+        },
+        {
+          "name": "StepInstanceKey",
+          "type": "Text",
+          "displayName": "Khóa lượt bước xử lý"
+        },
+        {
+          "name": "ReviewRound",
+          "type": "Number",
+          "displayName": "Lượt xử lý"
+        },
+        {
+          "name": "EventType",
+          "type": "Text",
+          "displayName": "Loại sự kiện"
+        },
+        {
+          "name": "EventTime",
+          "type": "DateTime",
+          "displayName": "Thời gian phát sinh"
+        },
+        {
+          "name": "ActorUPN",
+          "type": "Text",
+          "displayName": "Người thực hiện"
+        },
+        {
+          "name": "FromState",
+          "type": "Text",
+          "displayName": "Trạng thái trước"
+        },
+        {
+          "name": "ToState",
+          "type": "Text",
+          "displayName": "Trạng thái sau"
+        },
+        {
+          "name": "Note",
+          "type": "Note",
+          "displayName": "Ghi chú"
+        },
+        {
+          "name": "DetailsJson",
+          "type": "Note",
+          "displayName": "Chi tiết sự kiện (JSON)"
+        }
+      ],
+      "displayName": "Nhật ký tiến trình hồ sơ"
+    },
+    {
+      "name": "EMI_PAY_ActivityInternal",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "ActivityKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa sự kiện"
+        },
+        {
+          "name": "StepInstanceKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa lượt bước xử lý"
+        },
+        {
+          "name": "OUCode",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã phòng ban"
+        },
+        {
+          "name": "ReviewRound",
+          "type": "Number",
+          "displayName": "Lượt xử lý"
+        },
+        {
+          "name": "EventType",
+          "type": "Text",
+          "displayName": "Loại sự kiện"
+        },
+        {
+          "name": "EventTime",
+          "type": "DateTime",
+          "displayName": "Thời gian phát sinh"
+        },
+        {
+          "name": "ActorUPN",
+          "type": "Text",
+          "displayName": "Người thực hiện"
+        },
+        {
+          "name": "FieldName",
+          "type": "Text",
+          "displayName": "Trường dữ liệu thay đổi"
+        },
+        {
+          "name": "OldValue",
+          "type": "Note",
+          "displayName": "Giá trị trước"
+        },
+        {
+          "name": "NewValue",
+          "type": "Note",
+          "displayName": "Giá trị sau"
+        },
+        {
+          "name": "Reason",
+          "type": "Note",
+          "displayName": "Lý do"
+        }
+      ],
+      "displayName": "Nhật ký xử lý nội bộ"
+    },
+    {
+      "name": "EMI_PAY_Commands",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "CommandKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa yêu cầu"
+        },
+        {
+          "name": "StepInstanceKey",
+          "type": "Text",
+          "displayName": "Khóa lượt bước xử lý"
+        },
+        {
+          "name": "CommandType",
+          "type": "Text",
+          "displayName": "Loại thao tác"
+        },
+        {
+          "name": "PayloadJson",
+          "type": "Note",
+          "displayName": "Dữ liệu thao tác (JSON)"
+        },
+        {
+          "name": "State",
+          "type": "Choice",
+          "indexed": true,
+          "choices": [
+            "Pending",
+            "Processing",
+            "Succeeded",
+            "Rejected",
+            "Failed"
+          ],
+          "displayName": "Trạng thái xử lý"
+        },
+        {
+          "name": "DedupeKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa chống xử lý trùng"
+        },
+        {
+          "name": "ProcessedAt",
+          "type": "DateTime",
+          "displayName": "Thời gian xử lý"
+        },
+        {
+          "name": "ErrorMessage",
+          "type": "Note",
+          "displayName": "Thông tin lỗi"
+        }
+      ],
+      "displayName": "Yêu cầu thao tác quy trình"
+    },
+    {
+      "name": "EMI_PAY_Notifications",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "NotificationKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa thông báo"
+        },
+        {
+          "name": "RecipientUPN",
+          "type": "Text",
+          "displayName": "Tài khoản người nhận"
+        },
+        {
+          "name": "NoticeType",
+          "type": "Text",
+          "displayName": "Loại thông báo"
+        },
+        {
+          "name": "DeliveryState",
+          "type": "Choice",
+          "choices": [
+            "Pending",
+            "Sent",
+            "Failed"
+          ],
+          "displayName": "Trạng thái gửi"
+        },
+        {
+          "name": "AttemptCount",
+          "type": "Number",
+          "displayName": "Số lần thử"
+        },
+        {
+          "name": "SentAt",
+          "type": "DateTime",
+          "displayName": "Thời gian gửi"
+        },
+        {
+          "name": "ErrorMessage",
+          "type": "Note",
+          "displayName": "Thông tin lỗi"
+        }
+      ],
+      "displayName": "Thông báo hệ thống"
+    },
+    {
+      "name": "EMI_PAY_ArchiveJobs",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "JobKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa công việc"
+        },
+        {
+          "name": "ArchiveType",
+          "type": "Choice",
+          "choices": [
+            "Completed",
+            "Cancelled"
+          ],
+          "displayName": "Loại hồ sơ lưu trữ"
+        },
+        {
+          "name": "State",
+          "type": "Choice",
+          "indexed": true,
+          "choices": [
+            "Pending",
+            "Processing",
+            "Failed",
+            "Completed"
+          ],
+          "displayName": "Trạng thái xử lý"
+        },
+        {
+          "name": "AttemptCount",
+          "type": "Number",
+          "displayName": "Số lần thử"
+        },
+        {
+          "name": "LastAttemptAt",
+          "type": "DateTime",
+          "displayName": "Lần thử gần nhất"
+        },
+        {
+          "name": "Destination",
+          "type": "Text",
+          "displayName": "Nơi lưu trữ đích"
+        },
+        {
+          "name": "ErrorMessage",
+          "type": "Note",
+          "displayName": "Thông tin lỗi"
+        }
+      ],
+      "displayName": "Công việc lưu trữ hồ sơ"
+    },
+    {
+      "name": "EMI_PAY_SystemSettings",
+      "kind": "GenericList",
+      "fields": [
+        {
+          "name": "SettingKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Mã tham số cấu hình"
+        },
+        {
+          "name": "SettingValue",
+          "type": "Note",
+          "displayName": "Giá trị cấu hình"
+        },
+        {
+          "name": "SettingDescription",
+          "type": "Note",
+          "displayName": "Mô tả cấu hình"
+        }
+      ],
+      "displayName": "Cấu hình hệ thống"
+    },
+    {
+      "name": "EMI_PAY_DocsWorking",
+      "kind": "DocumentLibrary",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "DocumentKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa tài liệu"
+        },
+        {
+          "name": "StepInstanceKey",
+          "type": "Text",
+          "displayName": "Khóa lượt bước xử lý"
+        },
+        {
+          "name": "ChecklistItemKey",
+          "type": "Text",
+          "displayName": "Khóa mục checklist"
+        },
+        {
+          "name": "DocClass",
+          "type": "Choice",
+          "choices": [
+            "Checklist",
+            "StepAttachment",
+            "UNC"
+          ],
+          "displayName": "Nhóm tài liệu"
+        },
+        {
+          "name": "Visibility",
+          "type": "Choice",
+          "choices": [
+            "Internal",
+            "Published"
+          ],
+          "displayName": "Phạm vi hiển thị"
+        },
+        {
+          "name": "UploadedByUPN",
+          "type": "Text",
+          "displayName": "Người tải lên"
+        },
+        {
+          "name": "IsCurrent",
+          "type": "Boolean",
+          "displayName": "Phiên bản hiện hành"
+        },
+        {
+          "name": "ReviewRound",
+          "type": "Number",
+          "displayName": "Lượt xử lý"
+        }
+      ],
+      "displayName": "Tài liệu hồ sơ đang xử lý"
+    },
+    {
+      "name": "EMI_PAY_DocsInternal",
+      "kind": "DocumentLibrary",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "DocumentKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa tài liệu"
+        },
+        {
+          "name": "StepInstanceKey",
+          "type": "Text",
+          "displayName": "Khóa lượt bước xử lý"
+        },
+        {
+          "name": "ChecklistItemKey",
+          "type": "Text",
+          "displayName": "Khóa mục checklist"
+        },
+        {
+          "name": "DocClass",
+          "type": "Choice",
+          "choices": [
+            "Checklist",
+            "StepAttachment",
+            "UNC"
+          ],
+          "displayName": "Nhóm tài liệu"
+        },
+        {
+          "name": "Visibility",
+          "type": "Choice",
+          "choices": [
+            "Internal",
+            "Published"
+          ],
+          "displayName": "Phạm vi hiển thị"
+        },
+        {
+          "name": "UploadedByUPN",
+          "type": "Text",
+          "displayName": "Người tải lên"
+        },
+        {
+          "name": "IsCurrent",
+          "type": "Boolean",
+          "displayName": "Phiên bản hiện hành"
+        },
+        {
+          "name": "ReviewRound",
+          "type": "Number",
+          "displayName": "Lượt xử lý"
+        }
+      ],
+      "displayName": "Tài liệu nội bộ bộ phận"
+    },
+    {
+      "name": "EMI_PAY_ArchiveCompleted",
+      "kind": "DocumentLibrary",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "DocumentKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa tài liệu"
+        },
+        {
+          "name": "StepInstanceKey",
+          "type": "Text",
+          "displayName": "Khóa lượt bước xử lý"
+        },
+        {
+          "name": "ChecklistItemKey",
+          "type": "Text",
+          "displayName": "Khóa mục checklist"
+        },
+        {
+          "name": "DocClass",
+          "type": "Choice",
+          "choices": [
+            "Checklist",
+            "StepAttachment",
+            "UNC"
+          ],
+          "displayName": "Nhóm tài liệu"
+        },
+        {
+          "name": "Visibility",
+          "type": "Choice",
+          "choices": [
+            "Internal",
+            "Published"
+          ],
+          "displayName": "Phạm vi hiển thị"
+        },
+        {
+          "name": "UploadedByUPN",
+          "type": "Text",
+          "displayName": "Người tải lên"
+        },
+        {
+          "name": "IsCurrent",
+          "type": "Boolean",
+          "displayName": "Phiên bản hiện hành"
+        },
+        {
+          "name": "ReviewRound",
+          "type": "Number",
+          "displayName": "Lượt xử lý"
+        }
+      ],
+      "displayName": "Kho hồ sơ thanh toán hoàn tất"
+    },
+    {
+      "name": "EMI_PAY_ArchiveCancelled",
+      "kind": "DocumentLibrary",
+      "fields": [
+        {
+          "name": "RequestKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa hồ sơ"
+        },
+        {
+          "name": "DocumentKey",
+          "type": "Text",
+          "indexed": true,
+          "displayName": "Khóa tài liệu"
+        },
+        {
+          "name": "StepInstanceKey",
+          "type": "Text",
+          "displayName": "Khóa lượt bước xử lý"
+        },
+        {
+          "name": "ChecklistItemKey",
+          "type": "Text",
+          "displayName": "Khóa mục checklist"
+        },
+        {
+          "name": "DocClass",
+          "type": "Choice",
+          "choices": [
+            "Checklist",
+            "StepAttachment",
+            "UNC"
+          ],
+          "displayName": "Nhóm tài liệu"
+        },
+        {
+          "name": "Visibility",
+          "type": "Choice",
+          "choices": [
+            "Internal",
+            "Published"
+          ],
+          "displayName": "Phạm vi hiển thị"
+        },
+        {
+          "name": "UploadedByUPN",
+          "type": "Text",
+          "displayName": "Người tải lên"
+        },
+        {
+          "name": "IsCurrent",
+          "type": "Boolean",
+          "displayName": "Phiên bản hiện hành"
+        },
+        {
+          "name": "ReviewRound",
+          "type": "Number",
+          "displayName": "Lượt xử lý"
+        }
+      ],
+      "displayName": "Kho hồ sơ thanh toán đã hủy"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+﻿"Principal","PrincipalType","RoleNames"
+"cecm Chủ sở hữu","SharePointGroup","Kiểm soát Đầy đủ"
+"cecm Khách truy cập","SharePointGroup","Đọc"
+"cecm Thành viên","SharePointGroup","Sửa"

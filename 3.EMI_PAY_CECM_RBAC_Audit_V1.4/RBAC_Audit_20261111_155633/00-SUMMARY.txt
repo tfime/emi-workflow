@@ -1,0 +1,9 @@
+Site: https://emicomvn.sharepoint.com/sites/cecm
+Audit time: 2026-11-11 15:57:05 +07:00
+Site Owners group: cecm Chủ sở hữu
+Audited lists/libraries: 23
+Lists/libraries inheriting site rights: 23
+Lists/libraries with unique rights: 0
+Known EMI PAY groups: 7 / 7
+This directory contains a READ-ONLY permission inventory, not a restore script.
+It does not inspect individual file/item unique permissions, sharing links or external identities.

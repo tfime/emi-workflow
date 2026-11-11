@@ -1,0 +1,221 @@
+﻿Loại,Tên kỹ thuật,Tên hiển thị tiếng Việt
+Danh sách,EMI_PAY_OrgUnits,Danh mục phòng ban
+Cột (EMI_PAY_OrgUnits),OUCode,Mã phòng ban
+Cột (EMI_PAY_OrgUnits),OUName,Tên phòng ban
+Cột (EMI_PAY_OrgUnits),HomeLECode,Mã pháp nhân
+Cột (EMI_PAY_OrgUnits),ManagerUPN,Tài khoản trưởng phòng
+Cột (EMI_PAY_OrgUnits),EntraGroupId,Mã nhóm Entra
+Cột (EMI_PAY_OrgUnits),IsActive,Đang sử dụng
+Danh sách,EMI_PAY_OrgMembers,Nhân sự thuộc phòng ban
+Cột (EMI_PAY_OrgMembers),OUCode,Mã phòng ban
+Cột (EMI_PAY_OrgMembers),MemberUPN,Tài khoản nhân sự
+Cột (EMI_PAY_OrgMembers),IsActive,Đang sử dụng
+Danh sách,EMI_PAY_PaymentTypes,Danh mục loại hồ sơ thanh toán
+Cột (EMI_PAY_PaymentTypes),PaymentTypeCode,Mã loại hồ sơ
+Cột (EMI_PAY_PaymentTypes),ChecklistVersion,Phiên bản checklist
+Cột (EMI_PAY_PaymentTypes),WorkflowCode,Mã quy trình
+Cột (EMI_PAY_PaymentTypes),IsActive,Đang sử dụng
+Danh sách,EMI_PAY_WorkflowVersions,Phiên bản quy trình
+Cột (EMI_PAY_WorkflowVersions),WorkflowCode,Mã quy trình
+Cột (EMI_PAY_WorkflowVersions),VersionNo,Số phiên bản
+Cột (EMI_PAY_WorkflowVersions),Lifecycle,Tình trạng ban hành
+Cột (EMI_PAY_WorkflowVersions),PublishedAt,Ngày ban hành
+Cột (EMI_PAY_WorkflowVersions),EffectiveAt,Ngày hiệu lực
+Danh sách,EMI_PAY_WorkflowSteps,Các bước xử lý quy trình
+Cột (EMI_PAY_WorkflowSteps),WorkflowCode,Mã quy trình
+Cột (EMI_PAY_WorkflowSteps),VersionNo,Số phiên bản
+Cột (EMI_PAY_WorkflowSteps),StepKey,Khóa bước xử lý
+Cột (EMI_PAY_WorkflowSteps),StepOrder,Thứ tự bước
+Cột (EMI_PAY_WorkflowSteps),StepName,Tên bước xử lý
+Cột (EMI_PAY_WorkflowSteps),StepKind,Loại bước xử lý
+Cột (EMI_PAY_WorkflowSteps),IsActive,Đang sử dụng
+Danh sách,EMI_PAY_StepRecipients,Phòng ban tiếp nhận theo bước
+Cột (EMI_PAY_StepRecipients),WorkflowCode,Mã quy trình
+Cột (EMI_PAY_StepRecipients),VersionNo,Số phiên bản
+Cột (EMI_PAY_StepRecipients),StepKey,Khóa bước xử lý
+Cột (EMI_PAY_StepRecipients),OUCode,Mã phòng ban
+Cột (EMI_PAY_StepRecipients),IsDefault,Phòng tiếp nhận mặc định
+Danh sách,EMI_PAY_ChecklistTemplates,Cấu hình checklist tài liệu
+Cột (EMI_PAY_ChecklistTemplates),PaymentTypeCode,Mã loại hồ sơ
+Cột (EMI_PAY_ChecklistTemplates),VersionNo,Số phiên bản
+Cột (EMI_PAY_ChecklistTemplates),ItemCode,Mã mục checklist
+Cột (EMI_PAY_ChecklistTemplates),ItemLabel,Tên tài liệu yêu cầu
+Cột (EMI_PAY_ChecklistTemplates),IsRequired,Bắt buộc
+Cột (EMI_PAY_ChecklistTemplates),MinFileCount,Số tệp tối thiểu
+Cột (EMI_PAY_ChecklistTemplates),DisplayOrder,Thứ tự hiển thị
+Danh sách,EMI_PAY_Requests,Hồ sơ thanh toán
+Cột (EMI_PAY_Requests),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_Requests),RequestCode,Mã hồ sơ
+Cột (EMI_PAY_Requests),CreatedOUCode,Mã đơn vị khởi tạo
+Cột (EMI_PAY_Requests),CreatorUPN,Tài khoản người khởi tạo
+Cột (EMI_PAY_Requests),PaymentTypeCode,Mã loại hồ sơ
+Cột (EMI_PAY_Requests),Amount,Tổng số tiền đề nghị
+Cột (EMI_PAY_Requests),Explanation,Diễn giải hồ sơ
+Cột (EMI_PAY_Requests),WorkflowCode,Mã quy trình
+Cột (EMI_PAY_Requests),WorkflowVersion,Phiên bản quy trình áp dụng
+Cột (EMI_PAY_Requests),ChecklistVersion,Phiên bản checklist
+Cột (EMI_PAY_Requests),ReviewRound,Lượt xử lý
+Cột (EMI_PAY_Requests),CurrentStepKey,Bước xử lý hiện tại
+Cột (EMI_PAY_Requests),CurrentStepInstanceKey,Lượt bước xử lý hiện tại
+Cột (EMI_PAY_Requests),CurrentOUCode,Mã phòng đang xử lý
+Cột (EMI_PAY_Requests),Status,Trạng thái hồ sơ
+Cột (EMI_PAY_Requests),IsLocked,Đã khóa chỉnh sửa
+Cột (EMI_PAY_Requests),ArchiveStatus,Trạng thái lưu trữ
+Cột (EMI_PAY_Requests),FirstSubmittedAt,Ngày gửi hồ sơ lần đầu
+Cột (EMI_PAY_Requests),PaidAt,Ngày xác nhận thanh toán
+Cột (EMI_PAY_Requests),ArchivedAt,Ngày lưu trữ
+Danh sách,EMI_PAY_ChecklistItems,Checklist tài liệu hồ sơ
+Cột (EMI_PAY_ChecklistItems),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_ChecklistItems),ChecklistItemKey,Khóa mục checklist
+Cột (EMI_PAY_ChecklistItems),ItemCode,Mã mục checklist
+Cột (EMI_PAY_ChecklistItems),ItemLabel,Tên tài liệu yêu cầu
+Cột (EMI_PAY_ChecklistItems),IsRequired,Bắt buộc
+Cột (EMI_PAY_ChecklistItems),MinFileCount,Số tệp tối thiểu
+Cột (EMI_PAY_ChecklistItems),UploadedCount,Số tệp đã tải lên
+Cột (EMI_PAY_ChecklistItems),ItemStatus,Trạng thái tài liệu
+Cột (EMI_PAY_ChecklistItems),IsLocked,Đã khóa chỉnh sửa
+Danh sách,EMI_PAY_WorkItems,Công việc xử lý hồ sơ
+Cột (EMI_PAY_WorkItems),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_WorkItems),StepInstanceKey,Khóa lượt bước xử lý
+Cột (EMI_PAY_WorkItems),ReviewRound,Lượt xử lý
+Cột (EMI_PAY_WorkItems),StepKey,Khóa bước xử lý
+Cột (EMI_PAY_WorkItems),StepOrder,Thứ tự bước
+Cột (EMI_PAY_WorkItems),StepKind,Loại bước xử lý
+Cột (EMI_PAY_WorkItems),ResponsibleOUCode,Mã phòng chịu trách nhiệm
+Cột (EMI_PAY_WorkItems),ManagerUPN,Tài khoản trưởng phòng
+Cột (EMI_PAY_WorkItems),State,Trạng thái xử lý
+Cột (EMI_PAY_WorkItems),AcceptedByUPN,Người tiếp nhận
+Cột (EMI_PAY_WorkItems),AcceptedAt,Thời gian tiếp nhận
+Cột (EMI_PAY_WorkItems),DueAt,Hạn hoàn thành
+Cột (EMI_PAY_WorkItems),ClosedAt,Thời gian kết thúc bước
+Cột (EMI_PAY_WorkItems),Decision,Quyết định
+Cột (EMI_PAY_WorkItems),DecisionNote,Nhận xét quyết định
+Danh sách,EMI_PAY_Assignments,Phân công nhân sự xử lý
+Cột (EMI_PAY_Assignments),StepInstanceKey,Khóa lượt bước xử lý
+Cột (EMI_PAY_Assignments),StaffUPN,Tài khoản nhân sự được giao
+Cột (EMI_PAY_Assignments),AssignedByUPN,Người phân công
+Cột (EMI_PAY_Assignments),AssignedAt,Ngày phân công
+Cột (EMI_PAY_Assignments),RemovedAt,Ngày thôi phân công
+Cột (EMI_PAY_Assignments),IsActive,Đang sử dụng
+Danh sách,EMI_PAY_StepReviews,Kết quả kiểm tra tài liệu
+Cột (EMI_PAY_StepReviews),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_StepReviews),StepInstanceKey,Khóa lượt bước xử lý
+Cột (EMI_PAY_StepReviews),ReviewRound,Lượt xử lý
+Cột (EMI_PAY_StepReviews),ChecklistItemKey,Khóa mục checklist
+Cột (EMI_PAY_StepReviews),Result,Kết quả đánh giá
+Cột (EMI_PAY_StepReviews),Reason,Lý do
+Cột (EMI_PAY_StepReviews),ReviewedByUPN,Người đánh giá
+Cột (EMI_PAY_StepReviews),ReviewedAt,Thời gian đánh giá
+Danh sách,EMI_PAY_DocumentIndex,Danh mục tài liệu đính kèm
+Cột (EMI_PAY_DocumentIndex),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_DocumentIndex),DocumentKey,Khóa tài liệu
+Cột (EMI_PAY_DocumentIndex),StepInstanceKey,Khóa lượt bước xử lý
+Cột (EMI_PAY_DocumentIndex),ChecklistItemKey,Khóa mục checklist
+Cột (EMI_PAY_DocumentIndex),DocClass,Nhóm tài liệu
+Cột (EMI_PAY_DocumentIndex),Visibility,Phạm vi hiển thị
+Cột (EMI_PAY_DocumentIndex),FileName,Tên tệp
+Cột (EMI_PAY_DocumentIndex),LibraryName,Tên thư viện
+Cột (EMI_PAY_DocumentIndex),DriveItemId,Mã tệp SharePoint
+Cột (EMI_PAY_DocumentIndex),FileUrl,Đường dẫn tệp
+Cột (EMI_PAY_DocumentIndex),UploadedByUPN,Người tải lên
+Cột (EMI_PAY_DocumentIndex),UploadedAt,Thời gian tải lên
+Cột (EMI_PAY_DocumentIndex),IsCurrent,Phiên bản hiện hành
+Cột (EMI_PAY_DocumentIndex),IsArchived,Đã lưu trữ
+Cột (EMI_PAY_DocumentIndex),ArchiveLocation,Vị trí lưu trữ
+Danh sách,EMI_PAY_ActivityPublic,Nhật ký tiến trình hồ sơ
+Cột (EMI_PAY_ActivityPublic),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_ActivityPublic),ActivityKey,Khóa sự kiện
+Cột (EMI_PAY_ActivityPublic),StepInstanceKey,Khóa lượt bước xử lý
+Cột (EMI_PAY_ActivityPublic),ReviewRound,Lượt xử lý
+Cột (EMI_PAY_ActivityPublic),EventType,Loại sự kiện
+Cột (EMI_PAY_ActivityPublic),EventTime,Thời gian phát sinh
+Cột (EMI_PAY_ActivityPublic),ActorUPN,Người thực hiện
+Cột (EMI_PAY_ActivityPublic),FromState,Trạng thái trước
+Cột (EMI_PAY_ActivityPublic),ToState,Trạng thái sau
+Cột (EMI_PAY_ActivityPublic),Note,Ghi chú
+Cột (EMI_PAY_ActivityPublic),DetailsJson,Chi tiết sự kiện (JSON)
+Danh sách,EMI_PAY_ActivityInternal,Nhật ký xử lý nội bộ
+Cột (EMI_PAY_ActivityInternal),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_ActivityInternal),ActivityKey,Khóa sự kiện
+Cột (EMI_PAY_ActivityInternal),StepInstanceKey,Khóa lượt bước xử lý
+Cột (EMI_PAY_ActivityInternal),OUCode,Mã phòng ban
+Cột (EMI_PAY_ActivityInternal),ReviewRound,Lượt xử lý
+Cột (EMI_PAY_ActivityInternal),EventType,Loại sự kiện
+Cột (EMI_PAY_ActivityInternal),EventTime,Thời gian phát sinh
+Cột (EMI_PAY_ActivityInternal),ActorUPN,Người thực hiện
+Cột (EMI_PAY_ActivityInternal),FieldName,Trường dữ liệu thay đổi
+Cột (EMI_PAY_ActivityInternal),OldValue,Giá trị trước
+Cột (EMI_PAY_ActivityInternal),NewValue,Giá trị sau
+Cột (EMI_PAY_ActivityInternal),Reason,Lý do
+Danh sách,EMI_PAY_Commands,Yêu cầu thao tác quy trình
+Cột (EMI_PAY_Commands),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_Commands),CommandKey,Khóa yêu cầu
+Cột (EMI_PAY_Commands),StepInstanceKey,Khóa lượt bước xử lý
+Cột (EMI_PAY_Commands),CommandType,Loại thao tác
+Cột (EMI_PAY_Commands),PayloadJson,Dữ liệu thao tác (JSON)
+Cột (EMI_PAY_Commands),State,Trạng thái xử lý
+Cột (EMI_PAY_Commands),DedupeKey,Khóa chống xử lý trùng
+Cột (EMI_PAY_Commands),ProcessedAt,Thời gian xử lý
+Cột (EMI_PAY_Commands),ErrorMessage,Thông tin lỗi
+Danh sách,EMI_PAY_Notifications,Thông báo hệ thống
+Cột (EMI_PAY_Notifications),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_Notifications),NotificationKey,Khóa thông báo
+Cột (EMI_PAY_Notifications),RecipientUPN,Tài khoản người nhận
+Cột (EMI_PAY_Notifications),NoticeType,Loại thông báo
+Cột (EMI_PAY_Notifications),DeliveryState,Trạng thái gửi
+Cột (EMI_PAY_Notifications),AttemptCount,Số lần thử
+Cột (EMI_PAY_Notifications),SentAt,Thời gian gửi
+Cột (EMI_PAY_Notifications),ErrorMessage,Thông tin lỗi
+Danh sách,EMI_PAY_ArchiveJobs,Công việc lưu trữ hồ sơ
+Cột (EMI_PAY_ArchiveJobs),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_ArchiveJobs),JobKey,Khóa công việc
+Cột (EMI_PAY_ArchiveJobs),ArchiveType,Loại hồ sơ lưu trữ
+Cột (EMI_PAY_ArchiveJobs),State,Trạng thái xử lý
+Cột (EMI_PAY_ArchiveJobs),AttemptCount,Số lần thử
+Cột (EMI_PAY_ArchiveJobs),LastAttemptAt,Lần thử gần nhất
+Cột (EMI_PAY_ArchiveJobs),Destination,Nơi lưu trữ đích
+Cột (EMI_PAY_ArchiveJobs),ErrorMessage,Thông tin lỗi
+Danh sách,EMI_PAY_SystemSettings,Cấu hình hệ thống
+Cột (EMI_PAY_SystemSettings),SettingKey,Mã tham số cấu hình
+Cột (EMI_PAY_SystemSettings),SettingValue,Giá trị cấu hình
+Cột (EMI_PAY_SystemSettings),SettingDescription,Mô tả cấu hình
+Thư viện tài liệu,EMI_PAY_DocsWorking,Tài liệu hồ sơ đang xử lý
+Cột (EMI_PAY_DocsWorking),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_DocsWorking),DocumentKey,Khóa tài liệu
+Cột (EMI_PAY_DocsWorking),StepInstanceKey,Khóa lượt bước xử lý
+Cột (EMI_PAY_DocsWorking),ChecklistItemKey,Khóa mục checklist
+Cột (EMI_PAY_DocsWorking),DocClass,Nhóm tài liệu
+Cột (EMI_PAY_DocsWorking),Visibility,Phạm vi hiển thị
+Cột (EMI_PAY_DocsWorking),UploadedByUPN,Người tải lên
+Cột (EMI_PAY_DocsWorking),IsCurrent,Phiên bản hiện hành
+Cột (EMI_PAY_DocsWorking),ReviewRound,Lượt xử lý
+Thư viện tài liệu,EMI_PAY_DocsInternal,Tài liệu nội bộ bộ phận
+Cột (EMI_PAY_DocsInternal),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_DocsInternal),DocumentKey,Khóa tài liệu
+Cột (EMI_PAY_DocsInternal),StepInstanceKey,Khóa lượt bước xử lý
+Cột (EMI_PAY_DocsInternal),ChecklistItemKey,Khóa mục checklist
+Cột (EMI_PAY_DocsInternal),DocClass,Nhóm tài liệu
+Cột (EMI_PAY_DocsInternal),Visibility,Phạm vi hiển thị
+Cột (EMI_PAY_DocsInternal),UploadedByUPN,Người tải lên
+Cột (EMI_PAY_DocsInternal),IsCurrent,Phiên bản hiện hành
+Cột (EMI_PAY_DocsInternal),ReviewRound,Lượt xử lý
+Thư viện tài liệu,EMI_PAY_ArchiveCompleted,Kho hồ sơ thanh toán hoàn tất
+Cột (EMI_PAY_ArchiveCompleted),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_ArchiveCompleted),DocumentKey,Khóa tài liệu
+Cột (EMI_PAY_ArchiveCompleted),StepInstanceKey,Khóa lượt bước xử lý
+Cột (EMI_PAY_ArchiveCompleted),ChecklistItemKey,Khóa mục checklist
+Cột (EMI_PAY_ArchiveCompleted),DocClass,Nhóm tài liệu
+Cột (EMI_PAY_ArchiveCompleted),Visibility,Phạm vi hiển thị
+Cột (EMI_PAY_ArchiveCompleted),UploadedByUPN,Người tải lên
+Cột (EMI_PAY_ArchiveCompleted),IsCurrent,Phiên bản hiện hành
+Cột (EMI_PAY_ArchiveCompleted),ReviewRound,Lượt xử lý
+Thư viện tài liệu,EMI_PAY_ArchiveCancelled,Kho hồ sơ thanh toán đã hủy
+Cột (EMI_PAY_ArchiveCancelled),RequestKey,Khóa hồ sơ
+Cột (EMI_PAY_ArchiveCancelled),DocumentKey,Khóa tài liệu
+Cột (EMI_PAY_ArchiveCancelled),StepInstanceKey,Khóa lượt bước xử lý
+Cột (EMI_PAY_ArchiveCancelled),ChecklistItemKey,Khóa mục checklist
+Cột (EMI_PAY_ArchiveCancelled),DocClass,Nhóm tài liệu
+Cột (EMI_PAY_ArchiveCancelled),Visibility,Phạm vi hiển thị
+Cột (EMI_PAY_ArchiveCancelled),UploadedByUPN,Người tải lên
+Cột (EMI_PAY_ArchiveCancelled),IsCurrent,Phiên bản hiện hành
+Cột (EMI_PAY_ArchiveCancelled),ReviewRound,Lượt xử lý

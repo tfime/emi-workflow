@@ -1,0 +1,39 @@
+{
+  "Mode": "Apply",
+  "SiteUrl": "https://emicomvn.sharepoint.com/sites/cecm",
+  "Timestamp": "2026-11-11T18:02:16.6887934+07:00",
+  "PilotGuid": "60bb23f6-4702-4aed-b36f-b2b20b09e74d",
+  "SiteAclSignature": "11:1073741825|12:1073741825|13:1073741825|3:1073741825,1073741829|4:1073741826|5:1073741830",
+  "Applied": [
+    {
+      "InternalName": "EMI_PAY_OrgMembers",
+      "Guid": "58db4d66-1299-4edb-893e-50c8fe459253"
+    },
+    {
+      "InternalName": "EMI_PAY_WorkflowVersions",
+      "Guid": "b263446d-7cea-4fd8-bfde-b22dd2de4281"
+    },
+    {
+      "InternalName": "EMI_PAY_WorkflowSteps",
+      "Guid": "0135b54a-f4a3-4edc-a738-a64e12feb9ad"
+    },
+    {
+      "InternalName": "EMI_PAY_ChecklistTemplates",
+      "Guid": "81b94541-2e8e-4457-af28-e47f4d284477"
+    },
+    {
+      "InternalName": "EMI_PAY_StepRecipients",
+      "Guid": "7ebac733-193d-4216-bf63-785c6a5f06a2"
+    },
+    {
+      "InternalName": "EMI_PAY_SystemSettings",
+      "Guid": "2d065a1c-c5f3-42f4-9fba-351967e430c7"
+    }
+  ],
+  "Skipped": [
+    {
+      "InternalName": "EMI_PAY_OrgUnits",
+      "Guid": "a95e5ccf-00cc-4c7e-b375-828a07117530"
+    }
+  ]
+}

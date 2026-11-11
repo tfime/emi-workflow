@@ -1,0 +1,77 @@
+{
+  "Name": "EMI_PAY_ChecklistTemplates",
+  "Guid": "81b94541-2e8e-4457-af28-e47f4d284477",
+  "DisplayName": "Cấu hình checklist tài liệu",
+  "ItemCount": 0,
+  "Unique": false,
+  "Assignments": [
+    {
+      "PrincipalId": 3,
+      "PrincipalName": "cecm Chủ sở hữu",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741825,
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ",
+        "Truy nhập Hạn chế"
+      ]
+    },
+    {
+      "PrincipalId": 4,
+      "PrincipalName": "cecm Khách truy cập",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741826
+      ],
+      "RoleNames": [
+        "Đọc"
+      ]
+    },
+    {
+      "PrincipalId": 5,
+      "PrincipalName": "cecm Thành viên",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741830
+      ],
+      "RoleNames": [
+        "Sửa"
+      ]
+    },
+    {
+      "PrincipalId": 11,
+      "PrincipalName": "GR-PAY-SYSADM",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741825
+      ],
+      "RoleNames": [
+        "Truy nhập Hạn chế"
+      ]
+    },
+    {
+      "PrincipalId": 12,
+      "PrincipalName": "GR-PAY-FLOW-SVC",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741825
+      ],
+      "RoleNames": [
+        "Truy nhập Hạn chế"
+      ]
+    },
+    {
+      "PrincipalId": 13,
+      "PrincipalName": "GR-PAY-PROCADM",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741825
+      ],
+      "RoleNames": [
+        "Truy nhập Hạn chế"
+      ]
+    }
+  ]
+}

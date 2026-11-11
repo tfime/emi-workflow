@@ -1,0 +1,54 @@
+{
+  "InternalName": "EMI_PAY_PaymentTypes",
+  "Guid": "60bb23f6-4702-4aed-b36f-b2b20b09e74d",
+  "DisplayName": "Danh mục loại hồ sơ thanh toán",
+  "BaseTemplate": 100,
+  "ItemCount": 0,
+  "Unique": true,
+  "Assignments": [
+    {
+      "PrincipalId": 3,
+      "PrincipalName": "cecm Chủ sở hữu",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    },
+    {
+      "PrincipalId": 11,
+      "PrincipalName": "GR-PAY-SYSADM",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    },
+    {
+      "PrincipalId": 12,
+      "PrincipalName": "GR-PAY-FLOW-SVC",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    },
+    {
+      "PrincipalId": 13,
+      "PrincipalName": "GR-PAY-PROCADM",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741827
+      ],
+      "RoleNames": [
+        "Đóng góp"
+      ]
+    }
+  ]
+}

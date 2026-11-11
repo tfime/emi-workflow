@@ -1,0 +1,8 @@
+﻿"GroupName","Exists","GroupId","IsSiteOwnerGroup"
+"GR-PAY-SYSADM","True","11","False"
+"GR-PAY-FLOW-SVC","True","12","False"
+"GR-PAY-PROCADM","True","13","False"
+"GR-PAY-CHAIR","True","14","False"
+"GR-PAY-TCKT","True","15","False"
+"GR-PAY-USERS","True","16","False"
+"GR-PAY-AUDIT","True","17","False"

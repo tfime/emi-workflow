@@ -1,0 +1,43 @@
+{
+  "InternalName": "verified",
+  "Guid": "3d896def-8c43-412d-90e8-0cfc92140963",
+  "DisplayName": "Thông báo hệ thống",
+  "BaseTemplate": 100,
+  "ItemCount": 0,
+  "Unique": true,
+  "Assignments": [
+    {
+      "PrincipalId": 3,
+      "PrincipalName": "cecm Chủ sở hữu",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    },
+    {
+      "PrincipalId": 11,
+      "PrincipalName": "GR-PAY-SYSADM",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    },
+    {
+      "PrincipalId": 12,
+      "PrincipalName": "GR-PAY-FLOW-SVC",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    }
+  ]
+}

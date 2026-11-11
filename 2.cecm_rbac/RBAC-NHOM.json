@@ -1,0 +1,33 @@
+{
+  "site": "https://emicomvn.sharepoint.com/sites/cecm",
+  "groups": [
+    {
+      "name": "GR-PAY-SYSADM",
+      "description": "Quản trị kỹ thuật ứng dụng EMI PAY – không thay thế Site Owners"
+    },
+    {
+      "name": "GR-PAY-FLOW-SVC",
+      "description": "Tài khoản kết nối Power Automate; chỉ thêm danh tính chuyên dụng đã được phê duyệt"
+    },
+    {
+      "name": "GR-PAY-PROCADM",
+      "description": "Quản trị loại hồ sơ, checklist, bước và cấu hình quy trình"
+    },
+    {
+      "name": "GR-PAY-CHAIR",
+      "description": "CT-HĐQT: chỉ đọc toàn bộ hồ sơ và lịch sử, không quyền sửa"
+    },
+    {
+      "name": "GR-PAY-TCKT",
+      "description": "Vai trò TCKT; quyền hồ sơ cụ thể sẽ được cấp động sau"
+    },
+    {
+      "name": "GR-PAY-USERS",
+      "description": "Người dùng nghiệp vụ; quyền hồ sơ/bước cụ thể sẽ cấp động sau"
+    },
+    {
+      "name": "GR-PAY-AUDIT",
+      "description": "Vai trò kiểm toán; chưa cấp quyền mặc định, chờ chính sách"
+    }
+  ]
+}

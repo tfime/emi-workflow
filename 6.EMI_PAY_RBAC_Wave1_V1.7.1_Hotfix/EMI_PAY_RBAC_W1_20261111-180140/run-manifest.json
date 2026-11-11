@@ -1,0 +1,14 @@
+{
+  "Mode": "Apply",
+  "SiteUrl": "https://emicomvn.sharepoint.com/sites/cecm",
+  "Timestamp": "2026-11-11T18:01:40.4177657+07:00",
+  "PilotGuid": "60bb23f6-4702-4aed-b36f-b2b20b09e74d",
+  "SiteAclSignature": "11:1073741825|12:1073741825|13:1073741825|3:1073741825,1073741829|4:1073741826|5:1073741830",
+  "Applied": [
+    {
+      "InternalName": "EMI_PAY_OrgUnits",
+      "Guid": "a95e5ccf-00cc-4c7e-b375-828a07117530"
+    }
+  ],
+  "Skipped": []
+}

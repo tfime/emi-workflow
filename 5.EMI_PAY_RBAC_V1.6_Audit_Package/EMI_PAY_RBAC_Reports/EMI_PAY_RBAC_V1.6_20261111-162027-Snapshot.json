@@ -1,0 +1,333 @@
+{
+  "AuditTimestamp": "2026-11-11T16:20:54.6736957+07:00",
+  "SiteUrl": "https://emicomvn.sharepoint.com/sites/cecm",
+  "PilotListGuid": "60bb23f6-4702-4aed-b36f-b2b20b09e74d",
+  "PilotListName": "Danh mục loại hồ sơ thanh toán",
+  "HasUniqueRoleAssignments": true,
+  "PilotItemCount": 0,
+  "ExpectedDirectAssignmentsMatch": false,
+  "UnexpectedDirectAssignmentsCount": 0,
+  "UnexpectedDirectAssignments": [],
+  "ExpectedRoles": [
+    {
+      "Principal": "cecm Chủ sở hữu",
+      "Expected": "Full Control",
+      "Actual": "Kiểm soát Đầy đủ",
+      "Match": false
+    },
+    {
+      "Principal": "GR-PAY-SYSADM",
+      "Expected": "Full Control",
+      "Actual": "Kiểm soát Đầy đủ",
+      "Match": false
+    },
+    {
+      "Principal": "GR-PAY-FLOW-SVC",
+      "Expected": "Full Control",
+      "Actual": "Kiểm soát Đầy đủ",
+      "Match": false
+    },
+    {
+      "Principal": "GR-PAY-PROCADM",
+      "Expected": "Contribute",
+      "Actual": "Đóng góp",
+      "Match": false
+    },
+    {
+      "Principal": "GR-PAY-CHAIR",
+      "Expected": "(no direct assignment)",
+      "Actual": "(no direct assignment)",
+      "Match": true
+    },
+    {
+      "Principal": "GR-PAY-TCKT",
+      "Expected": "(no direct assignment)",
+      "Actual": "(no direct assignment)",
+      "Match": true
+    },
+    {
+      "Principal": "GR-PAY-USERS",
+      "Expected": "(no direct assignment)",
+      "Actual": "(no direct assignment)",
+      "Match": true
+    },
+    {
+      "Principal": "GR-PAY-AUDIT",
+      "Expected": "(no direct assignment)",
+      "Actual": "(no direct assignment)",
+      "Match": true
+    }
+  ],
+  "DirectAssignments": [
+    {
+      "ListGuid": "60bb23f6-4702-4aed-b36f-b2b20b09e74d",
+      "ListTitle": "Danh mục loại hồ sơ thanh toán",
+      "PrincipalId": 3,
+      "PrincipalName": "cecm Chủ sở hữu",
+      "PrincipalLogin": "cecm Chủ sở hữu",
+      "PrincipalType": "SharePointGroup",
+      "Roles": "Kiểm soát Đầy đủ"
+    },
+    {
+      "ListGuid": "60bb23f6-4702-4aed-b36f-b2b20b09e74d",
+      "ListTitle": "Danh mục loại hồ sơ thanh toán",
+      "PrincipalId": 11,
+      "PrincipalName": "GR-PAY-SYSADM",
+      "PrincipalLogin": "GR-PAY-SYSADM",
+      "PrincipalType": "SharePointGroup",
+      "Roles": "Kiểm soát Đầy đủ"
+    },
+    {
+      "ListGuid": "60bb23f6-4702-4aed-b36f-b2b20b09e74d",
+      "ListTitle": "Danh mục loại hồ sơ thanh toán",
+      "PrincipalId": 12,
+      "PrincipalName": "GR-PAY-FLOW-SVC",
+      "PrincipalLogin": "GR-PAY-FLOW-SVC",
+      "PrincipalType": "SharePointGroup",
+      "Roles": "Kiểm soát Đầy đủ"
+    },
+    {
+      "ListGuid": "60bb23f6-4702-4aed-b36f-b2b20b09e74d",
+      "ListTitle": "Danh mục loại hồ sơ thanh toán",
+      "PrincipalId": 13,
+      "PrincipalName": "GR-PAY-PROCADM",
+      "PrincipalLogin": "GR-PAY-PROCADM",
+      "PrincipalType": "SharePointGroup",
+      "Roles": "Đóng góp"
+    }
+  ],
+  "TestAccounts": [],
+  "Inventory": [
+    {
+      "InternalName": "EMI_PAY_PaymentTypes",
+      "Guid": "60bb23f6-4702-4aed-b36f-b2b20b09e74d",
+      "ExpectedDisplayName": "Danh mục loại hồ sơ thanh toán",
+      "ActualTitle": "Danh mục loại hồ sơ thanh toán",
+      "Wave": "0",
+      "ItemCount": 0,
+      "UniquePermission": true,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_OrgUnits",
+      "Guid": "a95e5ccf-00cc-4c7e-b375-828a07117530",
+      "ExpectedDisplayName": "Danh mục phòng ban",
+      "ActualTitle": "Danh mục phòng ban",
+      "Wave": "1",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_OrgMembers",
+      "Guid": "58db4d66-1299-4edb-893e-50c8fe459253",
+      "ExpectedDisplayName": "Nhân sự thuộc phòng ban",
+      "ActualTitle": "Nhân sự thuộc phòng ban",
+      "Wave": "1",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_WorkflowVersions",
+      "Guid": "b263446d-7cea-4fd8-bfde-b22dd2de4281",
+      "ExpectedDisplayName": "Phiên bản quy trình",
+      "ActualTitle": "Phiên bản quy trình",
+      "Wave": "1",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_WorkflowSteps",
+      "Guid": "0135b54a-f4a3-4edc-a738-a64e12feb9ad",
+      "ExpectedDisplayName": "Các bước xử lý quy trình",
+      "ActualTitle": "Các bước xử lý quy trình",
+      "Wave": "1",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_ChecklistTemplates",
+      "Guid": "81b94541-2e8e-4457-af28-e47f4d284477",
+      "ExpectedDisplayName": "Cấu hình checklist tài liệu",
+      "ActualTitle": "Cấu hình checklist tài liệu",
+      "Wave": "1",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_StepRecipients",
+      "Guid": "7ebac733-193d-4216-bf63-785c6a5f06a2",
+      "ExpectedDisplayName": "Phòng ban tiếp nhận theo bước",
+      "ActualTitle": "Phòng ban tiếp nhận theo bước",
+      "Wave": "1",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_SystemSettings",
+      "Guid": "2d065a1c-c5f3-42f4-9fba-351967e430c7",
+      "ExpectedDisplayName": "Cấu hình hệ thống",
+      "ActualTitle": "Cấu hình hệ thống",
+      "Wave": "1",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_Commands",
+      "Guid": "e16b76dc-7686-43e9-b232-18c80e2b31d2",
+      "ExpectedDisplayName": "Yêu cầu thao tác quy trình",
+      "ActualTitle": "Yêu cầu thao tác quy trình",
+      "Wave": "2",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_Assignments",
+      "Guid": "0ec1447a-6ff0-4071-b6c4-4d939d74d404",
+      "ExpectedDisplayName": "Phân công nhân sự xử lý",
+      "ActualTitle": "Phân công nhân sự xử lý",
+      "Wave": "2",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_WorkItems",
+      "Guid": "e21ef6e7-ee31-466a-be3b-65ae30ca7722",
+      "ExpectedDisplayName": "Công việc xử lý hồ sơ",
+      "ActualTitle": "Công việc xử lý hồ sơ",
+      "Wave": "2",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_StepReviews",
+      "Guid": "02a39987-5801-401e-8f3f-ba8caf1c1f4a",
+      "ExpectedDisplayName": "Kết quả kiểm tra tài liệu",
+      "ActualTitle": "Kết quả kiểm tra tài liệu",
+      "Wave": "2",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_ActivityInternal",
+      "Guid": "b8ceb7ed-3925-4292-af35-4027f41c9d6a",
+      "ExpectedDisplayName": "Nhật ký xử lý nội bộ",
+      "ActualTitle": "Nhật ký xử lý nội bộ",
+      "Wave": "2",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_ArchiveJobs",
+      "Guid": "4d959c76-7293-4c11-bca2-349f2e48f99a",
+      "ExpectedDisplayName": "Công việc lưu trữ hồ sơ",
+      "ActualTitle": "Công việc lưu trữ hồ sơ",
+      "Wave": "2",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_DocumentIndex",
+      "Guid": "a45c74cd-1f21-454c-9fcc-6812692b801b",
+      "ExpectedDisplayName": "Danh mục tài liệu đính kèm",
+      "ActualTitle": "Danh mục tài liệu đính kèm",
+      "Wave": "2",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_Notifications",
+      "Guid": "3d896def-8c43-412d-90e8-0cfc92140963",
+      "ExpectedDisplayName": "Thông báo hệ thống",
+      "ActualTitle": "Thông báo hệ thống",
+      "Wave": "2",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_ChecklistItems",
+      "Guid": "d02c6a03-9561-4d90-b5d5-ad30a2fef88b",
+      "ExpectedDisplayName": "Checklist tài liệu hồ sơ",
+      "ActualTitle": "Checklist tài liệu hồ sơ",
+      "Wave": "2",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_ActivityPublic",
+      "Guid": "84b57c9e-6b90-4a6b-a200-b3afb4499895",
+      "ExpectedDisplayName": "Nhật ký tiến trình hồ sơ",
+      "ActualTitle": "Nhật ký tiến trình hồ sơ",
+      "Wave": "2",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_Requests",
+      "Guid": "12b3051d-7642-4f90-a39d-5364df561fbf",
+      "ExpectedDisplayName": "Hồ sơ thanh toán",
+      "ActualTitle": "Hồ sơ thanh toán",
+      "Wave": "3",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_DocsWorking",
+      "Guid": "c2b4ef47-2c55-41e4-8b3c-c6480a27bbb2",
+      "ExpectedDisplayName": "Tài liệu hồ sơ đang xử lý",
+      "ActualTitle": "Tài liệu hồ sơ đang xử lý",
+      "Wave": "3",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_DocsInternal",
+      "Guid": "84ba461f-30ea-4d32-bb56-0ab1aa9cf456",
+      "ExpectedDisplayName": "Tài liệu nội bộ bộ phận",
+      "ActualTitle": "Tài liệu nội bộ bộ phận",
+      "Wave": "3",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_ArchiveCompleted",
+      "Guid": "bb7f6020-1fb6-448b-af3b-2cb36d793cc1",
+      "ExpectedDisplayName": "Kho hồ sơ thanh toán hoàn tất",
+      "ActualTitle": "Kho hồ sơ thanh toán hoàn tất",
+      "Wave": "3",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    },
+    {
+      "InternalName": "EMI_PAY_ArchiveCancelled",
+      "Guid": "e64e349b-2fca-4925-b18b-08e387163601",
+      "ExpectedDisplayName": "Kho hồ sơ thanh toán đã hủy",
+      "ActualTitle": "Kho hồ sơ thanh toán đã hủy",
+      "Wave": "3",
+      "ItemCount": 0,
+      "UniquePermission": false,
+      "Error": ""
+    }
+  ],
+  "Note": "Read-only snapshot. Does not validate browser/API access or workflow authorizations."
+}

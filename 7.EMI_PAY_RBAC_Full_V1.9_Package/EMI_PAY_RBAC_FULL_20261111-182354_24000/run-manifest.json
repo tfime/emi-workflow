@@ -1,0 +1,87 @@
+{
+  "ScriptVersion": "1.9",
+  "Mode": "Apply",
+  "SiteUrl": "https://emicomvn.sharepoint.com/sites/cecm",
+  "StartedAt": "2026-11-11T18:23:54.8342831+07:00",
+  "SiteAclSignature": "11:1073741825|12:1073741825|13:1073741825|3:1073741825,1073741829|4:1073741826|5:1073741830",
+  "Touched": [
+    {
+      "InternalName": "EMI_PAY_Commands",
+      "Guid": "e16b76dc-7686-43e9-b232-18c80e2b31d2"
+    },
+    {
+      "InternalName": "EMI_PAY_Assignments",
+      "Guid": "0ec1447a-6ff0-4071-b6c4-4d939d74d404"
+    },
+    {
+      "InternalName": "EMI_PAY_WorkItems",
+      "Guid": "e21ef6e7-ee31-466a-be3b-65ae30ca7722"
+    },
+    {
+      "InternalName": "EMI_PAY_StepReviews",
+      "Guid": "02a39987-5801-401e-8f3f-ba8caf1c1f4a"
+    },
+    {
+      "InternalName": "EMI_PAY_ActivityInternal",
+      "Guid": "b8ceb7ed-3925-4292-af35-4027f41c9d6a"
+    },
+    {
+      "InternalName": "EMI_PAY_ArchiveJobs",
+      "Guid": "4d959c76-7293-4c11-bca2-349f2e48f99a"
+    },
+    {
+      "InternalName": "EMI_PAY_DocumentIndex",
+      "Guid": "a45c74cd-1f21-454c-9fcc-6812692b801b"
+    },
+    {
+      "InternalName": "EMI_PAY_Notifications",
+      "Guid": "3d896def-8c43-412d-90e8-0cfc92140963"
+    },
+    {
+      "InternalName": "EMI_PAY_ChecklistItems",
+      "Guid": "d02c6a03-9561-4d90-b5d5-ad30a2fef88b"
+    },
+    {
+      "InternalName": "EMI_PAY_ActivityPublic",
+      "Guid": "84b57c9e-6b90-4a6b-a200-b3afb4499895"
+    },
+    {
+      "InternalName": "EMI_PAY_Requests",
+      "Guid": "12b3051d-7642-4f90-a39d-5364df561fbf"
+    },
+    {
+      "InternalName": "EMI_PAY_DocsWorking",
+      "Guid": "c2b4ef47-2c55-41e4-8b3c-c6480a27bbb2"
+    },
+    {
+      "InternalName": "EMI_PAY_DocsInternal",
+      "Guid": "84ba461f-30ea-4d32-bb56-0ab1aa9cf456"
+    },
+    {
+      "InternalName": "EMI_PAY_ArchiveCompleted",
+      "Guid": "bb7f6020-1fb6-448b-af3b-2cb36d793cc1"
+    },
+    {
+      "InternalName": "EMI_PAY_ArchiveCancelled",
+      "Guid": "e64e349b-2fca-4925-b18b-08e387163601"
+    }
+  ],
+  "Completed": [
+    "EMI_PAY_Commands",
+    "EMI_PAY_Assignments",
+    "EMI_PAY_WorkItems",
+    "EMI_PAY_StepReviews",
+    "EMI_PAY_ActivityInternal",
+    "EMI_PAY_ArchiveJobs",
+    "EMI_PAY_DocumentIndex",
+    "EMI_PAY_Notifications",
+    "EMI_PAY_ChecklistItems",
+    "EMI_PAY_ActivityPublic",
+    "EMI_PAY_Requests",
+    "EMI_PAY_DocsWorking",
+    "EMI_PAY_DocsInternal",
+    "EMI_PAY_ArchiveCompleted",
+    "EMI_PAY_ArchiveCancelled"
+  ],
+  "Verified": false
+}

@@ -1,0 +1,4 @@
+﻿"Scope","ObjectName","UniquePermissions","PrincipalId","PrincipalTitle","PrincipalLogin","PrincipalType","PermissionLevels"
+"Web","https://emicomvn.sharepoint.com/sites/cecm","True","3","cecm Chủ sở hữu","cecm Chủ sở hữu","SharePointGroup","Kiểm soát Đầy đủ"
+"Web","https://emicomvn.sharepoint.com/sites/cecm","True","4","cecm Khách truy cập","cecm Khách truy cập","SharePointGroup","Đọc"
+"Web","https://emicomvn.sharepoint.com/sites/cecm","True","5","cecm Thành viên","cecm Thành viên","SharePointGroup","Sửa"

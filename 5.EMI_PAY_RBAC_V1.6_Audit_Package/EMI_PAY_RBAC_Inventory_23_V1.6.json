@@ -1,0 +1,186 @@
+[
+  {
+    "InternalName": "EMI_PAY_PaymentTypes",
+    "ListGuid": "60bb23f6-4702-4aed-b36f-b2b20b09e74d",
+    "DisplayName": "Danh mục loại hồ sơ thanh toán",
+    "Type": "List",
+    "Wave": 0,
+    "StateAccordingToHandover": "Pilot V1.5"
+  },
+  {
+    "InternalName": "EMI_PAY_OrgUnits",
+    "ListGuid": "a95e5ccf-00cc-4c7e-b375-828a07117530",
+    "DisplayName": "Danh mục phòng ban",
+    "Type": "List",
+    "Wave": 1,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_OrgMembers",
+    "ListGuid": "58db4d66-1299-4edb-893e-50c8fe459253",
+    "DisplayName": "Nhân sự thuộc phòng ban",
+    "Type": "List",
+    "Wave": 1,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_WorkflowVersions",
+    "ListGuid": "b263446d-7cea-4fd8-bfde-b22dd2de4281",
+    "DisplayName": "Phiên bản quy trình",
+    "Type": "List",
+    "Wave": 1,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_WorkflowSteps",
+    "ListGuid": "0135b54a-f4a3-4edc-a738-a64e12feb9ad",
+    "DisplayName": "Các bước xử lý quy trình",
+    "Type": "List",
+    "Wave": 1,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_ChecklistTemplates",
+    "ListGuid": "81b94541-2e8e-4457-af28-e47f4d284477",
+    "DisplayName": "Cấu hình checklist tài liệu",
+    "Type": "List",
+    "Wave": 1,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_StepRecipients",
+    "ListGuid": "7ebac733-193d-4216-bf63-785c6a5f06a2",
+    "DisplayName": "Phòng ban tiếp nhận theo bước",
+    "Type": "List",
+    "Wave": 1,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_SystemSettings",
+    "ListGuid": "2d065a1c-c5f3-42f4-9fba-351967e430c7",
+    "DisplayName": "Cấu hình hệ thống",
+    "Type": "List",
+    "Wave": 1,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_Commands",
+    "ListGuid": "e16b76dc-7686-43e9-b232-18c80e2b31d2",
+    "DisplayName": "Yêu cầu thao tác quy trình",
+    "Type": "List",
+    "Wave": 2,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_Assignments",
+    "ListGuid": "0ec1447a-6ff0-4071-b6c4-4d939d74d404",
+    "DisplayName": "Phân công nhân sự xử lý",
+    "Type": "List",
+    "Wave": 2,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_WorkItems",
+    "ListGuid": "e21ef6e7-ee31-466a-be3b-65ae30ca7722",
+    "DisplayName": "Công việc xử lý hồ sơ",
+    "Type": "List",
+    "Wave": 2,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_StepReviews",
+    "ListGuid": "02a39987-5801-401e-8f3f-ba8caf1c1f4a",
+    "DisplayName": "Kết quả kiểm tra tài liệu",
+    "Type": "List",
+    "Wave": 2,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_ActivityInternal",
+    "ListGuid": "b8ceb7ed-3925-4292-af35-4027f41c9d6a",
+    "DisplayName": "Nhật ký xử lý nội bộ",
+    "Type": "List",
+    "Wave": 2,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_ArchiveJobs",
+    "ListGuid": "4d959c76-7293-4c11-bca2-349f2e48f99a",
+    "DisplayName": "Công việc lưu trữ hồ sơ",
+    "Type": "List",
+    "Wave": 2,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_DocumentIndex",
+    "ListGuid": "a45c74cd-1f21-454c-9fcc-6812692b801b",
+    "DisplayName": "Danh mục tài liệu đính kèm",
+    "Type": "List",
+    "Wave": 2,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_Notifications",
+    "ListGuid": "3d896def-8c43-412d-90e8-0cfc92140963",
+    "DisplayName": "Thông báo hệ thống",
+    "Type": "List",
+    "Wave": 2,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_ChecklistItems",
+    "ListGuid": "d02c6a03-9561-4d90-b5d5-ad30a2fef88b",
+    "DisplayName": "Checklist tài liệu hồ sơ",
+    "Type": "List",
+    "Wave": 2,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_ActivityPublic",
+    "ListGuid": "84b57c9e-6b90-4a6b-a200-b3afb4499895",
+    "DisplayName": "Nhật ký tiến trình hồ sơ",
+    "Type": "List",
+    "Wave": 2,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_Requests",
+    "ListGuid": "12b3051d-7642-4f90-a39d-5364df561fbf",
+    "DisplayName": "Hồ sơ thanh toán",
+    "Type": "List",
+    "Wave": 3,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_DocsWorking",
+    "ListGuid": "c2b4ef47-2c55-41e4-8b3c-c6480a27bbb2",
+    "DisplayName": "Tài liệu hồ sơ đang xử lý",
+    "Type": "Library",
+    "Wave": 3,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_DocsInternal",
+    "ListGuid": "84ba461f-30ea-4d32-bb56-0ab1aa9cf456",
+    "DisplayName": "Tài liệu nội bộ bộ phận",
+    "Type": "Library",
+    "Wave": 3,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_ArchiveCompleted",
+    "ListGuid": "bb7f6020-1fb6-448b-af3b-2cb36d793cc1",
+    "DisplayName": "Kho hồ sơ thanh toán hoàn tất",
+    "Type": "Library",
+    "Wave": 3,
+    "StateAccordingToHandover": "Pending"
+  },
+  {
+    "InternalName": "EMI_PAY_ArchiveCancelled",
+    "ListGuid": "e64e349b-2fca-4925-b18b-08e387163601",
+    "DisplayName": "Kho hồ sơ thanh toán đã hủy",
+    "Type": "Library",
+    "Wave": 3,
+    "StateAccordingToHandover": "Pending"
+  }
+]
