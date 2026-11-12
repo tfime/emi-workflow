@@ -1,0 +1,7 @@
+OUCode,OUName,HomeLECode,ManagerUPN,EntraGroupId,IsActive,Notes
+OU_HCNS,Phòng Hành chính - Nhân sự,SPV,TO_FILL,,TRUE,Phòng ban chuyên môn
+OU_TONGHOP,Phòng Tổng hợp,SPV,TO_FILL,,TRUE,Phòng ban chuyên môn
+OU_KINHTE,Phòng Kinh tế - Kế hoạch,SPV,TO_FILL,,TRUE,Phòng ban chuyên môn
+OU_KYTHUAT,Phòng Kỹ thuật - Hạ tầng,SPV,TO_FILL,,TRUE,Phòng ban chuyên môn
+OU_TCKT,Phòng Tài chính - Kế toán,SPV,TO_FILL,,TRUE,Phòng ban chuyên môn
+OU_CHAIR,CT.HĐQT,SPV,TO_FILL,,TRUE,Bước phê duyệt — không thuộc 5 phòng chuyên môn

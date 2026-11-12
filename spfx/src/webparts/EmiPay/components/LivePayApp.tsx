@@ -18,6 +18,8 @@ import {
   listPaymentTypes,
   listChecklistTemplates,
   listOrgUnits,
+  listStepRecipients,
+  IStepRecipient,
   listRecentRequests,
   getRequestByKey,
   patchRequestAfterCreate,
@@ -29,9 +31,7 @@ import {
   checklistReviewComplete,
   checklistHasFail,
   lockChecklistItems,
-  enqueueCommand,
-  waitCommand,
-  getCommand,
+  enqueueAndRun,
   uploadChecklistFile,
   uploadUncFile,
   listUncDocuments,
@@ -54,7 +54,6 @@ import { payThemeStyle } from '../theme/payTokens';
 import { DialogKind, IPayAction, PayPersona, PayView } from './types';
 import BusyDialog from './BusyDialog';
 import PayNoticeBar, { IPayNotice } from './PayNotice';
-import ConfigAdmin from './ConfigAdmin';
 import FilePreviewDrawer from './FilePreviewDrawer';
 
 initializeIcons(undefined, { disableWarnings: true });
@@ -64,6 +63,8 @@ export interface ILivePayAppProps {
   userDisplayName: string;
   userLoginName: string;
   sp: ISpRestContext;
+  /** HTTP POST URL Flow Core (When a HTTP request is received). Empty = poll Commands. */
+  orchestratorUrl?: string;
 }
 
 const badgeClass = (kind: string): string => {
@@ -90,11 +91,11 @@ function upnFromLogin(login: string): string {
 const dialogTitleVi = (kind: DialogKind): string => {
   switch (kind) {
     case 'submit':
-      return 'Gửi hồ sơ';
+      return 'Trình trưởng phòng';
     case 'forward':
-      return 'Chuyển bước tiếp theo';
+      return 'Duyệt / chuyển bước';
     case 'return':
-      return 'Trả về người tạo';
+      return 'Từ chối / trả hồ sơ';
     case 'approve':
       return 'Phê duyệt của CT.HĐQT';
     case 'reject':
@@ -115,6 +116,13 @@ const dialogTitleVi = (kind: DialogKind): string => {
 const REVIEW_STEPS = ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK'];
 const REVIEW_PERSONAS: PayPersona[] = ['bpcm2', 'bpcm3', 'tckt_check', 'tckt', 'manager', 'assignee'];
 
+/** UI chỉ chọn BPCM2/BPCM3; TCKT/CHAIR/Archive auto từ StepRecipients default. */
+const ROUTE_STEPS_UI: { key: string; label: string }[] = [
+  { key: 'BPCM2_TECH', label: 'BPCM2' },
+  { key: 'BPCM3_PRICE', label: 'BPCM3' }
+];
+const ROUTE_STEPS_AUTO = ['TCKT_CHECK', 'CHAIR_APPROVE', 'TCKT_PAY', 'SYSTEM_ARCHIVE'];
+
 const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const actorUPN = upnFromLogin(props.userLoginName);
   const [view, setView] = React.useState<PayView>('inbox');
@@ -134,8 +142,10 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const [createTitle, setCreateTitle] = React.useState('Hồ sơ thanh toán');
   const [createAmount, setCreateAmount] = React.useState('1000000');
   const [createExpl, setCreateExpl] = React.useState('');
-  const [createOu, setCreateOu] = React.useState('OU_BPCM1');
+  const [createOu, setCreateOu] = React.useState('OU_TONGHOP');
   const [orgUnits, setOrgUnits] = React.useState<IOrgUnit[]>([]);
+  const [stepRecipients, setStepRecipients] = React.useState<IStepRecipient[]>([]);
+  const [routePlan, setRoutePlan] = React.useState<Record<string, string>>({});
 
   const [requestKey, setRequestKey] = React.useState('');
   const [master, setMaster] = React.useState<IRequestMaster | undefined>(undefined);
@@ -217,6 +227,15 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       const ous = await listOrgUnits(props.sp);
       setOrgUnits(ous);
       if (ous[0]) setCreateOu(ous[0].ouCode);
+      const srs = await listStepRecipients(props.sp);
+      setStepRecipients(srs);
+      const defaults: Record<string, string> = {};
+      [...ROUTE_STEPS_UI.map((r) => r.key), ...ROUTE_STEPS_AUTO].forEach((key) => {
+        const rows = srs.filter((r) => r.stepKey === key);
+        const def = rows.filter((r) => r.isDefault)[0] || rows[0];
+        if (def) defaults[key] = def.ouCode;
+      });
+      setRoutePlan(defaults);
       await refreshInbox();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -290,21 +309,42 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         const title = createTitle || 'Hồ sơ thanh toán';
         const amount = Number(createAmount) || 0;
         const explanation = createExpl || 'Tạo từ giao diện EMI PAY';
-        const enq = await enqueueCommand(props.sp, 'CREATE_REQUEST', {
-          title,
-          createdOUCode: createOu || 'OU_BPCM1',
-          creatorUPN: actorUPN,
-          paymentTypeCode: selectedType,
-          amount,
-          explanation
+        const fullRoute: Record<string, string> = { ...routePlan };
+        ROUTE_STEPS_AUTO.forEach((key) => {
+          if (!fullRoute[key]) {
+            const rows = stepRecipients.filter((r) => r.stepKey === key);
+            const def = rows.filter((r) => r.isDefault)[0] || rows[0];
+            if (def) fullRoute[key] = def.ouCode;
+          }
         });
-        setBusyMessage('Đang tạo hồ sơ… Hệ thống đang xử lý, vui lòng chờ.');
-        await waitCommand(props.sp, enq.id, { pollMs: 1000 });
-        const cmdDone = await getCommand(props.sp, enq.id);
-        const key = cmdDone.requestKey || enq.requestKey;
-        // Bù Title/Amount/Explanation — Flow 1.0.0.9 CREATE chưa map đủ payload.
-        setBusyMessage('Đang cập nhật thông tin hồ sơ…');
-        await patchRequestAfterCreate(props.sp, key, { title, amount, explanation });
+        const missingUi = ROUTE_STEPS_UI.filter((rs) => !fullRoute[rs.key]);
+        if (missingUi.length) {
+          throw new Error(`Chọn phòng: ${missingUi.map((r) => r.label).join(', ')}`);
+        }
+        const routePlanJson = JSON.stringify(fullRoute);
+        setBusyMessage('Đang tạo hồ sơ… Gọi Orchestrator…');
+        const cmdDone = await enqueueAndRun(
+          props.sp,
+          'CREATE_REQUEST',
+          {
+            title,
+            createdOUCode: createOu || 'OU_TONGHOP',
+            creatorUPN: actorUPN,
+            paymentTypeCode: selectedType,
+            amount,
+            explanation,
+            routePlan: fullRoute
+          },
+          { orchestratorUrl: props.orchestratorUrl }
+        );
+        const key = cmdDone.requestKey;
+        setBusyMessage('Đang cập nhật thông tin hồ sơ + RoutePlan…');
+        await patchRequestAfterCreate(props.sp, key, {
+          title,
+          amount,
+          explanation,
+          routePlanJson
+        });
         const pt = paymentTypes.filter((t) => t.code === selectedType)[0];
         if (pt) {
           const tpls =
@@ -320,7 +360,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       },
       {
         waiting: 'Đang tạo hồ sơ…',
-        success: 'Đã tạo hồ sơ thành công. Tiếp tục tải tài liệu checklist rồi gửi duyệt.'
+        success:
+          'Đã tạo hồ sơ. Tải checklist rồi bấm «Trình trưởng phòng» (chưa sang BPCM2).'
       }
     );
   };
@@ -393,7 +434,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           if (!requiredChecklistReady(checklist)) {
             throw new Error('Chưa đủ tài liệu checklist bắt buộc');
           }
-          const enq = await enqueueCommand(
+          setBusyMessage('Đang gửi hồ sơ… Gọi Orchestrator…');
+          await enqueueAndRun(
             props.sp,
             'SUBMIT',
             {
@@ -401,10 +443,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               expectedStepKey: 'BPCM1_PREPARE',
               expectedReviewRound: master.reviewRound
             },
-            { requestKey: master.requestKey }
+            {
+              requestKey: master.requestKey,
+              orchestratorUrl: props.orchestratorUrl
+            }
           );
-          setBusyMessage('Đang gửi hồ sơ… Hệ thống đang kiểm tra và chuyển bước.');
-          await waitCommand(props.sp, enq.id);
           await loadDetail(master.requestKey);
           await refreshInbox();
         },
@@ -433,16 +476,16 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             if (!paymentDue) throw new Error('Vui lòng nhập thời hạn thanh toán');
             payload.paymentDueAt = `${paymentDue}T00:00:00Z`;
           }
-          const enq = await enqueueCommand(props.sp, 'DECIDE', payload, {
-            requestKey: master.requestKey,
-            stepInstanceKey: master.currentStepInstanceKey
-          });
           setBusyMessage(
             kind === 'approve'
               ? 'Đang ghi nhận phê duyệt của CT.HĐQT…'
               : 'Đang chuyển bước tiếp theo…'
           );
-          await waitCommand(props.sp, enq.id, { pollMs: 1000 });
+          await enqueueAndRun(props.sp, 'DECIDE', payload, {
+            requestKey: master.requestKey,
+            stepInstanceKey: master.currentStepInstanceKey,
+            orchestratorUrl: props.orchestratorUrl
+          });
           // Khóa checklist ngay sau khi chuyển — không cho đánh giá lại.
           await lockChecklistItems(props.sp, checklist);
           await loadDetail(master.requestKey);
@@ -460,7 +503,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       void run(
         async () => {
           if (!reason.trim()) throw new Error('Vui lòng nhập lý do');
-          const enq = await enqueueCommand(
+          setBusyMessage('Đang trả hồ sơ về người tạo…');
+          await enqueueAndRun(
             props.sp,
             'DECIDE',
             {
@@ -474,11 +518,10 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             },
             {
               requestKey: master.requestKey,
-              stepInstanceKey: master.currentStepInstanceKey
+              stepInstanceKey: master.currentStepInstanceKey,
+              orchestratorUrl: props.orchestratorUrl
             }
           );
-          setBusyMessage('Đang trả hồ sơ về người tạo…');
-          await waitCommand(props.sp, enq.id, { pollMs: 1000 });
           await lockChecklistItems(props.sp, checklist);
           await loadDetail(master.requestKey);
           await refreshInbox();
@@ -492,7 +535,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       void run(
         async () => {
           if (!uncDocs.length) throw new Error('Chưa có ủy nhiệm chi (UNC)');
-          const enq = await enqueueCommand(
+          setBusyMessage('Đang xác nhận đã thanh toán…');
+          await enqueueAndRun(
             props.sp,
             'CONFIRM_PAYMENT',
             {
@@ -503,11 +547,10 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             },
             {
               requestKey: master.requestKey,
-              stepInstanceKey: master.currentStepInstanceKey
+              stepInstanceKey: master.currentStepInstanceKey,
+              orchestratorUrl: props.orchestratorUrl
             }
           );
-          setBusyMessage('Đang xác nhận đã thanh toán…');
-          await waitCommand(props.sp, enq.id);
           await loadDetail(master.requestKey);
           await refreshInbox();
         },
@@ -705,18 +748,17 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             onChange={(e) => {
               const next = e.target.value as PayPersona;
               setPersona(next);
-              if (next === 'procadm') setView('config');
-              else if (next === 'audit') setView('audit');
-              else if (view === 'config' || view === 'audit') setView('inbox');
+              if (next === 'audit') setView('audit');
+              else if (view === 'audit') setView('inbox');
             }}
           >
             <option value="creator">R01 · BPCM1 Người tạo</option>
+            <option value="manager">R01b · Trưởng phòng phòng tạo</option>
             <option value="bpcm2">R02 · BPCM2 KT kỹ thuật</option>
             <option value="bpcm3">R03 · BPCM3 KT giá</option>
             <option value="tckt_check">R04 · TCKT Kiểm tra</option>
             <option value="chair">R05 · CT.HĐQT</option>
             <option value="tckt_pay">R06 · TCKT Thanh toán</option>
-            <option value="procadm">R08 · Quản trị quy trình</option>
             <option value="audit">R10 · Kiểm toán</option>
           </select>
           <div className={styles.avatar} aria-hidden="true">
@@ -774,15 +816,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             Hồ sơ của tôi
           </button>
 
-          <div className={styles.navGroup}>Quản trị / kiểm toán</div>
-          <button
-            type="button"
-            className={`${styles.navBtn} ${view === 'config' ? styles.navBtnActive : ''}`}
-            disabled={persona !== 'procadm'}
-            onClick={() => setView('config')}
-          >
-            Cấu hình quy trình
-          </button>
+          <div className={styles.navGroup}>Kiểm toán</div>
           <button
             type="button"
             className={`${styles.navBtn} ${view === 'audit' ? styles.navBtnActive : ''}`}
@@ -917,10 +951,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                       Đơn vị khởi tạo
                       <select value={createOu} onChange={(e) => setCreateOu(e.target.value)}>
                         {orgUnits.length === 0 && (
-                          <>
-                            <option value="OU_BPCM1">OU_BPCM1</option>
-                            <option value="OU_PBCM">OU_PBCM</option>
-                          </>
+                          <option value="OU_TONGHOP">OU_TONGHOP</option>
                         )}
                         {orgUnits.map((o) => (
                           <option key={o.id} value={o.ouCode}>
@@ -929,6 +960,36 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                         ))}
                       </select>
                     </label>
+                    <div className={`${styles.field} ${styles.fieldFull}`}>
+                      <span>Phòng nhận BPCM2 / BPCM3</span>
+                      <div className={styles.routeRow}>
+                        {ROUTE_STEPS_UI.map((rs) => {
+                          const opts = stepRecipients.filter((r) => r.stepKey === rs.key);
+                          return (
+                            <label key={rs.key} className={styles.routeChip}>
+                              <span>{rs.label}</span>
+                              <select
+                                value={routePlan[rs.key] || ''}
+                                onChange={(e) =>
+                                  setRoutePlan((prev) => ({
+                                    ...prev,
+                                    [rs.key]: e.target.value
+                                  }))
+                                }
+                              >
+                                {!opts.length && <option value="">—</option>}
+                                {opts.map((o) => (
+                                  <option key={`${rs.key}-${o.ouCode}`} value={o.ouCode}>
+                                    {o.ouCode}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          );
+                        })}
+                      </div>
+                      <p className={styles.hint}>TCKT / CT.HĐQT lấy mặc định từ cấu hình — không chọn tay.</p>
+                    </div>
                     <label className={styles.field}>
                       Số tiền đề nghị (VND)
                       <input
@@ -1435,8 +1496,6 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               Chưa chọn hồ sơ. Vào «Việc của tôi» hoặc «Tạo hồ sơ». {requestKey}
             </p>
           )}
-
-          {view === 'config' && <ConfigAdmin sp={props.sp} />}
 
           {view === 'audit' && (
             <>

@@ -18,6 +18,19 @@ export interface ICommandResult {
   stepInstanceKey: string;
 }
 
+export interface IOrchestratorApiResult extends ICommandResult {
+  commandKey: string;
+  commandType?: string;
+}
+
+function choiceState(v: unknown): CommandState {
+  if (v === null || v === undefined) return 'Pending';
+  if (typeof v === 'object' && v && 'Value' in (v as object)) {
+    return String((v as { Value?: string }).Value || 'Pending') as CommandState;
+  }
+  return String(v || 'Pending') as CommandState;
+}
+
 export async function enqueueCommand(
   ctx: ISpRestContext,
   type: CommandType,
@@ -50,14 +63,14 @@ export async function getCommand(
 ): Promise<ICommandResult> {
   const row = await getItemById<{
     Id: number;
-    State: string;
+    State?: unknown;
     ErrorMessage?: string;
     RequestKey?: string;
     StepInstanceKey?: string;
-  }>(ctx, PAY_LISTS.Commands, id);
+  }>(ctx, PAY_LISTS.Commands, id, 'Id,State,ErrorMessage,RequestKey,StepInstanceKey');
   return {
     id: row.Id,
-    state: (row.State || 'Pending') as CommandState,
+    state: choiceState(row.State),
     errorMessage: row.ErrorMessage || '',
     requestKey: row.RequestKey || '',
     stepInstanceKey: row.StepInstanceKey || ''
@@ -69,26 +82,147 @@ export async function waitCommand(
   id: number,
   opts?: { timeoutMs?: number; pollMs?: number; accept?: CommandState[] }
 ): Promise<ICommandResult> {
-  const timeoutMs = opts?.timeoutMs ?? 90000;
-  const pollMs = opts?.pollMs ?? 1200;
+  const timeoutMs = opts?.timeoutMs ?? 120000;
+  const pollMs = opts?.pollMs ?? 1500;
   const accept = opts?.accept ?? ['Succeeded'];
   const deadline = Date.now() + timeoutMs;
-  // Poll ngay lần đầu (không chờ pollMs) để phản hồi nhanh hơn.
   let delay = 0;
+  let last: ICommandResult | undefined;
   while (Date.now() < deadline) {
     if (delay > 0) {
       await new Promise<void>((resolve) => setTimeout(resolve, delay));
     }
-    const cur = await getCommand(ctx, id);
-    if (['Succeeded', 'Rejected', 'Failed'].indexOf(cur.state) >= 0) {
-      if (accept.indexOf(cur.state) < 0) {
-        throw new Error(`Command ${id} ${cur.state}: ${cur.errorMessage || '(no message)'}`);
+    last = await getCommand(ctx, id);
+    if (['Succeeded', 'Rejected', 'Failed'].indexOf(last.state) >= 0) {
+      if (accept.indexOf(last.state) < 0) {
+        throw new Error(
+          `Command ${id} ${last.state}: ${last.errorMessage || '(no message)'}`
+        );
       }
-      return cur;
+      return last;
     }
     delay = pollMs;
   }
-  throw new Error(`Timeout waiting command ${id} (Flow ON?)`);
+  throw new Error(
+    `Timeout chờ Command ${id} (State=${last?.state || '?'}` +
+      `${last?.errorMessage ? '; ' + last.errorMessage : ''}). ` +
+      `Kiểm tra Orchestrator URL / Flow ON.`
+  );
+}
+
+/** POST commandId → Flow HTTP (OAuth AAD); nhận State/requestKey đồng bộ. */
+export async function invokeOrchestratorApi(
+  orchestratorUrl: string,
+  enq: IEnqueueResult,
+  postToOrchestrator?: ISpRestContext['postToOrchestrator']
+): Promise<IOrchestratorApiResult> {
+  const url = orchestratorUrl.trim();
+  if (!url) {
+    throw new Error('Thiếu Orchestrator URL (property web part).');
+  }
+  const body = { commandId: enq.id };
+  let status: number;
+  let ok: boolean;
+  let raw: string;
+  if (postToOrchestrator) {
+    const res = await postToOrchestrator(url, body);
+    status = res.status;
+    ok = res.ok;
+    raw = res.text;
+  } else {
+    // Chỉ dùng khi Flow = Anyone (anonymous). Tenant hiện tại thường bắt OAuth → 401.
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    status = res.status;
+    ok = res.ok;
+    raw = await res.text();
+  }
+  let data: {
+    commandId?: number;
+    state?: unknown;
+    requestKey?: string;
+    stepInstanceKey?: string;
+    errorMessage?: string;
+    commandType?: string;
+    error?: { code?: string; message?: string };
+  } = {};
+  if (raw) {
+    try {
+      data = JSON.parse(raw) as typeof data;
+    } catch {
+      throw new Error(
+        `Orchestrator HTTP ${status}: phản hồi không phải JSON (${raw.slice(0, 180)})`
+      );
+    }
+  }
+  if (!ok) {
+    const detail =
+      data.errorMessage ||
+      data.error?.message ||
+      (data.error?.code ? `${data.error.code}: ${raw.slice(0, 240)}` : raw) ||
+      `HTTP ${status}`;
+    if (status === 401 || data.error?.code === 'DirectApiAuthorizationRequired') {
+      throw new Error(
+        `Orchestrator HTTP 401 (cần OAuth). Kiểm tra: (1) Flow «Who can trigger» = Any user in my tenant; ` +
+          `(2) API access «Microsoft Flow Service / User» đã Approve; (3) serve/package có AadHttpClient. Chi tiết: ${detail}`
+      );
+    }
+    throw new Error(`Orchestrator HTTP ${status}: ${detail}`);
+  }
+  const state = choiceState(data.state);
+  if (state === 'Rejected' || state === 'Failed') {
+    throw new Error(
+      `Command ${enq.id} ${state}: ${data.errorMessage || '(no message)'}`
+    );
+  }
+  if (state !== 'Succeeded') {
+    throw new Error(
+      `Orchestrator trả State=${state} cho Command ${enq.id} (kỳ vọng Succeeded).`
+    );
+  }
+  return {
+    id: enq.id,
+    commandKey: enq.commandKey,
+    state,
+    errorMessage: data.errorMessage || '',
+    requestKey: data.requestKey || enq.requestKey,
+    stepInstanceKey: data.stepInstanceKey || '',
+    commandType: data.commandType
+  };
+}
+
+/**
+ * Ghi Commands (Pending) rồi gọi API Flow đồng bộ.
+ * Không có orchestratorUrl → fallback poll waitCommand (chậm, chỉ khi chưa cấu hình).
+ */
+export async function enqueueAndRun(
+  ctx: ISpRestContext,
+  type: CommandType,
+  payload: Record<string, unknown>,
+  options?: {
+    requestKey?: string;
+    stepInstanceKey?: string;
+    title?: string;
+    orchestratorUrl?: string;
+  }
+): Promise<IOrchestratorApiResult> {
+  const enq = await enqueueCommand(ctx, type, payload, options);
+  const url = (options?.orchestratorUrl || '').trim();
+  if (url) {
+    return invokeOrchestratorApi(url, enq, ctx.postToOrchestrator);
+  }
+  const waited = await waitCommand(ctx, enq.id, { pollMs: 1000 });
+  return {
+    id: enq.id,
+    commandKey: enq.commandKey,
+    state: waited.state,
+    errorMessage: waited.errorMessage,
+    requestKey: waited.requestKey || enq.requestKey,
+    stepInstanceKey: waited.stepInstanceKey
+  };
 }
 
 export function createRequestKeyFromCommandKey(commandKey: string): string {

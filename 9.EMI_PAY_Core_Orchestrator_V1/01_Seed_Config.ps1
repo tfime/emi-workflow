@@ -68,6 +68,29 @@ function Find-ItemsByEq {
     return $bag
 }
 
+$script:CfgKeyReady = @{}
+
+function Has-CfgKeyField([string]$ListName) {
+    if ($script:CfgKeyReady.ContainsKey($ListName)) {
+        return [bool]$script:CfgKeyReady[$ListName]
+    }
+    $listId = Get-ListId $ListName
+    $f = Get-PnPField -List $listId -Identity 'CfgKey' -ErrorAction SilentlyContinue -Connection $connection
+    $script:CfgKeyReady[$ListName] = ($null -ne $f)
+    return [bool]$script:CfgKeyReady[$ListName]
+}
+
+function Values-ForWrite {
+    param([string]$ListName, [hashtable]$Values)
+    if (Has-CfgKeyField $ListName) { return $Values }
+    $copy = @{}
+    foreach ($k in $Values.Keys) {
+        if ($k -eq 'CfgKey') { continue }
+        $copy[$k] = $Values[$k]
+    }
+    return $copy
+}
+
 function Upsert-ByKey {
     param(
         [string]$ListName,
@@ -78,6 +101,7 @@ function Upsert-ByKey {
     )
     try {
         $listId = Get-ListId $ListName
+        $writeValues = Values-ForWrite -ListName $ListName -Values $Values
         $existing = Find-ItemsByEq -ListId $listId -Field $KeyField -Value $KeyValue
         if ($MatchExtra) {
             $filtered = [System.Collections.Generic.List[object]]::new()
@@ -96,21 +120,21 @@ function Upsert-ByKey {
             if ($null -eq $itemId) {
                 $status = 'WouldCreate'
                 if ($Mode -eq 'Apply') {
-                    Add-PnPListItem -List $listId -Values $Values -Connection $connection | Out-Null
+                    Add-PnPListItem -List $listId -Values $writeValues -Connection $connection | Out-Null
                     $status = 'Created'
                 }
             }
             else {
                 $status = 'WouldUpdate'
                 if ($Mode -eq 'Apply') {
-                    Set-PnPListItem -List $listId -Identity $itemId -Values $Values -Connection $connection | Out-Null
+                    Set-PnPListItem -List $listId -Identity $itemId -Values $writeValues -Connection $connection | Out-Null
                     $status = 'Updated'
                 }
             }
         }
         else {
             if ($Mode -eq 'Apply') {
-                Add-PnPListItem -List $listId -Values $Values -Connection $connection | Out-Null
+                Add-PnPListItem -List $listId -Values $writeValues -Connection $connection | Out-Null
                 $status = 'Created'
             }
         }
@@ -123,6 +147,10 @@ function Upsert-ByKey {
 
 Write-Host "Seed Mode=$Mode" -ForegroundColor Cyan
 
+function CfgKey([string[]]$Parts) {
+    return (($Parts | ForEach-Object { if ($null -eq $_) { '' } else { $_.ToString().Trim().ToLowerInvariant() } } | Where-Object { $_ }) -join '|')
+}
+
 foreach ($ou in @($seed.orgUnits)) {
     Upsert-ByKey -ListName 'EMI_PAY_OrgUnits' -KeyField 'OUCode' -KeyValue $ou.OUCode -Values @{
         Title        = $ou.OUCode
@@ -132,6 +160,7 @@ foreach ($ou in @($seed.orgUnits)) {
         ManagerUPN   = $ou.ManagerUPN
         EntraGroupId = $ou.EntraGroupId
         IsActive     = [bool]$ou.IsActive
+        CfgKey       = (CfgKey @($ou.OUCode))
     }
 }
 
@@ -142,6 +171,7 @@ foreach ($pt in @($seed.paymentTypes)) {
         ChecklistVersion = [double]$pt.ChecklistVersion
         WorkflowCode     = $pt.WorkflowCode
         IsActive         = [bool]$pt.IsActive
+        CfgKey           = (CfgKey @($pt.PaymentTypeCode))
     }
 }
 
@@ -153,6 +183,7 @@ foreach ($wv in @($seed.workflowVersions)) {
         Lifecycle    = $wv.Lifecycle
         PublishedAt  = (Get-Date).ToUniversalTime()
         EffectiveAt  = (Get-Date).ToUniversalTime()
+        CfgKey       = (CfgKey @($wv.WorkflowCode, [string]$wv.VersionNo))
     } -MatchExtra {
         param($item)
         [int]$item.FieldValues['VersionNo'] -eq [int]$wv.VersionNo
@@ -169,6 +200,7 @@ foreach ($st in @($seed.workflowSteps)) {
         StepName     = $st.StepName
         StepKind     = $st.StepKind
         IsActive     = [bool]$st.IsActive
+        CfgKey       = (CfgKey @($st.WorkflowCode, [string]$st.VersionNo, $st.StepKey))
     } -MatchExtra {
         param($item)
         ($item.FieldValues['WorkflowCode'] -eq $st.WorkflowCode) -and
@@ -184,6 +216,7 @@ foreach ($sr in @($seed.stepRecipients)) {
         StepKey      = $sr.StepKey
         OUCode       = $sr.OUCode
         IsDefault    = [bool]$sr.IsDefault
+        CfgKey       = (CfgKey @($sr.WorkflowCode, [string]$sr.VersionNo, $sr.StepKey, $sr.OUCode))
     } -MatchExtra {
         param($item)
         ($item.FieldValues['WorkflowCode'] -eq $sr.WorkflowCode) -and
@@ -202,6 +235,7 @@ foreach ($ct in @($seed.checklistTemplates)) {
         IsRequired       = [bool]$ct.IsRequired
         MinFileCount     = [double]$ct.MinFileCount
         DisplayOrder     = [double]$ct.DisplayOrder
+        CfgKey           = (CfgKey @($ct.PaymentTypeCode, [string]$ct.VersionNo, $ct.ItemCode))
     } -MatchExtra {
         param($item)
         ($item.FieldValues['PaymentTypeCode'] -eq $ct.PaymentTypeCode) -and

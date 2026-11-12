@@ -28,11 +28,16 @@ cd F:\Projects\sharepoint\emi-workflow\9.EMI_PAY_Core_Orchestrator_V1
 
 PASS mới nên Seed/Orchestrator. Báo cáo CSV: `preflight-report-*.csv`.
 
-## 1) Seed cấu hình
+## 1) Seed cấu hình (sau wipe demo)
+
+Chuẩn khóa: `EMI_PAY_SPV` + StepKey Core. BA: `SUBMIT`→`AwaitingManager`; TP `DECIDE`→BPCM2; OU từ `RoutePlanJson`.
 
 ```powershell
 cd F:\Projects\sharepoint\emi-workflow\9.EMI_PAY_Core_Orchestrator_V1
-.\01_Seed_Config.ps1 -Mode Validate
+.\00_Wipe_Demo_Data.ps1 -Mode Apply -ConfirmApply
+.\04_Add_Request_RoutePlan_AwaitingManager.ps1 -Mode Apply
+.\02_Add_OrgMembers_MemberRole.ps1 -Mode Apply
+.\03_Enforce_Cfg_UniqueKeys.ps1 -Mode Apply
 .\01_Seed_Config.ps1 -Mode Apply
 ```
 

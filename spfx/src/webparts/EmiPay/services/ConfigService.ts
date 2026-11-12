@@ -1,5 +1,5 @@
 import { PAY_LISTS, escapeOData } from './PayLists';
-import { ISpRestContext, createItem, getItems, mergeItem } from './SpRest';
+import { ISpRestContext, getItems } from './SpRest';
 
 function choiceVal(v: unknown): string {
   if (v === null || v === undefined) return '';
@@ -38,13 +38,6 @@ export interface IOrgUnit {
   isActive: boolean;
 }
 
-export interface IOrgMember {
-  id: number;
-  ouCode: string;
-  memberUPN: string;
-  isActive: boolean;
-}
-
 export interface IWorkflowVersion {
   id: number;
   workflowCode: string;
@@ -74,13 +67,8 @@ export interface IStepRecipient {
   isDefault: boolean;
 }
 
-/** Active payment types for create form. */
+/** Active payment types for create form. CFG ghi qua seed / Site Contents. */
 export async function listPaymentTypes(ctx: ISpRestContext): Promise<IPaymentType[]> {
-  const all = await listPaymentTypesAdmin(ctx);
-  return all.filter((r) => r.isActive && !!r.code);
-}
-
-export async function listPaymentTypesAdmin(ctx: ISpRestContext): Promise<IPaymentType[]> {
   const rows = await getItems<Record<string, unknown>>(
     ctx,
     PAY_LISTS.PaymentTypes,
@@ -95,36 +83,8 @@ export async function listPaymentTypesAdmin(ctx: ISpRestContext): Promise<IPayme
       workflowCode: String(r.WorkflowCode || ''),
       isActive: r.IsActive !== false
     }))
+    .filter((r) => r.isActive && !!r.code)
     .sort((a, b) => a.title.localeCompare(b.title));
-}
-
-export async function createPaymentType(
-  ctx: ISpRestContext,
-  input: {
-    code: string;
-    title: string;
-    checklistVersion: number;
-    workflowCode: string;
-  }
-): Promise<number> {
-  const code = input.code.trim();
-  if (!code) throw new Error('Thiếu mã loại hồ sơ');
-  const created = await createItem(ctx, PAY_LISTS.PaymentTypes, {
-    Title: input.title.trim() || code,
-    PaymentTypeCode: code,
-    ChecklistVersion: Number(input.checklistVersion) || 1,
-    WorkflowCode: (input.workflowCode || '').trim(),
-    IsActive: true
-  });
-  return created.Id;
-}
-
-export async function setPaymentTypeActive(
-  ctx: ISpRestContext,
-  id: number,
-  isActive: boolean
-): Promise<void> {
-  await mergeItem(ctx, PAY_LISTS.PaymentTypes, id, { IsActive: isActive });
 }
 
 export async function listChecklistTemplates(
@@ -154,55 +114,6 @@ export async function listChecklistTemplates(
     .sort((a, b) => a.displayOrder - b.displayOrder);
 }
 
-export async function listChecklistTemplatesAdmin(
-  ctx: ISpRestContext
-): Promise<IChecklistTemplate[]> {
-  const rows = await getItems<Record<string, unknown>>(
-    ctx,
-    PAY_LISTS.ChecklistTemplates,
-    `$select=Id,PaymentTypeCode,VersionNo,ItemCode,ItemLabel,IsRequired,MinFileCount,DisplayOrder&$orderby=PaymentTypeCode,VersionNo,DisplayOrder&$top=500`
-  );
-  return rows
-    .map((r) => ({
-      id: Number(r.Id),
-      paymentTypeCode: String(r.PaymentTypeCode || ''),
-      versionNo: Number(r.VersionNo || 1),
-      itemCode: String(r.ItemCode || ''),
-      itemLabel: String(r.ItemLabel || r.ItemCode || ''),
-      isRequired: !!r.IsRequired,
-      minFileCount: Number(r.MinFileCount || 0),
-      displayOrder: Number(r.DisplayOrder || 0)
-    }))
-    .filter((r) => !!r.itemCode);
-}
-
-export async function createChecklistTemplate(
-  ctx: ISpRestContext,
-  input: {
-    paymentTypeCode: string;
-    versionNo: number;
-    itemCode: string;
-    itemLabel: string;
-    isRequired: boolean;
-    minFileCount: number;
-    displayOrder: number;
-  }
-): Promise<number> {
-  const itemCode = input.itemCode.trim();
-  if (!itemCode) throw new Error('Thiếu ItemCode');
-  const created = await createItem(ctx, PAY_LISTS.ChecklistTemplates, {
-    Title: `${input.paymentTypeCode}|${itemCode}`,
-    PaymentTypeCode: input.paymentTypeCode.trim(),
-    VersionNo: Number(input.versionNo) || 1,
-    ItemCode: itemCode,
-    ItemLabel: input.itemLabel.trim() || itemCode,
-    IsRequired: !!input.isRequired,
-    MinFileCount: Number(input.minFileCount) || 0,
-    DisplayOrder: Number(input.displayOrder) || 0
-  });
-  return created.Id;
-}
-
 export async function listOrgUnits(ctx: ISpRestContext): Promise<IOrgUnit[]> {
   const rows = await getItems<Record<string, unknown>>(
     ctx,
@@ -220,56 +131,6 @@ export async function listOrgUnits(ctx: ISpRestContext): Promise<IOrgUnit[]> {
     }))
     .filter((r) => !!r.ouCode)
     .sort((a, b) => a.ouCode.localeCompare(b.ouCode));
-}
-
-export async function createOrgUnit(
-  ctx: ISpRestContext,
-  input: { ouCode: string; ouName: string; managerUPN?: string; homeLECode?: string }
-): Promise<number> {
-  const ouCode = input.ouCode.trim();
-  if (!ouCode) throw new Error('Thiếu OUCode');
-  const created = await createItem(ctx, PAY_LISTS.OrgUnits, {
-    Title: input.ouName.trim() || ouCode,
-    OUCode: ouCode,
-    OUName: input.ouName.trim() || ouCode,
-    HomeLECode: (input.homeLECode || '').trim(),
-    ManagerUPN: (input.managerUPN || '').trim(),
-    IsActive: true
-  });
-  return created.Id;
-}
-
-export async function listOrgMembers(ctx: ISpRestContext): Promise<IOrgMember[]> {
-  const rows = await getItems<Record<string, unknown>>(
-    ctx,
-    PAY_LISTS.OrgMembers,
-    `$select=Id,Title,OUCode,MemberUPN,IsActive&$top=500`
-  );
-  return rows
-    .map((r) => ({
-      id: Number(r.Id),
-      ouCode: String(r.OUCode || ''),
-      memberUPN: String(r.MemberUPN || ''),
-      isActive: r.IsActive !== false
-    }))
-    .filter((r) => !!r.ouCode && !!r.memberUPN)
-    .sort((a, b) => a.ouCode.localeCompare(b.ouCode) || a.memberUPN.localeCompare(b.memberUPN));
-}
-
-export async function createOrgMember(
-  ctx: ISpRestContext,
-  input: { ouCode: string; memberUPN: string }
-): Promise<number> {
-  const ouCode = input.ouCode.trim();
-  const memberUPN = input.memberUPN.trim();
-  if (!ouCode || !memberUPN) throw new Error('Thiếu OUCode hoặc MemberUPN');
-  const created = await createItem(ctx, PAY_LISTS.OrgMembers, {
-    Title: `${ouCode}|${memberUPN}`,
-    OUCode: ouCode,
-    MemberUPN: memberUPN,
-    IsActive: true
-  });
-  return created.Id;
 }
 
 export async function listWorkflowVersions(ctx: ISpRestContext): Promise<IWorkflowVersion[]> {
@@ -342,28 +203,4 @@ export async function listStepRecipients(ctx: ISpRestContext): Promise<IStepReci
         a.versionNo - b.versionNo ||
         a.stepKey.localeCompare(b.stepKey)
     );
-}
-
-export async function createStepRecipient(
-  ctx: ISpRestContext,
-  input: {
-    workflowCode: string;
-    versionNo: number;
-    stepKey: string;
-    ouCode: string;
-    isDefault: boolean;
-  }
-): Promise<number> {
-  const stepKey = input.stepKey.trim();
-  const ouCode = input.ouCode.trim();
-  if (!stepKey || !ouCode) throw new Error('Thiếu StepKey hoặc OUCode');
-  const created = await createItem(ctx, PAY_LISTS.StepRecipients, {
-    Title: `${input.workflowCode}|${stepKey}|${ouCode}`,
-    WorkflowCode: input.workflowCode.trim(),
-    VersionNo: Number(input.versionNo) || 1,
-    StepKey: stepKey,
-    OUCode: ouCode,
-    IsDefault: !!input.isDefault
-  });
-  return created.Id;
 }

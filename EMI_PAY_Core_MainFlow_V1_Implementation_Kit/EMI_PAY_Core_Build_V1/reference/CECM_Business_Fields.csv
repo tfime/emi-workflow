@@ -1,6 +1,7 @@
 ﻿ListInternalName,ListGuid,FieldInternalName,Type,Required
 EMI_PAY_PaymentTypes,60bb23f6-4702-4aed-b36f-b2b20b09e74d,Title,Text,True
 EMI_PAY_PaymentTypes,60bb23f6-4702-4aed-b36f-b2b20b09e74d,PaymentTypeCode,Text,False
+EMI_PAY_PaymentTypes,60bb23f6-4702-4aed-b36f-b2b20b09e74d,CfgKey,Text,False
 EMI_PAY_PaymentTypes,60bb23f6-4702-4aed-b36f-b2b20b09e74d,ChecklistVersion,Number,False
 EMI_PAY_PaymentTypes,60bb23f6-4702-4aed-b36f-b2b20b09e74d,WorkflowCode,Text,False
 EMI_PAY_PaymentTypes,60bb23f6-4702-4aed-b36f-b2b20b09e74d,IsActive,Boolean,False
@@ -10,10 +11,13 @@ EMI_PAY_OrgUnits,a95e5ccf-00cc-4c7e-b375-828a07117530,OUName,Text,False
 EMI_PAY_OrgUnits,a95e5ccf-00cc-4c7e-b375-828a07117530,HomeLECode,Text,False
 EMI_PAY_OrgUnits,a95e5ccf-00cc-4c7e-b375-828a07117530,ManagerUPN,Text,False
 EMI_PAY_OrgUnits,a95e5ccf-00cc-4c7e-b375-828a07117530,EntraGroupId,Text,False
+EMI_PAY_OrgUnits,a95e5ccf-00cc-4c7e-b375-828a07117530,CfgKey,Text,False
 EMI_PAY_OrgUnits,a95e5ccf-00cc-4c7e-b375-828a07117530,IsActive,Boolean,False
 EMI_PAY_OrgMembers,58db4d66-1299-4edb-893e-50c8fe459253,Title,Text,True
 EMI_PAY_OrgMembers,58db4d66-1299-4edb-893e-50c8fe459253,OUCode,Text,False
 EMI_PAY_OrgMembers,58db4d66-1299-4edb-893e-50c8fe459253,MemberUPN,Text,False
+EMI_PAY_OrgMembers,58db4d66-1299-4edb-893e-50c8fe459253,MemberRole,Choice,False
+EMI_PAY_OrgMembers,58db4d66-1299-4edb-893e-50c8fe459253,CfgKey,Text,False
 EMI_PAY_OrgMembers,58db4d66-1299-4edb-893e-50c8fe459253,IsActive,Boolean,False
 EMI_PAY_WorkflowVersions,b263446d-7cea-4fd8-bfde-b22dd2de4281,Title,Text,True
 EMI_PAY_WorkflowVersions,b263446d-7cea-4fd8-bfde-b22dd2de4281,WorkflowCode,Text,False

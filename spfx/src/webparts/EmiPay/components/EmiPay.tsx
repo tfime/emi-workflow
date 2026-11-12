@@ -3,7 +3,7 @@ import { SPHttpClient } from '@microsoft/sp-http';
 import styles from './EmiPay.module.scss';
 import ActionDialog from './ActionDialog';
 import LivePayApp from './LivePayApp';
-import { actionsFor, canOpenConfig, canViewInternal } from './capability';
+import { actionsFor, canViewInternal } from './capability';
 import { FEATURE_MAP } from './featureMap';
 import {
   DETAIL_STATES,
@@ -23,10 +23,15 @@ import {
 export interface IEmiPayProps {
   title: string;
   demoMode: boolean;
+  orchestratorUrl?: string;
   userDisplayName: string;
   userLoginName: string;
   webUrl: string;
   spHttpClient: SPHttpClient;
+  postToOrchestrator?: (
+    url: string,
+    body: unknown
+  ) => Promise<{ status: number; ok: boolean; text: string }>;
 }
 
 type DetailTab = 'info' | 'checklist' | 'files' | 'activity';
@@ -82,12 +87,11 @@ const DETAIL_CHIPS: { key: PayStateKey; label: string }[] = [
   { key: 'cancelled', label: 'Hủy' }
 ];
 
-const NAV: { id: PayView; label: string; adminOnly?: boolean }[] = [
+const NAV: { id: PayView; label: string }[] = [
   { id: 'inbox', label: 'Việc của tôi' },
   { id: 'create', label: 'Tạo hồ sơ' },
   { id: 'detail', label: 'Chi tiết' },
   { id: 'search', label: 'Tra cứu' },
-  { id: 'config', label: 'Cấu hình', adminOnly: true },
   { id: 'features', label: 'Bao phủ chức năng' }
 ];
 
@@ -106,7 +110,12 @@ const EmiPay: React.FC<IEmiPayProps> = (props) => {
         title={props.title}
         userDisplayName={props.userDisplayName}
         userLoginName={props.userLoginName}
-        sp={{ spHttpClient: props.spHttpClient, webUrl: props.webUrl }}
+        orchestratorUrl={props.orchestratorUrl}
+        sp={{
+          spHttpClient: props.spHttpClient,
+          webUrl: props.webUrl,
+          postToOrchestrator: props.postToOrchestrator
+        }}
       />
     );
   }
@@ -122,7 +131,6 @@ const EmiPay: React.FC<IEmiPayProps> = (props) => {
   const detail = DETAIL_STATES[detailState];
   const actions = actionsFor(persona, detailState);
   const showInternal = canViewInternal(persona);
-  const configOk = canOpenConfig(persona);
 
   const mine = INBOX_ITEMS.filter(
     (i) => i.bucket === 'mine' && i.personas.indexOf(persona) >= 0
@@ -202,11 +210,7 @@ const EmiPay: React.FC<IEmiPayProps> = (props) => {
                 value={persona}
                 aria-label="Chọn persona demo"
                 onChange={(e) => {
-                  const next = e.target.value as PayPersona;
-                  setPersona(next);
-                  if (view === 'config' && !canOpenConfig(next)) {
-                    setView('inbox');
-                  }
+                  setPersona(e.target.value as PayPersona);
                 }}
               >
                 {PERSONAS.map((p) => (
@@ -225,20 +229,16 @@ const EmiPay: React.FC<IEmiPayProps> = (props) => {
 
       <div className={styles.shell}>
         <nav className={styles.nav} aria-label="Điều hướng EMI PAY">
-          {NAV.map((n) => {
-            const disabled = !!(n.adminOnly && !configOk);
-            return (
-              <button
-                key={n.id}
-                type="button"
-                disabled={disabled}
-                className={`${styles.navBtn} ${view === n.id ? styles.navBtnActive : ''}`}
-                onClick={() => setView(n.id)}
-              >
-                {n.label}
-              </button>
-            );
-          })}
+          {NAV.map((n) => (
+            <button
+              key={n.id}
+              type="button"
+              className={`${styles.navBtn} ${view === n.id ? styles.navBtnActive : ''}`}
+              onClick={() => setView(n.id)}
+            >
+              {n.label}
+            </button>
+          ))}
           <p className={styles.navNote}>
             UI bao phủ quy tắc V1.0 · capability theo vai trò × trạng thái. ACL động + Commands thật
             làm sau.
@@ -771,53 +771,6 @@ const EmiPay: React.FC<IEmiPayProps> = (props) => {
                   </div>
                 </div>
               </section>
-            </>
-          )}
-
-          {view === 'config' && configOk && (
-            <>
-              <div className={styles.pageToolbar}>
-                <div>
-                  <h2>Cấu hình quy trình</h2>
-                  <p>§06 · PROCADM · không thay phê duyệt nghiệp vụ</p>
-                </div>
-              </div>
-              <div className={styles.configGrid}>
-                <div className={styles.configCard}>
-                  <h4>OrgUnits / Members</h4>
-                  <ul>
-                    <li>OU_PBCM · ManagerUPN</li>
-                    <li>OU_PBCM2 / OU_PBCM3</li>
-                    <li>OU_TCKT · OU_CHAIR</li>
-                  </ul>
-                </div>
-                <div className={styles.configCard}>
-                  <h4>WorkflowVersions / Steps</h4>
-                  <ul>
-                    <li>WF_SPV_PAYMENT v1 · Published</li>
-                    <li>7 bước: PBCM → … → PAYMENT_CONFIRM</li>
-                  </ul>
-                </div>
-                <div className={styles.configCard}>
-                  <h4>StepRecipients</h4>
-                  <ul>
-                    <li>Mỗi StepKey → OU nhận (default)</li>
-                    <li>Cho phép nhiều OU / bước (chọn 1 khi gửi)</li>
-                  </ul>
-                </div>
-                <div className={styles.configCard}>
-                  <h4>ChecklistTemplates</h4>
-                  <ul>
-                    <li>DOC_REQUEST · bắt buộc</li>
-                    <li>DOC_INVOICE · bắt buộc</li>
-                    <li>DOC_CONTRACT · tùy chọn</li>
-                  </ul>
-                </div>
-              </div>
-              <p className={styles.hint}>
-                Đổi cấu hình chỉ áp dụng hồ sơ gửi lần đầu sau khi publish — hồ sơ đang chạy giữ
-                phiên bản cũ (BR-10).
-              </p>
             </>
           )}
 

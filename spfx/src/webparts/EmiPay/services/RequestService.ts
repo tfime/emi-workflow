@@ -20,6 +20,7 @@ export interface IRequestMaster {
   paidAt?: string;
   archiveStatus?: string;
   isLocked?: boolean;
+  routePlanJson?: string;
 }
 
 export interface IWorkItemRow {
@@ -56,7 +57,8 @@ function mapMaster(r: Record<string, unknown>): IRequestMaster {
     paymentDueAt: r.PaymentDueAt ? String(r.PaymentDueAt) : undefined,
     paidAt: r.PaidAt ? String(r.PaidAt) : undefined,
     archiveStatus: choiceVal(r.ArchiveStatus),
-    isLocked: !!r.IsLocked
+    isLocked: !!r.IsLocked,
+    routePlanJson: r.RoutePlanJson ? String(r.RoutePlanJson) : undefined
   };
 }
 
@@ -67,7 +69,7 @@ export async function getRequestByKey(
   const rows = await getItems<Record<string, unknown>>(
     ctx,
     PAY_LISTS.Requests,
-    `$filter=RequestKey eq '${escapeOData(requestKey)}'&$top=2`
+    `$filter=RequestKey eq '${escapeOData(requestKey)}'&$select=Id,Title,RequestKey,Status,CurrentStepKey,CurrentStepInstanceKey,CurrentOUCode,ReviewRound,PaymentTypeCode,CreatorUPN,CreatedOUCode,Explanation,Amount,PaymentDueAt,PaidAt,ArchiveStatus,IsLocked,RoutePlanJson&$top=2`
   );
   if (!rows.length) return undefined;
   return mapMaster(rows[0]);
@@ -80,7 +82,12 @@ export async function getRequestByKey(
 export async function patchRequestAfterCreate(
   ctx: ISpRestContext,
   requestKey: string,
-  fields: { title?: string; amount?: number; explanation?: string }
+  fields: {
+    title?: string;
+    amount?: number;
+    explanation?: string;
+    routePlanJson?: string;
+  }
 ): Promise<void> {
   const master = await getRequestByKey(ctx, requestKey);
   if (!master) {
@@ -90,6 +97,7 @@ export async function patchRequestAfterCreate(
   if (fields.title) body.Title = fields.title;
   if (fields.explanation !== undefined) body.Explanation = fields.explanation;
   if (fields.amount !== undefined && !isNaN(fields.amount)) body.Amount = fields.amount;
+  if (fields.routePlanJson !== undefined) body.RoutePlanJson = fields.routePlanJson;
   if (!Object.keys(body).length) return;
   await mergeItem(ctx, PAY_LISTS.Requests, master.id, body);
 }

@@ -183,10 +183,10 @@ function Test-CamLRead {
     }
 }
 
-Test-CamLRead -ListName 'EMI_PAY_OrgUnits' -Field 'OUCode' -Value 'OU_PBCM'
+Test-CamLRead -ListName 'EMI_PAY_OrgUnits' -Field 'OUCode' -Value 'OU_TONGHOP'
 Test-CamLRead -ListName 'EMI_PAY_Commands' -Field 'State' -Value 'Pending'
 Test-CamLRead -ListName 'EMI_PAY_PaymentTypes' -Field 'PaymentTypeCode' -Value 'SPV_PAYMENT'
-Test-CamLRead -ListName 'EMI_PAY_WorkflowSteps' -Field 'StepKey' -Value 'PBCM'
+Test-CamLRead -ListName 'EMI_PAY_WorkflowSteps' -Field 'StepKey' -Value 'BPCM1_PREPARE'
 
 # Choice query for Commands.State (Type=Choice)
 try {

@@ -1,12 +1,12 @@
 # EMI PAY Core Flow — Phase 1
 
-Cloud Flow Solution `EMI_PAY_CORE_V1` (version **1.0.0.6** — happy path + REJECT/resubmit).
+Cloud Flow Solution `EMI_PAY_CORE_V1` (version **1.0.0.10** — HTTP API `POST {commandId}` + sync Response).
 
 ## File chính
 
 | Path | Mục đích |
 |---|---|
-| `../EMI_PAY_CORE_V1_1_0_0_6.zip` | Solution import (Unmanaged) |
+| `../EMI_PAY_CORE_V1_1_0_0_10.zip` | Solution import (Unmanaged) |
 | `EMI_PAY_CORE_Orchestrator_V1.definition.json` | Definition đầy đủ (đối chiếu / rebuild) |
 | `transitions.phase1.json` | Bảng bước + choice map Phase 1 |
 | `00_RUNBOOK_PHASE1.md` | Import, gắn connection, UAT |

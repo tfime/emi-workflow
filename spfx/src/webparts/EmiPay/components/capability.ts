@@ -137,10 +137,6 @@ export function canViewInternal(persona: PayPersona): boolean {
   );
 }
 
-export function canOpenConfig(persona: PayPersona): boolean {
-  return persona === 'procadm';
-}
-
 export function dialogTitle(kind: Exclude<DialogKind, undefined>): string {
   const titles: Record<Exclude<DialogKind, undefined>, string> = {
     submit: 'Gửi / gửi lại hồ sơ',

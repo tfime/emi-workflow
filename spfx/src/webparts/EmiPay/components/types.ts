@@ -3,7 +3,6 @@ export type PayView =
   | 'create'
   | 'detail'
   | 'search'
-  | 'config'
   | 'audit'
   | 'features';
 

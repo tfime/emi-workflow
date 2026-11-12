@@ -1,6 +1,6 @@
 # EMI PAY — SPFx UI (live CECM)
 
-Solution SPFx trong `emi-workflow`. Live mode ghi `EMI_PAY_Commands` cho Core Flow `EMI_PAY_CORE_V1` **1.0.0.9**.
+Solution SPFx trong `emi-workflow`. Live mode ghi `EMI_PAY_Commands` rồi **POST HTTP** Core Flow `EMI_PAY_CORE_V1` **1.0.0.10** (nhận Response đồng bộ).
 
 | Mục | Giá trị |
 |---|---|
@@ -12,8 +12,10 @@ Solution SPFx trong `emi-workflow`. Live mode ghi `EMI_PAY_Commands` cho Core Fl
 
 - Node **22** (`>=22.14 <23`)
 - Script: `scripts/resolve-node22.ps1`
-- Flow `EMI_PAY_CORE_Orchestrator_V1` **On** trên tenant
-- Web part property **Demo mode = Off** (Live CECM)
+- Flow `EMI_PAY_CORE_Orchestrator_V1` **1.0.0.10+** **On** (HTTP trigger)
+- Flow trigger: **Who can trigger the flow** = **Any user in my tenant** (không để Anyone nếu tenant bắt OAuth)
+- Web part: **Demo mode = Off** + dán **Orchestrator HTTP URL**
+- **API access**: package xin `Microsoft Flow Service` / `User` → SharePoint Admin → Advanced → API access → **Approve** (cần 1 lần sau deploy/package)
 
 ## Live debug trên EMI-Pay.aspx
 

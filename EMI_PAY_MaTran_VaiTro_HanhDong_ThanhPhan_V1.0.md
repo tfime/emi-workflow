@@ -238,6 +238,7 @@ Tài liệu được đối chiếu từ: (1) sơ đồ **“01. Quy trình hồ
 | `EMI_PAY_ActivityPublic` | `RequestKey`, `ActivityKey`, `StepInstanceKey`, `ReviewRound`, `EventType`, `EventTime`, `ActorUPN`, `FromState`, `ToState`, `Note`, `DetailsJson` | Timeline hồ sơ |
 | `EMI_PAY_ActivityInternal` | `RequestKey`, `ActivityKey`, `StepInstanceKey`, `OUCode`, `ReviewRound`, `EventType`, `EventTime`, `ActorUPN`, `FieldName`, `OldValue`, `NewValue`, `Reason` | Truy vết nội bộ |
 | `EMI_PAY_StepRecipients` | `WorkflowCode`, `VersionNo`, `StepKey`, `OUCode`, `IsDefault` | Định tuyến bước |
+| `EMI_PAY_OrgMembers` | `OUCode`, `MemberUPN`, `MemberRole` (`Manager` \| `Member`), `IsActive` | Thành viên phòng; `Manager` đồng bộ `OrgUnits.ManagerUPN` |
 
 **Các điểm chưa chốt schema hoặc chưa có trong bản xuất:** `PaymentDueAt`, `PaymentLECode`, `WorkflowVersionNo` trong `Requests` (đều đã từng được đề xuất, chưa được xác nhận là đã tạo); cách khóa phiên bản quy trình cho hồ sơ; giá trị Choice thực tế; định danh gateway người dùng thực; mã OU/người nhận thực tế. Riêng `DueAt` **đã tồn tại trên `WorkItems`** nhưng không mặc nhiên thay thế được thời hạn thanh toán ở hồ sơ.
 

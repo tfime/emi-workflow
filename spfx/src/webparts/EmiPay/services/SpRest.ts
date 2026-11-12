@@ -1,8 +1,22 @@
 import { SPHttpClient, SPHttpClientResponse } from '@microsoft/sp-http';
 
+export interface IOrchestratorHttpResult {
+  status: number;
+  ok: boolean;
+  text: string;
+}
+
 export interface ISpRestContext {
   spHttpClient: SPHttpClient;
   webUrl: string;
+  /**
+   * POST JSON tới Power Automate HTTP trigger kèm OAuth
+   * (AadHttpClient audience https://service.flow.microsoft.com/).
+   */
+  postToOrchestrator?: (
+    url: string,
+    body: unknown
+  ) => Promise<IOrchestratorHttpResult>;
 }
 
 async function readJson<T>(res: SPHttpClientResponse): Promise<T> {
@@ -38,9 +52,11 @@ export async function getItems<T = Record<string, unknown>>(
 export async function getItemById<T = Record<string, unknown>>(
   ctx: ISpRestContext,
   listGuid: string,
-  id: number
+  id: number,
+  select?: string
 ): Promise<T> {
-  const url = `${ctx.webUrl}/_api/web/lists(guid'${listGuid}')/items(${id})`;
+  const qs = select ? `?$select=${select}` : '';
+  const url = `${ctx.webUrl}/_api/web/lists(guid'${listGuid}')/items(${id})${qs}`;
   const res = await ctx.spHttpClient.get(url, SPHttpClient.configurations.v1, {
     headers: { Accept: 'application/json;odata=nometadata' }
   });

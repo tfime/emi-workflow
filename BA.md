@@ -13,8 +13,8 @@
 | STT | Nguyên tắc | Nội dung |
 |---:|---|---|
 | 1 | Một hồ sơ duy nhất | Mỗi yêu cầu thanh toán có một **Master Record** xuyên suốt toàn bộ quy trình. |
-| 2 | BPCM1 tạo hồ sơ | Nhân sự BPCM1 được tự tạo và gửi hồ sơ trực tiếp, **không cần Trưởng phòng duyệt**. |
-| 3 | Tiếp nhận theo phòng ban | Mỗi bước BPCM chọn một phòng tiếp nhận từ danh mục phòng ban được cấu hình. |
+| 2 | BPCM1 tạo hồ sơ | Nhân sự BPCM1 tạo/điền hồ sơ; **Trưởng phòng phòng tạo duyệt** rồi mới gửi sang BPCM2 (`AwaitingManager`). |
+| 3 | Tuyến phòng (RoutePlan) | Lúc tạo/trình duyệt, người tạo **pin sẵn** `StepKey → OUCode` từ `StepRecipients`; các bước sau dùng RoutePlan, không hỏi lại từng bước. |
 | 4 | Trưởng phòng chịu trách nhiệm | Trưởng phòng là người quyết định cuối cùng đối với kết quả xử lý của bộ phận. |
 | 5 | Phân công linh hoạt | Trưởng phòng được tự xử lý hoặc phân công **một hay nhiều nhân sự** cùng xử lý hồ sơ. |
 | 6 | Thay đổi người thực hiện | Trưởng phòng được thêm hoặc bỏ nhân sự khi bước xử lý chưa chốt. |
@@ -45,11 +45,12 @@ Một người là Trưởng phòng không mặc nhiên được quyết định
 | Tải tài liệu | Upload đề nghị thanh toán, hợp đồng, chứng từ và tài liệu theo checklist. |
 | Quản lý bản nháp | Lưu và hoàn thiện thông tin trước khi gửi. |
 | Kiểm tra tính đầy đủ | Xem tài liệu đã có, còn thiếu và điều kiện bắt buộc. |
-| Gửi hồ sơ | Tự gửi sang BPCM2, không cần Trưởng phòng BPCM1 phê duyệt. |
+| Chọn tuyến phòng | Pin RoutePlan: chọn OU cho BPCM2, BPCM3, … trong danh sách `StepRecipients`. |
+| Trình trưởng phòng | `SUBMIT` từ Draft/Returned → trạng thái `AwaitingManager` (chưa sang BPCM2). |
 | Theo dõi hồ sơ | Xem vị trí, trạng thái, lịch sử và người đang xử lý. |
 | Tiếp nhận hồ sơ trả lại | Nhận lại kèm lý do, nhận xét và tài liệu cần bổ sung. |
-| Điều chỉnh, bổ sung | Chỉnh sửa thông tin được phép, bổ sung hoặc thay phiên bản tài liệu. |
-| Gửi lại hồ sơ | Gửi lại **cùng Master Record** từ BPCM2 theo sơ đồ BPMN mới nhất. |
+| Điều chỉnh, bổ sung | Chỉnh sửa thông tin được phép, bổ sung hoặc thay phiên bản tài liệu; có thể sửa RoutePlan khi Draft/Returned. |
+| Gửi lại hồ sơ | `SUBMIT` lại → lại `AwaitingManager`; sau TP duyệt mới vào BPCM2, cùng Master Record, tăng ReviewRound. |
 | Tra cứu lịch sử | Xem các lần gửi, trả lại, điều chỉnh và kết quả trước đó. |
 
 **Giới hạn:** Sau khi hồ sơ đã gửi, nhân sự BPCM1 không được tùy ý sửa dữ liệu đang được bộ phận khác kiểm tra. Việc chỉnh sửa mở lại theo trạng thái được phép.
@@ -71,11 +72,18 @@ Một người là Trưởng phòng không mặc nhiên được quyết định
 
 **Không mặc nhiên được:** Chấp nhận để chuyển bước; trả hồ sơ về BPCM1; sửa quyết định cuối của Trưởng phòng; xóa kết quả của nhân sự khác. Người được ủy quyền hợp lệ có thể nhận thêm quyền quyết định trong phạm vi ủy quyền.
 
+### 3.3a. Trưởng phòng phòng tạo (BPCM1 / nội bộ)
+
+| Thao tác | Mô tả |
+|---|---|
+| Duyệt trình gửi | Hồ sơ `AwaitingManager` tại BPCM1: `DECIDE` PASS → mở BPCM2 theo RoutePlan; khóa chỉnh sửa creator. |
+| Từ chối trình gửi | `DECIDE` REJECT → về Draft; creator sửa rồi trình lại. |
+
 ### 3.3. Trưởng phòng BPCM2, BPCM3 và TCKT kiểm tra
 
 | Nhóm | Tính năng | Mô tả |
 |---|---|---|
-| Tiếp nhận | Nhận hồ sơ của phòng | Nhìn thấy hồ sơ chuyển tới bộ phận. |
+| Tiếp nhận | Nhận hồ sơ của phòng | Nhìn thấy hồ sơ chuyển tới bộ phận (OU = RoutePlan của bước). |
 | Tiếp nhận | Xem toàn bộ hồ sơ liên quan | Xem thông tin, tài liệu, checklist, lịch sử theo thẩm quyền. |
 | Phân công | Giao nhân sự | Chọn một hoặc nhiều nhân sự cùng kiểm tra. |
 | Phân công | Tự xử lý | Trưởng phòng có thể trực tiếp kiểm tra. |
@@ -313,7 +321,7 @@ Bộ lệnh lõi đang đề xuất `CREATE_REQUEST`, `SUBMIT`, `DECIDE`, `CONFI
 
 | Vấn đề | Cách hiểu đang được tổng hợp | Trạng thái |
 |---|---|---|
-| Vai trò Trưởng phòng/Nhân sự | Trưởng phòng nhận việc, đặt hạn, phân công nhiều người, kiểm tra và chốt; nhân sự chỉ xử lý phần được giao. BPCM1 tự gửi không cần duyệt nội bộ. | Đề nghị xác nhận |
+| Vai trò Trưởng phòng/Nhân sự | Trưởng phòng nhận việc, đặt hạn, phân công nhiều người, kiểm tra và chốt; nhân sự chỉ xử lý phần được giao. **BPCM1: nhân viên trình → TP phòng tạo duyệt rồi mới ra BPCM2; RoutePlan pin lúc tạo.** | **Đã chốt 12/11/2026** |
 | Nhánh trả hồ sơ | Theo BPMN mới nhất: tất cả bước không đạt/không duyệt trả về BPCM1 và gửi lại từ BPCM2, khác quy tắc cũ về bước liền trước. | **Cần duyệt thống nhất** |
 | Thanh toán ngoài hệ thống | Sau CT.HĐQT duyệt, TCKT thanh toán ngoài hệ thống, tải UNC, xác nhận. Không có bước Giám đốc SPV ký chi trong app V1.0. | Đề nghị xác nhận |
 | Phân công, ủy quyền | Nhiều người có thể kiểm tra; chỉ Trưởng phòng hoặc người ủy quyền chốt. Chi tiết thời hạn/phạm vi ủy quyền chưa đặc tả. | Cần làm rõ chi tiết |
@@ -339,11 +347,12 @@ Bộ lệnh lõi đang đề xuất `CREATE_REQUEST`, `SUBMIT`, `DECIDE`, `CONFI
 
 EMI PAY là **hệ thống quản lý công việc và hồ sơ thanh toán đa vai trò**, không đơn thuần là chuỗi phê duyệt tuần tự. Thiết kế đặc biệt chú trọng:
 
-1. **Nhân sự BPCM1** tự lập, gửi, theo dõi, điều chỉnh và gửi lại hồ sơ.
-2. **Nhân sự kiểm tra** thực hiện phần việc và checklist được giao.
-3. **Trưởng phòng/người được ủy quyền** tiếp nhận, giao việc cho nhiều người, quản lý thời hạn, xem xét và chốt kết quả của bộ phận.
-4. **CT.HĐQT** quyết định phê duyệt thanh toán.
-5. **TCKT thanh toán** thực hiện thanh toán ngoài hệ thống, tải UNC và xác nhận.
-6. **Hệ thống** quản lý một Master Record, nhật ký, quyền truy cập và vòng đời lưu trữ.
+1. **Nhân sự BPCM1** lập hồ sơ, pin RoutePlan, trình Trưởng phòng phòng tạo; theo dõi, điều chỉnh và trình lại khi bị trả.
+2. **Trưởng phòng phòng tạo** duyệt/từ chối trước khi hồ sơ vào BPCM2.
+3. **Nhân sự kiểm tra** thực hiện phần việc và checklist được giao.
+4. **Trưởng phòng/người được ủy quyền** (BPCM2+) tiếp nhận, giao việc, hạn, chốt kết quả bộ phận.
+5. **CT.HĐQT** quyết định phê duyệt thanh toán.
+6. **TCKT thanh toán** thực hiện thanh toán ngoài hệ thống, tải UNC và xác nhận.
+7. **Hệ thống** quản lý một Master Record, nhật ký, quyền truy cập và vòng đời lưu trữ.
 
 **Đề nghị rà soát và chốt các điểm ở mục 7 trước khi coi tài liệu là đặc tả nghiệp vụ cuối cùng.**

@@ -3,6 +3,8 @@ declare interface IEmiPayWebPartStrings {
   BasicGroupName: string;
   TitleFieldLabel: string;
   DemoModeFieldLabel: string;
+  OrchestratorUrlFieldLabel: string;
+  OrchestratorUrlFieldDescription: string;
 }
 
 declare module 'EmiPayWebPartStrings' {

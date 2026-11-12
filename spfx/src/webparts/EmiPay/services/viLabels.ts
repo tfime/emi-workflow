@@ -4,7 +4,9 @@ export function statusVi(status: string): string {
   const map: Record<string, string> = {
     Draft: 'Nháp',
     InReview: 'Đang xử lý',
+    AwaitingManager: 'Chờ trưởng phòng duyệt gửi',
     AwaitManager: 'Chờ phê duyệt',
+    WaitingAcceptance: 'Chờ tiếp nhận',
     Returned: 'Đã trả về',
     PendingPayment: 'Chờ thanh toán',
     Archiving: 'Chờ lưu trữ',

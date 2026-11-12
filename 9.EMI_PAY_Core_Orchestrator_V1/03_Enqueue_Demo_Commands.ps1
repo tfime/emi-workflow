@@ -56,7 +56,7 @@ $requestKey = New-Key 'REQ'
 
 $createPayload = @{
     paymentTypeCode = 'SPV_PAYMENT'
-    createdOUCode   = 'OU_PBCM'
+    createdOUCode   = 'OU_TONGHOP'
     creatorUPN      = $CreatorUPN
     amount          = 1500000
     explanation     = "Demo $Scenario $runId"

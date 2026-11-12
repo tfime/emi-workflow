@@ -31,6 +31,12 @@
         "id": "e4717848-ba1b-4446-bae6-3ad20f70aaa3",
         "version": "0.1.0.0"
       }
+    ],
+    "webApiPermissionRequests": [
+      {
+        "resource": "Microsoft Flow Service",
+        "scope": "User"
+      }
     ]
   },
   "paths": {

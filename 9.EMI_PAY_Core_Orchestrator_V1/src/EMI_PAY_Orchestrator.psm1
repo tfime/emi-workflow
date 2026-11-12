@@ -167,12 +167,106 @@ function Get-EmiReturnFromStepKey([string]$RequestKey) {
 }
 
 function Get-EmiStepDef([string]$StepKey) {
+    $fromList = @(Get-EmiItemsEq -ListId (Get-EmiListId 'EMI_PAY_WorkflowSteps') -Field 'StepKey' -Value $StepKey -RowLimit 20)
+    $hit = @($fromList | Where-Object {
+            $null -ne $_ -and
+            [string]$_.FieldValues['WorkflowCode'] -eq [string]$script:SeedMeta.workflowCode -and
+            [bool]$_.FieldValues['IsActive']
+        })[0]
+    if ($hit) {
+        return [pscustomobject]@{
+            StepKey   = [string]$hit.FieldValues['StepKey']
+            StepOrder = [int]$hit.FieldValues['StepOrder']
+            StepName  = [string]$hit.FieldValues['StepName']
+            StepKind  = [string]$hit.FieldValues['StepKind']
+            IsActive  = [bool]$hit.FieldValues['IsActive']
+        }
+    }
     return @($script:SeedMeta.workflowSteps | Where-Object { $_.StepKey -eq $StepKey })[0]
 }
 
-function Get-EmiDefaultOu([string]$StepKey) {
+function Get-EmiRoutePlan($RequestItem) {
+    $raw = ''
+    if ($RequestItem -and $RequestItem.FieldValues -and $RequestItem.FieldValues.ContainsKey('RoutePlanJson')) {
+        $raw = [string]$RequestItem.FieldValues['RoutePlanJson']
+    }
+    if ([string]::IsNullOrWhiteSpace($raw)) { return [pscustomobject]@{} }
+    try { return ($raw | ConvertFrom-Json) } catch { return [pscustomobject]@{} }
+}
+
+function ConvertTo-EmiRoutePlanJson($RoutePlan) {
+    if ($null -eq $RoutePlan) { return '{}' }
+    if ($RoutePlan -is [string]) { return $RoutePlan }
+    return ($RoutePlan | ConvertTo-Json -Compress)
+}
+
+function Get-EmiRouteOu {
+    param($RoutePlan, [string]$StepKey, [string]$Fallback = '')
+    if ($RoutePlan -and $RoutePlan.PSObject.Properties.Name -contains $StepKey) {
+        $v = [string]$RoutePlan.$StepKey
+        if (-not [string]::IsNullOrWhiteSpace($v)) { return $v.Trim() }
+    }
+    return $Fallback
+}
+
+function Resolve-EmiRoutePlan {
+    param($Payload, $ExistingRaw = '')
+    $plan = @{}
+    if (-not [string]::IsNullOrWhiteSpace($ExistingRaw)) {
+        try {
+            $obj = $ExistingRaw | ConvertFrom-Json
+            foreach ($p in $obj.PSObject.Properties) { $plan[$p.Name] = [string]$p.Value }
+        } catch {}
+    }
+    $incoming = $null
+    if ($Payload.routePlan) { $incoming = $Payload.routePlan }
+    elseif ($Payload.RoutePlan) { $incoming = $Payload.RoutePlan }
+    if ($incoming) {
+        if ($incoming -is [string]) {
+            try { $incoming = $incoming | ConvertFrom-Json } catch { $incoming = $null }
+        }
+        if ($incoming) {
+            foreach ($p in $incoming.PSObject.Properties) {
+                if (-not [string]::IsNullOrWhiteSpace([string]$p.Value)) {
+                    $plan[$p.Name] = [string]$p.Value
+                }
+            }
+        }
+    }
+    # Fill missing steps from StepRecipients defaults
+    $required = @('BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK', 'CHAIR_APPROVE', 'TCKT_PAY', 'SYSTEM_ARCHIVE')
+    foreach ($sk in $required) {
+        if (-not $plan.ContainsKey($sk) -or [string]::IsNullOrWhiteSpace($plan[$sk])) {
+            $plan[$sk] = Get-EmiDefaultOu -StepKey $sk
+        }
+    }
+    return [pscustomobject]$plan
+}
+
+function Get-EmiDefaultOu {
+    param(
+        [string]$StepKey,
+        [string]$PreferredOU = ''
+    )
+    if (-not [string]::IsNullOrWhiteSpace($PreferredOU)) {
+        return $PreferredOU.Trim()
+    }
+    $rows = @(Get-EmiItemsEq -ListId (Get-EmiListId 'EMI_PAY_StepRecipients') -Field 'StepKey' -Value $StepKey -RowLimit 50)
+    $defaults = @($rows | Where-Object {
+            $null -ne $_ -and (
+                $_.FieldValues['IsDefault'] -eq $true -or
+                $_.FieldValues['IsDefault'] -eq 1 -or
+                [string]$_.FieldValues['IsDefault'] -eq '1'
+            )
+        })
+    if ($defaults.Count -gt 0) {
+        return [string]$defaults[0].FieldValues['OUCode']
+    }
+    if ($rows.Count -gt 0) {
+        return [string]$rows[0].FieldValues['OUCode']
+    }
     $sr = @($script:SeedMeta.stepRecipients | Where-Object { $_.StepKey -eq $StepKey -and $_.IsDefault })[0]
-    if (-not $sr) { throw "No default StepRecipient for $StepKey" }
+    if (-not $sr) { throw "No StepRecipient for $StepKey (list + seed)" }
     return [string]$sr.OUCode
 }
 
@@ -229,10 +323,12 @@ function New-EmiWorkItem {
         [string]$RequestKey,
         [int]$ReviewRound,
         [string]$StepKey,
-        [string]$State = 'WaitingAcceptance'
+        [string]$State = 'WaitingAcceptance',
+        [string]$ResponsibleOUCode = ''
     )
     $step = Get-EmiStepDef $StepKey
-    $ou = Get-EmiDefaultOu $StepKey
+    if (-not $step) { throw "Unknown StepKey $StepKey" }
+    $ou = Get-EmiDefaultOu -StepKey $StepKey -PreferredOU $ResponsibleOUCode
     $org = Get-EmiOrgUnit $ou
     $manager = if ($org) { [string]$org.FieldValues['ManagerUPN'] } else { '' }
     $stepKind = [string]$step.StepKind
@@ -290,7 +386,10 @@ function Invoke-EmiCreateRequest {
         if ($dup) { throw "RequestKey already exists: $existingReqKey" }
     }
     $paymentTypeCode = if ($Payload.paymentTypeCode) { [string]$Payload.paymentTypeCode } else { [string]$script:SeedMeta.paymentTypeCode }
-    $createdOU = if ($Payload.createdOUCode) { [string]$Payload.createdOUCode } else { 'OU_PBCM' }
+    $createdOU = if ($Payload.createdOUCode) { [string]$Payload.createdOUCode } else { '' }
+    if ([string]::IsNullOrWhiteSpace($createdOU)) {
+        throw 'CREATE_REQUEST requires payload.createdOUCode (BPCM1: any active OrgUnit)'
+    }
     $creator = if ($Payload.creatorUPN) { [string]$Payload.creatorUPN } else { 'demo@local' }
     $amount = if ($null -ne $Payload.amount) { [double]$Payload.amount } else { 0 }
     $explanation = if ($Payload.explanation) { [string]$Payload.explanation } else { '' }
@@ -299,8 +398,10 @@ function Invoke-EmiCreateRequest {
     $pt = @($script:SeedMeta.paymentTypes | Where-Object { $_.PaymentTypeCode -eq $paymentTypeCode })[0]
     if (-not $pt) { throw "Unknown PaymentTypeCode $paymentTypeCode" }
 
-    $wi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound 1 -StepKey 'PBCM' -State 'InReview'
-    Add-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Values @{
+    $routePlan = Resolve-EmiRoutePlan -Payload $Payload
+    $routeJson = ConvertTo-EmiRoutePlanJson $routePlan
+    $wi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound 1 -StepKey 'BPCM1_PREPARE' -State 'InReview' -ResponsibleOUCode $createdOU
+    $reqValues = @{
         Title                   = $requestCode
         RequestKey              = $requestKey
         RequestCode             = $requestCode
@@ -313,13 +414,22 @@ function Invoke-EmiCreateRequest {
         WorkflowVersion         = 0
         ChecklistVersion        = [double]$pt.ChecklistVersion
         ReviewRound             = 1
-        CurrentStepKey          = 'PBCM'
+        CurrentStepKey          = 'BPCM1_PREPARE'
         CurrentStepInstanceKey  = $wi.StepInstanceKey
         CurrentOUCode           = $createdOU
         Status                  = 'Draft'
         IsLocked                = $false
         ArchiveStatus           = 'NotStarted'
-    } -Connection $script:Connection | Out-Null
+        RoutePlanJson           = $routeJson
+    }
+    try {
+        Add-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Values $reqValues -Connection $script:Connection | Out-Null
+    } catch {
+        if ($_.Exception.Message -match 'RoutePlanJson') {
+            $reqValues.Remove('RoutePlanJson')
+            Add-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Values $reqValues -Connection $script:Connection | Out-Null
+        } else { throw }
+    }
 
     $templates = @($script:SeedMeta.checklistTemplates | Where-Object {
             $_.PaymentTypeCode -eq $paymentTypeCode -and [int]$_.VersionNo -eq [int]$pt.ChecklistVersion
@@ -393,18 +503,20 @@ function Invoke-EmiSubmit {
 
     $round = [int]$req.FieldValues['ReviewRound']
     $from = $status
-    $targetStep = 'PBCM2'
     if ($status -eq 'Returned') {
-        $resume = Get-EmiReturnFromStepKey $requestKey
-        if (-not $resume) { throw 'Returned request missing returnFromStepKey' }
-        $targetStep = $resume
         $round = $round + 1
     }
 
-    # Close open PBCM work item if any
-    $openPbcm = Get-EmiOpenWorkItem -RequestKey $requestKey -StepKey 'PBCM'
-    if ($openPbcm) {
-        Close-EmiWorkItem -WorkItem $openPbcm -State 'Completed' -Decision 'Accepted' -Note 'SUBMIT'
+    $existingRoute = ''
+    if ($req.FieldValues.ContainsKey('RoutePlanJson')) {
+        $existingRoute = [string]$req.FieldValues['RoutePlanJson']
+    }
+    $routePlan = Resolve-EmiRoutePlan -Payload $Payload -ExistingRaw $existingRoute
+    $routeJson = ConvertTo-EmiRoutePlanJson $routePlan
+
+    $openPrep = Get-EmiOpenWorkItem -RequestKey $requestKey -StepKey 'BPCM1_PREPARE'
+    if ($openPrep) {
+        Close-EmiWorkItem -WorkItem $openPrep -State 'Completed' -Decision 'Accepted' -Note 'SUBMIT→AwaitingManager'
     }
 
     $wfVersion = [int]$req.FieldValues['WorkflowVersion']
@@ -412,36 +524,146 @@ function Invoke-EmiSubmit {
         $wfVersion = [int]$script:SeedMeta.workflowVersion
     }
 
-    $wi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound $round -StepKey $targetStep
-    $ou = Get-EmiDefaultOu $targetStep
+    $createdOU = [string]$req.FieldValues['CreatedOUCode']
+    $wi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound $round -StepKey 'BPCM1_PREPARE' -State 'InReview' -ResponsibleOUCode $createdOU
     $firstSubmitted = $req.FieldValues['FirstSubmittedAt']
     if (-not $firstSubmitted) { $firstSubmitted = (Get-Date).ToUniversalTime() }
-    Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Identity (Get-EmiItemId $req) -Values @{
-        Status                 = 'WaitingAcceptance'
-        CurrentStepKey         = $targetStep
+
+    $patch = @{
+        Status                 = 'AwaitingManager'
+        CurrentStepKey         = 'BPCM1_PREPARE'
         CurrentStepInstanceKey = $wi.StepInstanceKey
-        CurrentOUCode          = $ou
+        CurrentOUCode          = $createdOU
         WorkflowVersion        = [double]$wfVersion
         ReviewRound            = [double]$round
         IsLocked               = $true
         FirstSubmittedAt       = $firstSubmitted
-    } -Connection $script:Connection | Out-Null
-
-    # Lock checklist
-    $cis = Get-EmiItemsEq -ListId (Get-EmiListId 'EMI_PAY_ChecklistItems') -Field 'RequestKey' -Value $requestKey -RowLimit 200
-    foreach ($ci in $cis) {
-        if ($null -eq $ci) { continue }
-        Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_ChecklistItems') -Identity (Get-EmiItemId $ci) -Values @{ IsLocked = $true } -Connection $script:Connection | Out-Null
+        RoutePlanJson          = $routeJson
+    }
+    try {
+        Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Identity (Get-EmiItemId $req) -Values $patch -Connection $script:Connection | Out-Null
+    } catch {
+        if ($_.Exception.Message -match 'RoutePlanJson|AwaitingManager') {
+            $patch.Remove('RoutePlanJson')
+            Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Identity (Get-EmiItemId $req) -Values $patch -Connection $script:Connection | Out-Null
+        } else { throw }
     }
 
     Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Commands') -Identity (Get-EmiItemId $Command) -Values @{ StepInstanceKey = $wi.StepInstanceKey } -Connection $script:Connection | Out-Null
-    Add-EmiActivity -ListName 'EMI_PAY_ActivityPublic' -RequestKey $requestKey -EventType 'SUBMITTED' `
-        -ActorUPN $actor -FromState $from -ToState 'WaitingAcceptance' -Note "→ $targetStep" `
-        -Details @{ targetStep = $targetStep } -StepInstanceKey $wi.StepInstanceKey -ReviewRound $round
-    Add-EmiActivity -ListName 'EMI_PAY_ActivityInternal' -RequestKey $requestKey -EventType 'SUBMITTED' `
-        -ActorUPN $actor -FromState $from -ToState 'WaitingAcceptance' -Note "→ $targetStep" `
-        -Details @{ targetStep = $targetStep; commandKey = [string]$Command.FieldValues['CommandKey'] } `
+    Add-EmiActivity -ListName 'EMI_PAY_ActivityPublic' -RequestKey $requestKey -EventType 'PRESENTED' `
+        -ActorUPN $actor -FromState $from -ToState 'AwaitingManager' -Note 'Trình trưởng phòng phòng tạo' `
+        -Details @{ routePlan = $routePlan } -StepInstanceKey $wi.StepInstanceKey -ReviewRound $round
+    Add-EmiActivity -ListName 'EMI_PAY_ActivityInternal' -RequestKey $requestKey -EventType 'PRESENTED' `
+        -ActorUPN $actor -FromState $from -ToState 'AwaitingManager' -Note 'SUBMIT→AwaitingManager' `
+        -Details @{ commandKey = [string]$Command.FieldValues['CommandKey']; routePlan = $routePlan } `
         -StepInstanceKey $wi.StepInstanceKey -ReviewRound $round
+}
+
+function Invoke-EmiDecide {
+    param($Command, $Payload)
+    $requestKey = [string]$Command.FieldValues['RequestKey']
+    $req = Get-EmiRequest $requestKey
+    if (-not $req) { throw "Request not found: $requestKey" }
+    $decision = [string]$Payload.decision
+    if ([string]::IsNullOrWhiteSpace($decision)) { $decision = 'PASS' }
+    $decision = $decision.ToUpperInvariant()
+    $status = [string]$req.FieldValues['Status']
+    $currentStep = [string]$req.FieldValues['CurrentStepKey']
+    $actor = if ($Payload.actorUPN) { [string]$Payload.actorUPN } else { 'demo@local' }
+    $round = [int]$req.FieldValues['ReviewRound']
+    $routePlan = Get-EmiRoutePlan $req
+    $note = if ($Payload.decisionNote) { [string]$Payload.decisionNote } else { "DECIDE $decision" }
+
+    # --- TP phòng tạo: AwaitingManager ---
+    if ($status -eq 'AwaitingManager' -and $currentStep -eq 'BPCM1_PREPARE') {
+        $createdOU = [string]$req.FieldValues['CreatedOUCode']
+        if (-not (Test-EmiActorInOu -ActorUPN $actor -OUCode $createdOU)) {
+            throw "Actor $actor not authorized as manager for OU $createdOU"
+        }
+        $wi = Get-EmiOpenWorkItem -RequestKey $requestKey -StepKey 'BPCM1_PREPARE'
+        if ($wi) {
+            Close-EmiWorkItem -WorkItem $wi -State $(if ($decision -eq 'PASS') { 'Completed' } else { 'Returned' }) `
+                -Decision $(if ($decision -eq 'PASS') { 'Approved' } else { 'Returned' }) -Note $note
+        }
+        if ($decision -eq 'PASS') {
+            $nextKey = 'BPCM2_TECH'
+            $nextOu = Get-EmiRouteOu -RoutePlan $routePlan -StepKey $nextKey -Fallback (Get-EmiDefaultOu $nextKey)
+            $newWi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound $round -StepKey $nextKey -ResponsibleOUCode $nextOu
+            Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Identity (Get-EmiItemId $req) -Values @{
+                Status                 = 'InReview'
+                CurrentStepKey         = $nextKey
+                CurrentStepInstanceKey = $newWi.StepInstanceKey
+                CurrentOUCode          = $nextOu
+                IsLocked               = $true
+            } -Connection $script:Connection | Out-Null
+            $cis = Get-EmiItemsEq -ListId (Get-EmiListId 'EMI_PAY_ChecklistItems') -Field 'RequestKey' -Value $requestKey -RowLimit 200
+            foreach ($ci in $cis) {
+                if ($null -eq $ci) { continue }
+                Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_ChecklistItems') -Identity (Get-EmiItemId $ci) -Values @{ IsLocked = $true } -Connection $script:Connection | Out-Null
+            }
+            Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Commands') -Identity (Get-EmiItemId $Command) -Values @{ StepInstanceKey = $newWi.StepInstanceKey } -Connection $script:Connection | Out-Null
+            Add-EmiActivity -ListName 'EMI_PAY_ActivityPublic' -RequestKey $requestKey -EventType 'MANAGER_APPROVED' `
+                -ActorUPN $actor -FromState 'AwaitingManager' -ToState $nextKey -Note $note `
+                -Details @{ nextOu = $nextOu } -StepInstanceKey $newWi.StepInstanceKey -ReviewRound $round
+            return
+        }
+        # REJECT → Draft
+        $adjustWi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound $round -StepKey 'BPCM1_PREPARE' -State 'InReview' -ResponsibleOUCode $createdOU
+        Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Identity (Get-EmiItemId $req) -Values @{
+            Status                 = 'Draft'
+            CurrentStepKey         = 'BPCM1_PREPARE'
+            CurrentStepInstanceKey = $adjustWi.StepInstanceKey
+            CurrentOUCode          = $createdOU
+            IsLocked               = $false
+        } -Connection $script:Connection | Out-Null
+        Add-EmiActivity -ListName 'EMI_PAY_ActivityPublic' -RequestKey $requestKey -EventType 'MANAGER_REJECTED' `
+            -ActorUPN $actor -FromState 'AwaitingManager' -ToState 'Draft' -Note $note `
+            -Details @{ reason = $note } -StepInstanceKey $adjustWi.StepInstanceKey -ReviewRound $round
+        return
+    }
+
+    # --- DECIDE PASS/REJECT ở các bước kiểm tra ---
+    if ($currentStep -in @('BPCM1_PREPARE', 'SYSTEM_ARCHIVE')) {
+        throw "DECIDE not allowed at $currentStep (Status=$status)"
+    }
+    $ou = [string]$req.FieldValues['CurrentOUCode']
+    if (-not (Test-EmiActorInOu -ActorUPN $actor -OUCode $ou)) {
+        throw "Actor $actor not authorized for OU $ou"
+    }
+    if ($decision -eq 'REJECT' -or $decision -eq 'RETURN') {
+        Invoke-EmiReturnStep -Command $Command -Payload ([pscustomobject]@{
+                actorUPN = $actor
+                reason   = $note
+            })
+        return
+    }
+    # PASS → next from RoutePlan
+    $wi = Get-EmiOpenWorkItem -RequestKey $requestKey -StepKey $currentStep
+    if (-not $wi) { throw "No open WorkItem for $currentStep" }
+    $step = Get-EmiStepDef $currentStep
+    $nextNo = [int]$step.StepOrder + 1
+    $next = @($script:SeedMeta.workflowSteps | Where-Object { [int]$_.StepOrder -eq $nextNo })[0]
+    if (-not $next) { throw "No next step after $currentStep" }
+    Close-EmiWorkItem -WorkItem $wi -State 'Completed' -Decision $(if ($currentStep -eq 'CHAIR_APPROVE') { 'Approved' } else { 'Accepted' }) -Note $note
+    $nextOu = Get-EmiRouteOu -RoutePlan $routePlan -StepKey $next.StepKey -Fallback (Get-EmiDefaultOu $next.StepKey)
+    $newWi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound $round -StepKey $next.StepKey -ResponsibleOUCode $nextOu
+    $newStatus = if ($next.StepKind -eq 'Approval') { 'AwaitManager' }
+        elseif ($next.StepKey -eq 'TCKT_PAY') { 'PendingPayment' }
+        else { 'InReview' }
+    $masterPatch = @{
+        Status                 = $newStatus
+        CurrentStepKey         = $next.StepKey
+        CurrentStepInstanceKey = $newWi.StepInstanceKey
+        CurrentOUCode          = $nextOu
+    }
+    if ($currentStep -eq 'CHAIR_APPROVE' -and $Payload.paymentDueAt) {
+        $masterPatch['PaymentDueAt'] = [datetime]$Payload.paymentDueAt
+    }
+    Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Identity (Get-EmiItemId $req) -Values $masterPatch -Connection $script:Connection | Out-Null
+    Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Commands') -Identity (Get-EmiItemId $Command) -Values @{ StepInstanceKey = $newWi.StepInstanceKey } -Connection $script:Connection | Out-Null
+    Add-EmiActivity -ListName 'EMI_PAY_ActivityPublic' -RequestKey $requestKey -EventType 'STEP_COMPLETED' `
+        -ActorUPN $actor -FromState $currentStep -ToState $next.StepKey -Note $note `
+        -Details @{ nextOu = $nextOu } -StepInstanceKey $newWi.StepInstanceKey -ReviewRound $round
 }
 
 function Invoke-EmiCompleteStep {
@@ -450,7 +672,7 @@ function Invoke-EmiCompleteStep {
     $req = Get-EmiRequest $requestKey
     if (-not $req) { throw "Request not found: $requestKey" }
     $currentStep = [string]$req.FieldValues['CurrentStepKey']
-    if ($currentStep -in @('PBCM', 'PAYMENT_CONFIRM')) {
+    if ($currentStep -in @('BPCM1_PREPARE', 'SYSTEM_ARCHIVE')) {
         throw "COMPLETE_STEP not allowed at $currentStep"
     }
     $actor = if ($Payload.actorUPN) { [string]$Payload.actorUPN } else { 'demo@local' }
@@ -464,30 +686,36 @@ function Invoke-EmiCompleteStep {
     $step = Get-EmiStepDef $currentStep
     $nextNo = [int]$step.StepOrder + 1
     $next = @($script:SeedMeta.workflowSteps | Where-Object { [int]$_.StepOrder -eq $nextNo })[0]
+    if (-not $next) {
+        $allSteps = @(Get-EmiItemsEq -ListId (Get-EmiListId 'EMI_PAY_WorkflowSteps') -Field 'WorkflowCode' -Value ([string]$script:SeedMeta.workflowCode) -RowLimit 50)
+        $nextHit = @($allSteps | Where-Object { [int]$_.FieldValues['StepOrder'] -eq $nextNo -and [bool]$_.FieldValues['IsActive'] })[0]
+        if ($nextHit) {
+            $next = [pscustomobject]@{
+                StepKey   = [string]$nextHit.FieldValues['StepKey']
+                StepOrder = [int]$nextHit.FieldValues['StepOrder']
+                StepKind  = [string]$nextHit.FieldValues['StepKind']
+            }
+        }
+    }
     $note = if ($Payload.decisionNote) { [string]$Payload.decisionNote } else { 'COMPLETE_STEP' }
     $round = [int]$req.FieldValues['ReviewRound']
-    Close-EmiWorkItem -WorkItem $wi -State 'Completed' -Decision $(if ($currentStep -eq 'CHAIR_APPROVAL') { 'Approved' } else { 'Accepted' }) -Note $note
-
-    if ($currentStep -eq 'TCKT_UNC') {
-        $newWi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound $round -StepKey 'PAYMENT_CONFIRM'
-        $newOu = Get-EmiDefaultOu 'PAYMENT_CONFIRM'
-        Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Identity (Get-EmiItemId $req) -Values @{
-            Status                 = 'PendingPayment'
-            CurrentStepKey         = 'PAYMENT_CONFIRM'
-            CurrentStepInstanceKey = $newWi.StepInstanceKey
-            CurrentOUCode          = $newOu
-        } -Connection $script:Connection | Out-Null
-        Add-EmiActivity -ListName 'EMI_PAY_ActivityPublic' -RequestKey $requestKey -EventType 'STEP_COMPLETED' `
-            -ActorUPN $actor -FromState $currentStep -ToState 'PendingPayment' -Note $note `
-            -Details @{ fromStep = $currentStep; toStep = 'PAYMENT_CONFIRM' } `
-            -StepInstanceKey $newWi.StepInstanceKey -ReviewRound $round
-        return
-    }
+    Close-EmiWorkItem -WorkItem $wi -State 'Completed' -Decision $(if ($currentStep -eq 'CHAIR_APPROVE') { 'Approved' } else { 'Accepted' }) -Note $note
 
     if (-not $next) { throw "No next step after $currentStep" }
-    $newWi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound $round -StepKey $next.StepKey
-    $newOu = Get-EmiDefaultOu $next.StepKey
-    $newStatus = if ($next.StepKind -eq 'Approval') { 'AwaitManager' } else { 'InReview' }
+    $routePlan = Get-EmiRoutePlan $req
+    $preferredOu = Get-EmiRouteOu -RoutePlan $routePlan -StepKey $next.StepKey `
+        -Fallback $(if ($Payload.targetOUCode) { [string]$Payload.targetOUCode } else { '' })
+    $newWi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound $round -StepKey $next.StepKey -ResponsibleOUCode $preferredOu
+    $newOu = Get-EmiDefaultOu -StepKey $next.StepKey -PreferredOU $preferredOu
+    $newStatus = if ($next.StepKind -eq 'Approval') {
+        'AwaitManager'
+    }
+    elseif ($next.StepKey -eq 'TCKT_PAY') {
+        'PendingPayment'
+    }
+    else {
+        'InReview'
+    }
     Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Identity (Get-EmiItemId $req) -Values @{
         Status                 = $newStatus
         CurrentStepKey         = $next.StepKey
@@ -508,7 +736,7 @@ function Invoke-EmiReturnStep {
     $reason = [string]$Payload.reason
     if ([string]::IsNullOrWhiteSpace($reason)) { throw 'RETURN_STEP requires reason' }
     $currentStep = [string]$req.FieldValues['CurrentStepKey']
-    if ($currentStep -in @('PBCM', 'PAYMENT_CONFIRM')) {
+    if ($currentStep -in @('BPCM1_PREPARE', 'SYSTEM_ARCHIVE')) {
         throw "RETURN_STEP not allowed at $currentStep"
     }
     $actor = if ($Payload.actorUPN) { [string]$Payload.actorUPN } else { 'demo@local' }
@@ -523,10 +751,10 @@ function Invoke-EmiReturnStep {
     Close-EmiWorkItem -WorkItem $wi -State 'Returned' -Decision 'Returned' -Note $reason
 
     $creatorOu = [string]$req.FieldValues['CreatedOUCode']
-    $adjustWi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound $round -StepKey 'PBCM' -State 'InReview'
+    $adjustWi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound $round -StepKey 'BPCM1_PREPARE' -State 'InReview' -ResponsibleOUCode $creatorOu
     Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Identity (Get-EmiItemId $req) -Values @{
         Status                 = 'Returned'
-        CurrentStepKey         = 'PBCM'
+        CurrentStepKey         = 'BPCM1_PREPARE'
         CurrentStepInstanceKey = $adjustWi.StepInstanceKey
         CurrentOUCode          = $creatorOu
         IsLocked               = $false
@@ -554,25 +782,29 @@ function Invoke-EmiConfirmPayment {
     if (-not $req) { throw "Request not found: $requestKey" }
     $status = [string]$req.FieldValues['Status']
     $currentStep = [string]$req.FieldValues['CurrentStepKey']
-    if ($status -ne 'PendingPayment' -or $currentStep -ne 'PAYMENT_CONFIRM') {
-        throw "CONFIRM_PAYMENT requires PendingPayment/PAYMENT_CONFIRM (got $status/$currentStep)"
+    if ($status -ne 'PendingPayment' -or $currentStep -ne 'TCKT_PAY') {
+        throw "CONFIRM_PAYMENT requires PendingPayment/TCKT_PAY (got $status/$currentStep)"
     }
     $actor = if ($Payload.actorUPN) { [string]$Payload.actorUPN } else { 'demo@local' }
     $ou = [string]$req.FieldValues['CurrentOUCode']
     if (-not (Test-EmiActorInOu -ActorUPN $actor -OUCode $ou)) {
         throw "Actor $actor not authorized for OU $ou"
     }
-    $wi = Get-EmiOpenWorkItem -RequestKey $requestKey -StepKey 'PAYMENT_CONFIRM'
-    if (-not $wi) { throw 'No open PAYMENT_CONFIRM WorkItem' }
+    $wi = Get-EmiOpenWorkItem -RequestKey $requestKey -StepKey 'TCKT_PAY'
+    if (-not $wi) { throw 'No open TCKT_PAY WorkItem' }
     $round = [int]$req.FieldValues['ReviewRound']
     Close-EmiWorkItem -WorkItem $wi -State 'Completed' -Decision 'Approved' -Note 'CONFIRM_PAYMENT'
     $paidAt = (Get-Date).ToUniversalTime()
+    $archiveWi = New-EmiWorkItem -RequestKey $requestKey -ReviewRound $round -StepKey 'SYSTEM_ARCHIVE'
     Set-PnPListItem -List (Get-EmiListId 'EMI_PAY_Requests') -Identity (Get-EmiItemId $req) -Values @{
-        Status = 'PaymentConfirmed'
-        PaidAt = $paidAt
+        Status                 = 'Archiving'
+        ArchiveStatus          = 'Pending'
+        CurrentStepKey         = 'SYSTEM_ARCHIVE'
+        CurrentStepInstanceKey = $archiveWi.StepInstanceKey
+        PaidAt                 = $paidAt
     } -Connection $script:Connection | Out-Null
     Add-EmiActivity -ListName 'EMI_PAY_ActivityPublic' -RequestKey $requestKey -EventType 'PAYMENT_CONFIRMED' `
-        -ActorUPN $actor -FromState 'PendingPayment' -ToState 'PaymentConfirmed' -Note 'CONFIRM_PAYMENT' `
+        -ActorUPN $actor -FromState 'PendingPayment' -ToState 'Archiving' -Note 'CONFIRM_PAYMENT' `
         -Details @{ paidAt = $paidAt.ToString('o') } -StepInstanceKey ([string]$wi.FieldValues['StepInstanceKey']) -ReviewRound $round
 }
 
@@ -610,6 +842,7 @@ function Invoke-EmiPayCommand {
         switch ($type) {
             'CREATE_REQUEST' { Invoke-EmiCreateRequest -Command $Command -Payload $payload }
             'SUBMIT' { Invoke-EmiSubmit -Command $Command -Payload $payload }
+            'DECIDE' { Invoke-EmiDecide -Command $Command -Payload $payload }
             'COMPLETE_STEP' { Invoke-EmiCompleteStep -Command $Command -Payload $payload }
             'RETURN_STEP' { Invoke-EmiReturnStep -Command $Command -Payload $payload }
             'CONFIRM_PAYMENT' { Invoke-EmiConfirmPayment -Command $Command -Payload $payload }

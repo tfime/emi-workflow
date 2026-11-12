@@ -7,7 +7,7 @@ import {
 import { IRequestMaster } from './RequestService';
 
 const STEP_PERSONAS: Record<string, PayPersona[]> = {
-  BPCM1_PREPARE: ['creator'],
+  BPCM1_PREPARE: ['creator', 'manager'],
   BPCM2_TECH: ['bpcm2'],
   BPCM3_PRICE: ['bpcm3'],
   TCKT_CHECK: ['tckt_check'],
@@ -15,7 +15,7 @@ const STEP_PERSONAS: Record<string, PayPersona[]> = {
   TCKT_PAY: ['tckt_pay']
 };
 
-/** Actions allowed by Core Flow 1.0.0.9 — derived from Master step/status (+ UI persona). */
+/** Actions allowed by Core Flow — BA: AwaitingManager + RoutePlan. */
 export function liveActionsFor(
   master: IRequestMaster,
   checklist: IChecklistItemRow[],
@@ -29,13 +29,36 @@ export function liveActionsFor(
     return [];
   }
 
-  // Map legacy mock personas onto matrix roles for action gating.
   const normalized: PayPersona | undefined =
-    persona === 'manager' || persona === 'assignee'
+    persona === 'assignee'
       ? 'bpcm2'
       : persona === 'tckt'
         ? 'tckt_check'
         : persona;
+
+  // TP phòng tạo duyệt trình gửi
+  if (
+    step === 'BPCM1_PREPARE' &&
+    status === 'AwaitingManager' &&
+    (normalized === 'manager' || !normalized)
+  ) {
+    return [
+      {
+        id: 'mgrApprove',
+        label: 'Duyệt gửi sang BPCM2',
+        primary: true,
+        command: 'DECIDE',
+        dialog: 'forward'
+      },
+      {
+        id: 'mgrReject',
+        label: 'Từ chối — trả về nháp',
+        danger: true,
+        command: 'DECIDE',
+        dialog: 'return'
+      }
+    ];
+  }
 
   if (
     normalized &&
@@ -47,10 +70,10 @@ export function liveActionsFor(
 
   if (step === 'BPCM1_PREPARE' && (status === 'Draft' || status === 'Returned')) {
     const actions: IPayAction[] = [];
-    if (requiredChecklistReady(checklist)) {
+    if (requiredChecklistReady(checklist) && normalized !== 'manager') {
       actions.push({
         id: 'submit',
-        label: status === 'Returned' ? 'Gửi lại hồ sơ' : 'Gửi hồ sơ',
+        label: status === 'Returned' ? 'Trình lại trưởng phòng' : 'Trình trưởng phòng',
         primary: true,
         command: 'SUBMIT',
         dialog: 'submit'

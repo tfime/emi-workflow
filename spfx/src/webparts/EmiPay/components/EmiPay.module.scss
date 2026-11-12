@@ -884,6 +884,39 @@
   font-weight: 400;
 }
 
+.routeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.routeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--emi-muted);
+
+  span {
+    white-space: nowrap;
+  }
+
+  select {
+    min-width: 120px;
+    max-width: 160px;
+    border: 1px solid var(--emi-line);
+    border-radius: var(--emi-radius);
+    padding: 4px 8px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--emi-text);
+    background: #fff;
+  }
+}
+
 .cmd {
   margin: 0;
   font-size: 12px;

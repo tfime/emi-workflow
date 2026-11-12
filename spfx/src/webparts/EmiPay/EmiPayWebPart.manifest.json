@@ -20,7 +20,8 @@
       "officeFabricIconFontName": "Money",
       "properties": {
         "title": "EMI PAY",
-        "demoMode": false
+        "demoMode": false,
+        "orchestratorUrl": ""
       }
     }
   ]

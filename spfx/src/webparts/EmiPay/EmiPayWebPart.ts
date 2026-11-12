@@ -7,26 +7,53 @@ import {
   PropertyPaneToggle
 } from '@microsoft/sp-property-pane';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
+import { AadHttpClient } from '@microsoft/sp-http';
 
 import * as strings from 'EmiPayWebPartStrings';
 import EmiPay from './components/EmiPay';
 import { IEmiPayProps } from './components/EmiPay';
 import { expandCanvasParents } from '../../shared/ui/expandCanvas';
+import { IOrchestratorHttpResult } from './services/SpRest';
+
+/** Audience bắt buộc cho HTTP trigger Flow (kèm trailing slash). */
+const FLOW_SERVICE_AUDIENCE = 'https://service.flow.microsoft.com/';
 
 export interface IEmiPayWebPartProps {
   title: string;
   demoMode: boolean;
+  /** HTTP URL of Core Flow (When a HTTP request is received). */
+  orchestratorUrl: string;
 }
 
 export default class EmiPayWebPart extends BaseClientSideWebPart<IEmiPayWebPartProps> {
+  private async postToOrchestrator(
+    url: string,
+    body: unknown
+  ): Promise<IOrchestratorHttpResult> {
+    const client = await this.context.aadHttpClientFactory.getClient(
+      FLOW_SERVICE_AUDIENCE
+    );
+    const res = await client.post(url, AadHttpClient.configurations.v1, {
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+    const text = await res.text();
+    return { status: res.status, ok: res.ok, text };
+  }
+
   public render(): void {
     const element: React.ReactElement<IEmiPayProps> = React.createElement(EmiPay, {
       title: this.properties.title || 'EMI PAY',
       demoMode: this.properties.demoMode === true,
+      orchestratorUrl: (this.properties.orchestratorUrl || '').trim(),
       userDisplayName: this.context.pageContext.user.displayName || '',
       userLoginName: this.context.pageContext.user.loginName || '',
       webUrl: this.context.pageContext.web.absoluteUrl,
-      spHttpClient: this.context.spHttpClient
+      spHttpClient: this.context.spHttpClient,
+      postToOrchestrator: (url, body) => this.postToOrchestrator(url, body)
     });
 
     ReactDom.render(element, this.domElement);
@@ -58,6 +85,12 @@ export default class EmiPayWebPart extends BaseClientSideWebPart<IEmiPayWebPartP
                   label: strings.DemoModeFieldLabel,
                   onText: 'Demo (mock)',
                   offText: 'Live CECM'
+                }),
+                PropertyPaneTextField('orchestratorUrl', {
+                  label: strings.OrchestratorUrlFieldLabel,
+                  description: strings.OrchestratorUrlFieldDescription,
+                  multiline: true,
+                  rows: 3
                 })
               ]
             }

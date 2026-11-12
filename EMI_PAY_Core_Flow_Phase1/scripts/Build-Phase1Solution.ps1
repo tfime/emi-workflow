@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) {
 $phaseRoot = Split-Path $PSScriptRoot -Parent
 $repoRoot = Split-Path $phaseRoot -Parent
 if ([string]::IsNullOrWhiteSpace($OutZip)) {
-    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_9.zip'
+    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_10.zip'
 }
 $staging = Join-Path $phaseRoot '_staging_solution'
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
@@ -23,6 +23,8 @@ $guidRequests = '12b3051d-7642-4f90-a39d-5364df561fbf'
 $guidWorkItems = 'e21ef6e7-ee31-466a-be3b-65ae30ca7722'
 $guidChecklist = 'd02c6a03-9561-4d90-b5d5-ad30a2fef88b'
 $guidDocIndex = 'a45c74cd-1f21-454c-9fcc-6812692b801b'
+$guidStepRecipients = '7ebac733-193d-4216-bf63-785c6a5f06a2'
+$guidWorkflowSteps = '0135b54a-f4a3-4edc-a738-a64e12feb9ad'
 $workflowId = '1703d2f2-46de-f111-84ea-000d3aa191f1'
 $workflowFile = "EMI_PAY_CORE_Orchestrator_V1-$($workflowId.ToUpper()).json" -replace '[{}]', ''
 
@@ -35,43 +37,73 @@ $definition = [ordered]@{
         '$authentication' = [ordered]@{ defaultvalue = @{}; type = 'SecureObject' }
     }
     triggers         = [ordered]@{
-        TRG_CommandCreated = [ordered]@{
-            type       = 'OpenApiConnection'
-            recurrence = [ordered]@{ interval = 1; frequency = 'Minute' }
-            splitOn    = "@triggerOutputs()?['body/value']"
-            inputs     = [ordered]@{
-                host           = [ordered]@{
-                    connectionName = 'shared_sharepointonline'
-                    operationId    = 'GetOnNewItems'
-                    apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+        # API sync: SPFx POST { commandId } → process Commands → HTTP Response (CORS).
+        # Replaces SharePoint GetOnNewItems poll (~1 min latency).
+        TRG_HttpCommand = [ordered]@{
+            type   = 'Request'
+            kind   = 'Http'
+            inputs = [ordered]@{
+                method = 'POST'
+                schema = [ordered]@{
+                    type       = 'object'
+                    properties = [ordered]@{
+                        commandId = [ordered]@{ type = 'integer' }
+                    }
+                    required   = @('commandId')
                 }
-                parameters     = [ordered]@{
-                    dataset = $site
-                    table   = $guidCommands
-                }
-                authentication = "@parameters('`$authentication')"
             }
         }
     }
     actions          = [ordered]@{
+        INIT_CommandId = [ordered]@{
+            type     = 'InitializeVariable'
+            inputs   = [ordered]@{
+                variables = @(@{
+                        name  = 'CommandId'
+                        type  = 'integer'
+                        value = "@int(coalesce(triggerBody()?['commandId'],0))"
+                    })
+            }
+            runAfter = @{}
+        }
+        HTTP_LoadCommand = [ordered]@{
+            type     = 'OpenApiConnection'
+            runAfter = @{ INIT_CommandId = @('Succeeded') }
+            inputs   = [ordered]@{
+                host           = [ordered]@{
+                    connectionName = 'shared_sharepointonline'
+                    operationId    = 'HttpRequest'
+                    apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                }
+                parameters     = [ordered]@{
+                    dataset             = $site
+                    'parameters/method'  = 'GET'
+                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')?`$select=Id,CommandKey,CommandType,RequestKey,PayloadJson,State,ErrorMessage,StepInstanceKey')"
+                    'parameters/headers' = [ordered]@{
+                        Accept = 'application/json;odata=nometadata'
+                    }
+                }
+                authentication = "@parameters('`$authentication')"
+            }
+        }
         INIT_CommandKey = [ordered]@{
             type     = 'InitializeVariable'
             inputs   = [ordered]@{
                 variables = @(@{
                         name  = 'CommandKey'
-                        type = 'string'
-                        value = "@coalesce(triggerOutputs()?['body/CommandKey'],'')"
+                        type  = 'string'
+                        value = "@coalesce(body('HTTP_LoadCommand')?['CommandKey'],'')"
                     })
             }
-            runAfter = @{}
+            runAfter = @{ HTTP_LoadCommand = @('Succeeded') }
         }
         INIT_CommandType = [ordered]@{
             type     = 'InitializeVariable'
             inputs   = [ordered]@{
                 variables = @(@{
                         name  = 'CommandType'
-                        type = 'string'
-                        value = "@coalesce(triggerOutputs()?['body/CommandType'],'')"
+                        type  = 'string'
+                        value = "@coalesce(body('HTTP_LoadCommand')?['CommandType'],'')"
                     })
             }
             runAfter = @{ INIT_CommandKey = @('Succeeded') }
@@ -81,8 +113,8 @@ $definition = [ordered]@{
             inputs   = [ordered]@{
                 variables = @(@{
                         name  = 'RequestKey'
-                        type = 'string'
-                        value = "@coalesce(triggerOutputs()?['body/RequestKey'],'')"
+                        type  = 'string'
+                        value = "@coalesce(body('HTTP_LoadCommand')?['RequestKey'],'')"
                     })
             }
             runAfter = @{ INIT_CommandType = @('Succeeded') }
@@ -92,8 +124,8 @@ $definition = [ordered]@{
             inputs   = [ordered]@{
                 variables = @(@{
                         name  = 'Payload'
-                        type = 'object'
-                        value = "@json(if(empty(coalesce(triggerOutputs()?['body/PayloadJson'],'')),'{}',coalesce(triggerOutputs()?['body/PayloadJson'],'{}')))"
+                        type  = 'object'
+                        value = "@json(if(empty(coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'')),'{}',coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'{}')))"
                     })
             }
             runAfter = @{ INIT_RequestKey = @('Succeeded') }
@@ -143,7 +175,11 @@ $definition = [ordered]@{
         INIT_StepInstanceKey = [ordered]@{
             type     = 'InitializeVariable'
             inputs   = [ordered]@{
-                variables = @(@{ name = 'StepInstanceKey'; type = 'string'; value = '' })
+                variables = @(@{
+                        name  = 'StepInstanceKey'
+                        type  = 'string'
+                        value = "@coalesce(body('HTTP_LoadCommand')?['StepInstanceKey'],'')"
+                    })
             }
             runAfter = @{ INIT_NextOU = @('Succeeded') }
         }
@@ -171,7 +207,11 @@ $definition = [ordered]@{
         INIT_Error = [ordered]@{
             type     = 'InitializeVariable'
             inputs   = [ordered]@{
-                variables = @(@{ name = 'ErrorMessage'; type = 'string'; value = '' })
+                variables = @(@{
+                        name  = 'ErrorMessage'
+                        type  = 'string'
+                        value = "@coalesce(body('HTTP_LoadCommand')?['ErrorMessage'],'')"
+                    })
             }
             runAfter = @{ INIT_ReviewRound = @('Succeeded') }
         }
@@ -183,17 +223,33 @@ $definition = [ordered]@{
                 and = @(
                     [ordered]@{
                         equals = @(
-                            "@coalesce(triggerOutputs()?['body/State'], triggerOutputs()?['body/State/Value'], '')"
+                            "@coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], '')"
                             'Succeeded'
                         )
                     }
                 )
             }
             actions    = [ordered]@{
-                TERM_AlreadySucceeded = [ordered]@{
-                    type   = 'Terminate'
-                    # runError only allowed when runStatus = Failed
-                    inputs = [ordered]@{ runStatus = 'Succeeded' }
+                RESP_AlreadySucceeded = [ordered]@{
+                    type   = 'Response'
+                    kind   = 'Http'
+                    inputs = [ordered]@{
+                        statusCode = 200
+                        headers    = [ordered]@{
+                            'Access-Control-Allow-Origin'  = '*'
+                            'Access-Control-Allow-Methods' = 'POST, OPTIONS'
+                            'Access-Control-Allow-Headers' = 'Content-Type'
+                            'Content-Type'                 = 'application/json'
+                        }
+                        body       = [ordered]@{
+                            commandId       = "@variables('CommandId')"
+                            state           = 'Succeeded'
+                            requestKey      = "@variables('RequestKey')"
+                            stepInstanceKey = "@variables('StepInstanceKey')"
+                            errorMessage    = ''
+                            commandType     = "@variables('CommandType')"
+                        }
+                    }
                 }
             }
             else       = [ordered]@{
@@ -209,7 +265,7 @@ $definition = [ordered]@{
                             parameters     = [ordered]@{
                                 dataset             = $site
                                 'parameters/method'  = 'POST'
-                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                 'parameters/headers' = [ordered]@{
                                     Accept          = 'application/json;odata=nometadata'
                                     'Content-Type'  = 'application/json;odata=nometadata'
@@ -261,7 +317,7 @@ $definition = [ordered]@{
                                                     Accept         = 'application/json;odata=nometadata'
                                                     'Content-Type' = 'application/json;odata=nometadata'
                                                 }
-                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '"",""RequestKey"":""', variables('RequestKey'), '"",""CreatedOUCode"":""', coalesce(variables('Payload')?['createdOUCode'],'OU_BPCM1'), '"",""CreatorUPN"":""', coalesce(variables('Payload')?['creatorUPN'],'admin@local'), '"",""PaymentTypeCode"":""', coalesce(variables('Payload')?['paymentTypeCode'],'SPV_PAYMENT'), '"",""WorkflowCode"":""EMI_PAY_SPV"",""WorkflowVersion"":1,""ChecklistVersion"":1,""ReviewRound"":1,""CurrentStepKey"":""BPCM1_PREPARE"",""CurrentStepInstanceKey"":""', variables('StepInstanceKey'), '"",""CurrentOUCode"":""', coalesce(variables('Payload')?['createdOUCode'],'OU_BPCM1'), '"",""Status"":""Draft"",""IsLocked"":false,""ArchiveStatus"":""NotStarted"",""Explanation"":""Phase1 CREATE""}'))"
+                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '"",""RequestKey"":""', variables('RequestKey'), '"",""CreatedOUCode"":""', coalesce(variables('Payload')?['createdOUCode'],''), '"",""CreatorUPN"":""', coalesce(variables('Payload')?['creatorUPN'],'admin@local'), '"",""PaymentTypeCode"":""', coalesce(variables('Payload')?['paymentTypeCode'],'SPV_PAYMENT'), '"",""WorkflowCode"":""EMI_PAY_SPV"",""WorkflowVersion"":1,""ChecklistVersion"":1,""ReviewRound"":1,""CurrentStepKey"":""BPCM1_PREPARE"",""CurrentStepInstanceKey"":""', variables('StepInstanceKey'), '"",""CurrentOUCode"":""', coalesce(variables('Payload')?['createdOUCode'],''), '"",""Status"":""Draft"",""IsLocked"":false,""ArchiveStatus"":""NotStarted"",""Explanation"":""Phase1 CREATE""}'))"
                                             }
                                             authentication = "@parameters('`$authentication')"
                                         }
@@ -283,7 +339,7 @@ $definition = [ordered]@{
                                                     Accept         = 'application/json;odata=nometadata'
                                                     'Content-Type' = 'application/json;odata=nometadata'
                                                 }
-                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '-BPCM1_PREPARE"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":1,""StepKey"":""BPCM1_PREPARE"",""StepOrder"":1,""StepKind"":""Department"",""ResponsibleOUCode"":""', coalesce(variables('Payload')?['createdOUCode'],'OU_BPCM1'), '"",""State"":""InReview"",""Decision"":""Pending""}'))"
+                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '-BPCM1_PREPARE"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":1,""StepKey"":""BPCM1_PREPARE"",""StepOrder"":1,""StepKind"":""Department"",""ResponsibleOUCode"":""', coalesce(variables('Payload')?['createdOUCode'],''), '"",""State"":""InReview"",""Decision"":""Pending""}'))"
                                             }
                                             authentication = "@parameters('`$authentication')"
                                         }
@@ -344,7 +400,7 @@ $definition = [ordered]@{
                                             parameters     = [ordered]@{
                                                 dataset             = $site
                                                 'parameters/method'  = 'POST'
-                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                 'parameters/headers' = [ordered]@{
                                                     Accept          = 'application/json;odata=nometadata'
                                                     'Content-Type'  = 'application/json;odata=nometadata'
@@ -505,12 +561,20 @@ $definition = [ordered]@{
                                                         runAfter = @{ HTTP_CloseWI_Submit = @('Succeeded', 'Failed') }
                                                         inputs   = [ordered]@{
                                                             name  = 'StepInstanceKey'
-                                                            value = "@concat(variables('RequestKey'),'|BPCM2_TECH|',variables('CommandKey'))"
+                                                            value = "@concat(variables('RequestKey'),'|BPCM1_PREPARE|MGR|',variables('CommandKey'))"
+                                                        }
+                                                    }
+                                                    SET_NextOU_Submit = [ordered]@{
+                                                        type     = 'SetVariable'
+                                                        runAfter = @{ SET_NewSIK_Submit = @('Succeeded') }
+                                                        inputs   = [ordered]@{
+                                                            name  = 'NextOU'
+                                                            value = "@coalesce(first(body('HTTP_FindMaster_Submit')?['value'])?['CreatedOUCode'], variables('Payload')?['createdOUCode'], '')"
                                                         }
                                                     }
                                                     HTTP_OpenWI_Submit = [ordered]@{
                                                         type     = 'OpenApiConnection'
-                                                        runAfter = @{ SET_NewSIK_Submit = @('Succeeded') }
+                                                        runAfter = @{ SET_NextOU_Submit = @('Succeeded') }
                                                         inputs   = [ordered]@{
                                                             host           = [ordered]@{
                                                                 connectionName = 'shared_sharepointonline'
@@ -525,7 +589,7 @@ $definition = [ordered]@{
                                                                     Accept         = 'application/json;odata=nometadata'
                                                                     'Content-Type' = 'application/json;odata=nometadata'
                                                                 }
-                                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '-BPCM2_TECH"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":', string(variables('ReviewRound')), ',""StepKey"":""BPCM2_TECH"",""StepOrder"":2,""StepKind"":""Department"",""ResponsibleOUCode"":""OU_BPCM2"",""State"":""InReview"",""Decision"":""Pending""}'))"
+                                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '-BPCM1-MGR"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":', string(variables('ReviewRound')), ',""StepKey"":""BPCM1_PREPARE"",""StepOrder"":1,""StepKind"":""Department"",""ResponsibleOUCode"":""', variables('NextOU'), '"",""State"":""InReview"",""Decision"":""Pending""}'))"
                                                             }
                                                             authentication = "@parameters('`$authentication')"
                                                         }
@@ -549,7 +613,7 @@ $definition = [ordered]@{
                                                                     'IF-MATCH'      = '*'
                                                                     'X-HTTP-Method' = 'MERGE'
                                                                 }
-                                                                'parameters/body'    = "@json(concat('{""Status"":""InReview"",""CurrentStepKey"":""BPCM2_TECH"",""CurrentStepInstanceKey"":""', variables('StepInstanceKey'), '"",""CurrentOUCode"":""OU_BPCM2"",""IsLocked"":true,""ReviewRound"":', string(variables('ReviewRound')), '}'))"
+                                                                'parameters/body'    = "@json(concat('{""Status"":""AwaitingManager"",""CurrentStepKey"":""BPCM1_PREPARE"",""CurrentStepInstanceKey"":""', variables('StepInstanceKey'), '"",""CurrentOUCode"":""', variables('NextOU'), '"",""IsLocked"":true,""ReviewRound"":', string(variables('ReviewRound')), '}'))"
                                                             }
                                                             authentication = "@parameters('`$authentication')"
                                                         }
@@ -566,7 +630,7 @@ $definition = [ordered]@{
                                                             parameters     = [ordered]@{
                                                                 dataset             = $site
                                                                 'parameters/method'  = 'POST'
-                                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                                 'parameters/headers' = [ordered]@{
                                                                     Accept          = 'application/json;odata=nometadata'
                                                                     'Content-Type'  = 'application/json;odata=nometadata'
@@ -592,7 +656,7 @@ $definition = [ordered]@{
                                                                 parameters     = [ordered]@{
                                                                     dataset             = $site
                                                                     'parameters/method'  = 'POST'
-                                                                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                                     'parameters/headers' = [ordered]@{
                                                                         Accept          = 'application/json;odata=nometadata'
                                                                         'Content-Type'  = 'application/json;odata=nometadata'
@@ -621,7 +685,7 @@ $definition = [ordered]@{
                                                         parameters     = [ordered]@{
                                                             dataset             = $site
                                                             'parameters/method'  = 'POST'
-                                                            'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                            'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                             'parameters/headers' = [ordered]@{
                                                                 Accept          = 'application/json;odata=nometadata'
                                                                 'Content-Type'  = 'application/json;odata=nometadata'
@@ -674,18 +738,41 @@ $definition = [ordered]@{
                                                 runAfter = @{ COMPOSE_Next_Decide = @('Succeeded') }
                                                 inputs   = [ordered]@{
                                                     name  = 'NextStepKey'
-                                                    value = "@if(equals(outputs('COMPOSE_Next_Decide'),'BPCM2_TECH'),'BPCM3_PRICE',if(equals(outputs('COMPOSE_Next_Decide'),'BPCM3_PRICE'),'TCKT_CHECK',if(equals(outputs('COMPOSE_Next_Decide'),'TCKT_CHECK'),'CHAIR_APPROVE',if(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),'TCKT_PAY','INVALID'))))"
+                                                    value = "@if(and(equals(first(body('HTTP_FindMaster_Decide')?['value'])?['Status'],'AwaitingManager'),equals(outputs('COMPOSE_Next_Decide'),'BPCM1_PREPARE')),'BPCM2_TECH',if(equals(outputs('COMPOSE_Next_Decide'),'BPCM2_TECH'),'BPCM3_PRICE',if(equals(outputs('COMPOSE_Next_Decide'),'BPCM3_PRICE'),'TCKT_CHECK',if(equals(outputs('COMPOSE_Next_Decide'),'TCKT_CHECK'),'CHAIR_APPROVE',if(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),'TCKT_PAY','INVALID')))))"
                                                 }
+                                            }
+                                            HTTP_GetWS_Decide = [ordered]@{
+                                                type     = 'OpenApiConnection'
+                                                runAfter = @{ SET_Next_Decide = @('Succeeded') }
+                                                inputs   = [ordered]@{
+                                                    host           = [ordered]@{
+                                                        connectionName = 'shared_sharepointonline'
+                                                        operationId    = 'HttpRequest'
+                                                        apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                    }
+                                                    parameters     = [ordered]@{
+                                                        dataset             = $site
+                                                        'parameters/method'  = 'GET'
+                                                        'parameters/uri'     = "@concat('_api/web/lists(guid''$guidWorkflowSteps'')/items?`$filter=StepKey eq ''', replace(variables('NextStepKey'),'''',''''''), ''' and WorkflowCode eq ''EMI_PAY_SPV''&`$select=StepKey,StepOrder,StepKind&`$top=2')"
+                                                        'parameters/headers' = [ordered]@{ Accept = 'application/json;odata=nometadata' }
+                                                    }
+                                                    authentication = "@parameters('`$authentication')"
+                                                }
+                                            }
+                                            COMPOSE_RoutePlan = [ordered]@{
+                                                type     = 'Compose'
+                                                runAfter = @{ HTTP_GetWS_Decide = @('Succeeded') }
+                                                inputs   = "@json(if(empty(coalesce(first(body('HTTP_FindMaster_Decide')?['value'])?['RoutePlanJson'],'')),'{}',coalesce(first(body('HTTP_FindMaster_Decide')?['value'])?['RoutePlanJson'],'{}')))"
                                             }
                                             SET_Meta_Decide = [ordered]@{
                                                 type     = 'Compose'
-                                                runAfter = @{ SET_Next_Decide = @('Succeeded') }
+                                                runAfter = @{ COMPOSE_RoutePlan = @('Succeeded') }
                                                 inputs   = [ordered]@{
-                                                    order  = "@if(equals(variables('NextStepKey'),'BPCM3_PRICE'),3,if(equals(variables('NextStepKey'),'TCKT_CHECK'),4,if(equals(variables('NextStepKey'),'CHAIR_APPROVE'),5,if(equals(variables('NextStepKey'),'TCKT_PAY'),6,0))))"
-                                                    kind   = "@if(equals(variables('NextStepKey'),'CHAIR_APPROVE'),'Approval',if(equals(variables('NextStepKey'),'TCKT_PAY'),'Payment','Department'))"
-                                                    status = "@if(equals(variables('NextStepKey'),'CHAIR_APPROVE'),'AwaitManager',if(equals(variables('NextStepKey'),'TCKT_PAY'),'PendingPayment','InReview'))"
-                                                    wi     = "@if(equals(variables('NextStepKey'),'CHAIR_APPROVE'),'AwaitManager','InReview')"
-                                                    ou     = "@if(equals(variables('NextStepKey'),'BPCM3_PRICE'),'OU_BPCM3',if(equals(variables('NextStepKey'),'TCKT_CHECK'),'OU_TCKT',if(equals(variables('NextStepKey'),'CHAIR_APPROVE'),'OU_CHAIR',if(equals(variables('NextStepKey'),'TCKT_PAY'),'OU_TCKT',''))))"
+                                                    order  = "@int(coalesce(first(body('HTTP_GetWS_Decide')?['value'])?['StepOrder'],0))"
+                                                    kind   = "@if(equals(coalesce(first(body('HTTP_GetWS_Decide')?['value'])?['StepKind'],'Department'),'Initiator'),'Department',if(equals(coalesce(first(body('HTTP_GetWS_Decide')?['value'])?['StepKind'],''),'System'),'Payment',coalesce(first(body('HTTP_GetWS_Decide')?['value'])?['StepKind'],'Department')))"
+                                                    status = "@if(equals(variables('NextStepKey'),'TCKT_PAY'),'PendingPayment',if(equals(coalesce(first(body('HTTP_GetWS_Decide')?['value'])?['StepKind'],''),'Approval'),'AwaitManager','InReview'))"
+                                                    wi     = "@if(equals(coalesce(first(body('HTTP_GetWS_Decide')?['value'])?['StepKind'],''),'Approval'),'AwaitManager','InReview')"
+                                                    ou     = "@coalesce(variables('Payload')?['targetOUCode'], if(equals(variables('NextStepKey'),'BPCM2_TECH'),outputs('COMPOSE_RoutePlan')?['BPCM2_TECH'],if(equals(variables('NextStepKey'),'BPCM3_PRICE'),outputs('COMPOSE_RoutePlan')?['BPCM3_PRICE'],if(equals(variables('NextStepKey'),'TCKT_CHECK'),outputs('COMPOSE_RoutePlan')?['TCKT_CHECK'],if(equals(variables('NextStepKey'),'CHAIR_APPROVE'),outputs('COMPOSE_RoutePlan')?['CHAIR_APPROVE'],if(equals(variables('NextStepKey'),'TCKT_PAY'),outputs('COMPOSE_RoutePlan')?['TCKT_PAY'],outputs('COMPOSE_RoutePlan')?['SYSTEM_ARCHIVE']))))), '')"
                                                 }
                                             }
                                             IF_NextValid = [ordered]@{
@@ -697,6 +784,12 @@ $definition = [ordered]@{
                                                         [ordered]@{ not = [ordered]@{ equals = @("@variables('NextStepKey')", 'INVALID') } }
                                                         [ordered]@{
                                                             or = @(
+                                                                [ordered]@{
+                                                                    and = @(
+                                                                        [ordered]@{ equals = @("@first(body('HTTP_FindMaster_Decide')?['value'])?['Status']", 'AwaitingManager') }
+                                                                        [ordered]@{ equals = @("@outputs('COMPOSE_Next_Decide')", 'BPCM1_PREPARE') }
+                                                                    )
+                                                                }
                                                                 [ordered]@{ equals = @("@outputs('COMPOSE_Next_Decide')", 'BPCM2_TECH') }
                                                                 [ordered]@{ equals = @("@outputs('COMPOSE_Next_Decide')", 'BPCM3_PRICE') }
                                                                 [ordered]@{ equals = @("@outputs('COMPOSE_Next_Decide')", 'TCKT_CHECK') }
@@ -847,7 +940,7 @@ $definition = [ordered]@{
                                                                     parameters     = [ordered]@{
                                                                         dataset             = $site
                                                                         'parameters/method'  = 'POST'
-                                                                        'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                                        'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                                         'parameters/headers' = [ordered]@{
                                                                             Accept          = 'application/json;odata=nometadata'
                                                                             'Content-Type'  = 'application/json;odata=nometadata'
@@ -873,7 +966,7 @@ $definition = [ordered]@{
                                                                         parameters     = [ordered]@{
                                                                             dataset             = $site
                                                                             'parameters/method'  = 'POST'
-                                                                            'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                                            'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                                             'parameters/headers' = [ordered]@{
                                                                                 Accept          = 'application/json;odata=nometadata'
                                                                                 'Content-Type'  = 'application/json;odata=nometadata'
@@ -902,7 +995,7 @@ $definition = [ordered]@{
                                                                 parameters     = [ordered]@{
                                                                     dataset             = $site
                                                                     'parameters/method'  = 'POST'
-                                                                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                                     'parameters/headers' = [ordered]@{
                                                                         Accept          = 'application/json;odata=nometadata'
                                                                         'Content-Type'  = 'application/json;odata=nometadata'
@@ -956,13 +1049,24 @@ $definition = [ordered]@{
                                                             [ordered]@{ equals = @("@length(body('HTTP_FindMaster_Reject')?['value'])", 1) }
                                                             [ordered]@{
                                                                 or = @(
+                                                                    [ordered]@{
+                                                                        and = @(
+                                                                            [ordered]@{ equals = @("@first(body('HTTP_FindMaster_Reject')?['value'])?['Status']", 'AwaitingManager') }
+                                                                            [ordered]@{ equals = @("@outputs('COMPOSE_RejectStep')", 'BPCM1_PREPARE') }
+                                                                        )
+                                                                    }
                                                                     [ordered]@{ equals = @("@outputs('COMPOSE_RejectStep')", 'BPCM2_TECH') }
                                                                     [ordered]@{ equals = @("@outputs('COMPOSE_RejectStep')", 'BPCM3_PRICE') }
                                                                     [ordered]@{ equals = @("@outputs('COMPOSE_RejectStep')", 'TCKT_CHECK') }
                                                                     [ordered]@{ equals = @("@outputs('COMPOSE_RejectStep')", 'CHAIR_APPROVE') }
                                                                 )
                                                             }
-                                                            [ordered]@{ not = [ordered]@{ equals = @("@outputs('COMPOSE_RejectReason')", '') } }
+                                                            [ordered]@{
+                                                                or = @(
+                                                                    [ordered]@{ equals = @("@first(body('HTTP_FindMaster_Reject')?['value'])?['Status']", 'AwaitingManager') }
+                                                                    [ordered]@{ not = [ordered]@{ equals = @("@outputs('COMPOSE_RejectReason')", '') } }
+                                                                )
+                                                            }
                                                         )
                                                     }
                                                     actions    = [ordered]@{
@@ -1056,7 +1160,7 @@ $definition = [ordered]@{
                                                                         Accept         = 'application/json;odata=nometadata'
                                                                         'Content-Type' = 'application/json;odata=nometadata'
                                                                     }
-                                                                    'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '-BPCM1_PREPARE"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":', string(variables('ReviewRound')), ',""StepKey"":""BPCM1_PREPARE"",""StepOrder"":1,""StepKind"":""Department"",""ResponsibleOUCode"":""', coalesce(first(body('HTTP_FindMaster_Reject')?['value'])?['CreatedOUCode'],'OU_BPCM1'), '"",""State"":""InReview"",""Decision"":""Pending""}'))"
+                                                                    'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '-BPCM1_PREPARE"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":', string(variables('ReviewRound')), ',""StepKey"":""BPCM1_PREPARE"",""StepOrder"":1,""StepKind"":""Department"",""ResponsibleOUCode"":""', coalesce(first(body('HTTP_FindMaster_Reject')?['value'])?['CreatedOUCode'],''), '"",""State"":""InReview"",""Decision"":""Pending""}'))"
                                                                 }
                                                                 authentication = "@parameters('`$authentication')"
                                                             }
@@ -1080,7 +1184,7 @@ $definition = [ordered]@{
                                                                         'IF-MATCH'      = '*'
                                                                         'X-HTTP-Method' = 'MERGE'
                                                                     }
-                                                                    'parameters/body'    = "@json(concat('{""Status"":""Returned"",""CurrentStepKey"":""BPCM1_PREPARE"",""CurrentStepInstanceKey"":""', variables('StepInstanceKey'), '"",""CurrentOUCode"":""', coalesce(first(body('HTTP_FindMaster_Reject')?['value'])?['CreatedOUCode'],'OU_BPCM1'), '"",""IsLocked"":false}'))"
+                                                                    'parameters/body'    = "@json(concat('{""Status"":""', if(equals(first(body('HTTP_FindMaster_Reject')?['value'])?['Status'],'AwaitingManager'),'Draft','Returned'), '"",""CurrentStepKey"":""BPCM1_PREPARE"",""CurrentStepInstanceKey"":""', variables('StepInstanceKey'), '"",""CurrentOUCode"":""', coalesce(first(body('HTTP_FindMaster_Reject')?['value'])?['CreatedOUCode'],''), '"",""IsLocked"":false}'))"
                                                                 }
                                                                 authentication = "@parameters('`$authentication')"
                                                             }
@@ -1097,7 +1201,7 @@ $definition = [ordered]@{
                                                                 parameters     = [ordered]@{
                                                                     dataset             = $site
                                                                     'parameters/method'  = 'POST'
-                                                                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                                     'parameters/headers' = [ordered]@{
                                                                         Accept          = 'application/json;odata=nometadata'
                                                                         'Content-Type'  = 'application/json;odata=nometadata'
@@ -1123,7 +1227,7 @@ $definition = [ordered]@{
                                                                     parameters     = [ordered]@{
                                                                         dataset             = $site
                                                                         'parameters/method'  = 'POST'
-                                                                        'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                                        'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                                         'parameters/headers' = [ordered]@{
                                                                             Accept          = 'application/json;odata=nometadata'
                                                                             'Content-Type'  = 'application/json;odata=nometadata'
@@ -1320,7 +1424,7 @@ $definition = [ordered]@{
                                                             parameters     = [ordered]@{
                                                                 dataset             = $site
                                                                 'parameters/method'  = 'POST'
-                                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                                 'parameters/headers' = [ordered]@{
                                                                     Accept          = 'application/json;odata=nometadata'
                                                                     'Content-Type'  = 'application/json;odata=nometadata'
@@ -1346,7 +1450,7 @@ $definition = [ordered]@{
                                                                 parameters     = [ordered]@{
                                                                     dataset             = $site
                                                                     'parameters/method'  = 'POST'
-                                                                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                                     'parameters/headers' = [ordered]@{
                                                                         Accept          = 'application/json;odata=nometadata'
                                                                         'Content-Type'  = 'application/json;odata=nometadata'
@@ -1375,7 +1479,7 @@ $definition = [ordered]@{
                                                         parameters     = [ordered]@{
                                                             dataset             = $site
                                                             'parameters/method'  = 'POST'
-                                                            'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                                            'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                                             'parameters/headers' = [ordered]@{
                                                                 Accept          = 'application/json;odata=nometadata'
                                                                 'Content-Type'  = 'application/json;odata=nometadata'
@@ -1406,7 +1510,7 @@ $definition = [ordered]@{
                                         parameters     = [ordered]@{
                                             dataset             = $site
                                             'parameters/method'  = 'POST'
-                                            'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(triggerOutputs()?['body/ID']), ')')"
+                                            'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
                                             'parameters/headers' = [ordered]@{
                                                 Accept          = 'application/json;odata=nometadata'
                                                 'Content-Type'  = 'application/json;odata=nometadata'
@@ -1418,6 +1522,48 @@ $definition = [ordered]@{
                                         authentication = "@parameters('`$authentication')"
                                     }
                                 }
+                            }
+                        }
+                    }
+                    HTTP_GetFinal = [ordered]@{
+                        type     = 'OpenApiConnection'
+                        runAfter = @{ SW_CommandType = @('Succeeded') }
+                        inputs   = [ordered]@{
+                            host           = [ordered]@{
+                                connectionName = 'shared_sharepointonline'
+                                operationId    = 'HttpRequest'
+                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                            }
+                            parameters     = [ordered]@{
+                                dataset             = $site
+                                'parameters/method'  = 'GET'
+                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')?`$select=Id,State,RequestKey,StepInstanceKey,ErrorMessage,CommandType')"
+                                'parameters/headers' = [ordered]@{
+                                    Accept = 'application/json;odata=nometadata'
+                                }
+                            }
+                            authentication = "@parameters('`$authentication')"
+                        }
+                    }
+                    RESP_Api = [ordered]@{
+                        type     = 'Response'
+                        kind     = 'Http'
+                        runAfter = @{ HTTP_GetFinal = @('Succeeded') }
+                        inputs   = [ordered]@{
+                            statusCode = 200
+                            headers    = [ordered]@{
+                                'Access-Control-Allow-Origin'  = '*'
+                                'Access-Control-Allow-Methods' = 'POST, OPTIONS'
+                                'Access-Control-Allow-Headers' = 'Content-Type'
+                                'Content-Type'                 = 'application/json'
+                            }
+                            body       = [ordered]@{
+                                commandId       = "@variables('CommandId')"
+                                state           = "@coalesce(body('HTTP_GetFinal')?['State'], body('HTTP_GetFinal')?['State/Value'], '')"
+                                requestKey      = "@coalesce(body('HTTP_GetFinal')?['RequestKey'], variables('RequestKey'))"
+                                stepInstanceKey = "@coalesce(body('HTTP_GetFinal')?['StepInstanceKey'], variables('StepInstanceKey'))"
+                                errorMessage    = "@coalesce(body('HTTP_GetFinal')?['ErrorMessage'],'')"
+                                commandType     = "@coalesce(body('HTTP_GetFinal')?['CommandType'], variables('CommandType'))"
                             }
                         }
                     }
@@ -1518,9 +1664,9 @@ $solution = @"
       <LocalizedName description="EMI_PAY_CORE_V1" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
-      <Description description="Core Orchestrator: checklist+UNC+CHAIR PaymentDueAt, DECIDE PASS/REJECT, CONFIRM" languagecode="1033" />
+      <Description description="Core Orchestrator HTTP API: POST commandId, sync Response; checklist+UNC+CHAIR" languagecode="1033" />
     </Descriptions>
-    <Version>1.0.0.9</Version>
+    <Version>1.0.0.10</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>tfime</UniqueName>

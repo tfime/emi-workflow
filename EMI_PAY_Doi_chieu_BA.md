@@ -1,8 +1,10 @@
 # EMI PAY — Đối chiếu BA với phần đã làm
 
-> Rà soát 12/11/2026. Nguồn: `BA.md`, `plan.md`, `PHASE2_BACKLOG.md`, ma trận vai trò V1.0, Core Flow 1.0.0.9, `LivePayApp`, `ConfigAdmin`.
+> Rà soát 12/11/2026 (cập nhật BA: duyệt nội bộ BPCM1 + RoutePlan). Nguồn: `BA.md`, quy tắc V1.0, Core Flow, `LivePayApp`.
 >
-> **Đủ trên live** nghĩa là lệnh hoặc màn hình đã nối dữ liệu thật. Dialog trong `EmiPay.tsx` / `ActionDialog.tsx` và cột `covered` của `featureMap` là UI demo, không tính là đã làm.
+> **Đủ trên live** nghĩa là lệnh hoặc màn hình đã nối dữ liệu thật. Dialog demo không tính là đã làm.
+>
+> **BA mới (đã chốt):** `SUBMIT` = trình TP (`AwaitingManager`); TP `DECIDE` PASS mới → BPCM2; OU các bước từ `RoutePlanJson`.
 
 ## Kết quả
 
@@ -51,7 +53,8 @@ Khoảng trống chặn nhiều người dùng là quyền và vai trò. Nhân s
 | Chức năng | Trạng thái | Hiện trạng |
 |---|---|---|
 | Một Master Record xuyên suốt | Đủ | `CREATE_REQUEST` tạo `EMI_PAY_Requests` |
-| BPCM1 tự gửi, không cần trưởng phòng | Đủ | `SUBMIT` từ Draft hoặc Returned |
+| BPCM1 trình TP rồi mới ra BPCM2 | Một phần | Đang triển khai: Status `AwaitingManager` + RoutePlan; Flow/UI theo plan |
+| Pin RoutePlan StepKey→OU lúc tạo | Một phần | Schema `RoutePlanJson`; UI chọn từ StepRecipients |
 | Chọn loại hồ sơ từ danh mục | Đủ | LivePayApp đọc PaymentTypes |
 | Chặn gửi khi thiếu chứng từ bắt buộc | Đủ | Gate UI và Flow trước `SUBMIT` |
 | Nhập đề nghị, pháp nhân, dự án | Một phần | Title, số tiền, diễn giải vá sau CREATE; chưa có trường pháp nhân và dự án |

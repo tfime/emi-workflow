@@ -119,8 +119,8 @@ Trình tự xử lý được xác định bởi phiên bản quy trình gắn v
 
 | **THỨ TỰ** | **BƯỚC**               | **KẾT QUẢ / HÀNH ĐỘNG CHÍNH**                                                                        |
 | ---------- | ---------------------- | ---------------------------------------------------------------------------------------------------- |
-| 01         | BPCM 1 – Khởi tạo      | Người tạo nhập thông tin, upload checklist bắt buộc, xác nhận phòng nhận bước tiếp và gửi.           |
-| 02         | Các BPCM theo cấu hình | Trưởng phòng tiếp nhận, đặt hạn, tự xử lý hoặc phân công; đánh giá checklist; gửi tiếp hoặc từ chối. |
+| 01         | BPCM 1 – Khởi tạo      | Người tạo nhập thông tin, upload checklist, pin RoutePlan, trình TP phòng tạo; TP duyệt mới ra BPCM2. |
+| 02         | Các BPCM theo cấu hình | Trưởng phòng tiếp nhận (OU theo RoutePlan), đặt hạn, tự xử lý hoặc phân công; đánh giá; gửi tiếp/trả. |
 | 03         | TCKT – Kiểm tra        | Tiếp nhận và kiểm tra hồ sơ theo cơ chế BPCM; có thể bổ sung tập tài liệu đính kèm.                  |
 | 04         | CT-HĐQT – Phê duyệt    | Chỉ Duyệt hoặc Không duyệt; không thực hiện xử lý checklist.                                         |
 | 05         | TCKT – Thanh toán      | Thực hiện thanh toán bên ngoài hệ thống, upload UNC, chọn người nhận thông báo, xác nhận.            |
@@ -143,9 +143,9 @@ Nhánh từ chối: tại bất kỳ BPCM hoặc CT-HĐQT, hồ sơ được tr�
 ## 4.2. Checklist do hệ thống cấu hình
 
 - Mỗi loại hồ sơ có danh sách tài liệu riêng, trong đó "Đề nghị thanh toán" là tài liệu nêu trong bộ hồ sơ cơ bản đã trao đổi.
-- Người tạo tải tài liệu vào đúng từng mục checklist; chỉ được gửi khi đã đáp ứng các tài liệu bắt buộc theo cấu hình.
+- Người tạo tải tài liệu vào đúng từng mục checklist; chỉ được trình Trưởng phòng khi đã đáp ứng các tài liệu bắt buộc theo cấu hình.
 - Việc đủ file là điều kiện đầu vào; việc đánh giá Đạt/Không đạt được thực hiện ở các bước kiểm tra tiếp theo.
-- Người tạo được trực tiếp gửi hồ sơ; không phải trình Trưởng phòng BPCM 1 trước khi gửi.
+- **Đã đổi (12/11/2026):** Người tạo **không** tự gửi sang BPCM2. Sau khi đủ checklist và pin RoutePlan, người tạo `SUBMIT` → trạng thái `AwaitingManager`; **Trưởng phòng phòng tạo** `DECIDE` PASS mới mở BPCM2; REJECT thì về Draft.
 
 ## 4.3. Quyền sửa thông tin chung
 
@@ -186,9 +186,9 @@ Mọi upload, sửa, bổ sung và thay thế file phải ghi Activity. File ho�
 
 ## 6.2. Danh sách phòng ban theo bước
 
-- BPCM 2/BPCM 3... là vị trí xử lý; mỗi vị trí có thể được cấu hình nhiều phòng đủ điều kiện tiếp nhận.
-- Khi gửi, người gửi chỉ nhìn thấy bước kế tiếp; lựa chọn một phòng nằm trong danh sách được phép, có thể dùng đề xuất mặc định của hệ thống.
-- Người gửi xác nhận đúng phòng/người tiếp nhận; hồ sơ sau đó được chuyển tới Trưởng phòng/Bộ phận đã chọn.
+- BPCM 2/BPCM 3... là vị trí xử lý; mỗi vị trí có thể được cấu hình nhiều phòng đủ điều kiện tiếp nhận (`StepRecipients`).
+- **Đã đổi (12/11/2026):** Lúc tạo/trình duyệt, người tạo **pin sẵn RoutePlan** (`RoutePlanJson` trên Request): mỗi `StepKey` → một `OUCode` thuộc danh sách được phép của bước đó (có thể lấy mặc định `IsDefault`). Các bước sau dùng RoutePlan; không hỏi lại OU từng lần gửi tiếp.
+- Khi trả về BPCM1 / gửi lại, người tạo được phép chỉnh RoutePlan trước khi trình lại Trưởng phòng.
 - Một hồ sơ tại một bước chỉ có một phòng chịu trách nhiệm; không gửi đồng thời sang hai phòng ở cùng bước.
 
 # 07. TIẾP NHẬN, PHÂN CÔNG VÀ KIỂM TRA TRONG BPCM

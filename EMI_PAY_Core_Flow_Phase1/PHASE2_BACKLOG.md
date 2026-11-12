@@ -36,7 +36,7 @@ Không làm trong Phase 1. Làm lần lượt khi Flow CREATE→CONFIRM đã ổ
 9. **ActivityPublic / ActivityInternal** — `ActivityKey={CommandKey}|{EventType}` idempotent
 10. **Trusted caller** — pilot allowlist theo Author email; không tin `ActorUPN` payload
 11. **Concurrency = 1** trên trigger; xác nhận trên designer sau Import
-12. **Đọc StepRecipients / WorkflowVersions** — bỏ hardcode OU khi CSV routing thật đã seed
+12. ~~**Đọc StepRecipients / WorkflowSteps**~~ — DONE trong Build Phase1 (SUBMIT/DECIDE đọc list; CREATE dùng `createdOUCode`)
 
 ## Dữ liệu / seed
 
