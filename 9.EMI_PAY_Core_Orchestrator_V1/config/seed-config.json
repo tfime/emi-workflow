@@ -1,0 +1,42 @@
+{
+  "workflowCode": "WF_SPV_PAYMENT",
+  "workflowVersion": 1,
+  "paymentTypeCode": "SPV_PAYMENT",
+  "checklistVersion": 1,
+  "orgUnits": [
+    { "OUCode": "OU_PBCM", "OUName": "Bộ phận chuyên môn 1 / NH2", "HomeLECode": "SPV", "ManagerUPN": "TO_FILL", "EntraGroupId": "", "IsActive": true },
+    { "OUCode": "OU_PBCM2", "OUName": "Bộ phận chuyên môn 2", "HomeLECode": "SPV", "ManagerUPN": "TO_FILL", "EntraGroupId": "", "IsActive": true },
+    { "OUCode": "OU_PBCM3", "OUName": "Bộ phận chuyên môn 3", "HomeLECode": "SPV", "ManagerUPN": "TO_FILL", "EntraGroupId": "", "IsActive": true },
+    { "OUCode": "OU_TCKT", "OUName": "TCKT", "HomeLECode": "SPV", "ManagerUPN": "TO_FILL", "EntraGroupId": "", "IsActive": true },
+    { "OUCode": "OU_CHAIR", "OUName": "CT.HĐQT", "HomeLECode": "SPV", "ManagerUPN": "TO_FILL", "EntraGroupId": "", "IsActive": true }
+  ],
+  "paymentTypes": [
+    { "PaymentTypeCode": "SPV_PAYMENT", "ChecklistVersion": 1, "WorkflowCode": "WF_SPV_PAYMENT", "IsActive": true, "Title": "Hồ sơ thanh toán SPV" }
+  ],
+  "workflowVersions": [
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "Lifecycle": "Published", "Title": "WF_SPV_PAYMENT v1" }
+  ],
+  "workflowSteps": [
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "PBCM", "StepOrder": 1, "StepName": "Khởi tạo / điều chỉnh hồ sơ", "StepKind": "Initiator", "IsActive": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "PBCM2", "StepOrder": 2, "StepName": "Kiểm tra kỹ thuật", "StepKind": "Department", "IsActive": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "PBCM3", "StepOrder": 3, "StepName": "Kiểm tra giá", "StepKind": "Department", "IsActive": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "TCKT_REVIEW", "StepOrder": 4, "StepName": "TCKT – Kiểm tra hồ sơ", "StepKind": "Department", "IsActive": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "CHAIR_APPROVAL", "StepOrder": 5, "StepName": "CT.HĐQT – Phê duyệt", "StepKind": "Approval", "IsActive": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "TCKT_UNC", "StepOrder": 6, "StepName": "TCKT – Tải UNC", "StepKind": "Payment", "IsActive": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "PAYMENT_CONFIRM", "StepOrder": 7, "StepName": "Xác nhận đã thanh toán", "StepKind": "Payment", "IsActive": true }
+  ],
+  "stepRecipients": [
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "PBCM", "OUCode": "OU_PBCM", "IsDefault": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "PBCM2", "OUCode": "OU_PBCM2", "IsDefault": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "PBCM3", "OUCode": "OU_PBCM3", "IsDefault": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "TCKT_REVIEW", "OUCode": "OU_TCKT", "IsDefault": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "CHAIR_APPROVAL", "OUCode": "OU_CHAIR", "IsDefault": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "TCKT_UNC", "OUCode": "OU_TCKT", "IsDefault": true },
+    { "WorkflowCode": "WF_SPV_PAYMENT", "VersionNo": 1, "StepKey": "PAYMENT_CONFIRM", "OUCode": "OU_TCKT", "IsDefault": true }
+  ],
+  "checklistTemplates": [
+    { "PaymentTypeCode": "SPV_PAYMENT", "VersionNo": 1, "ItemCode": "DOC_REQUEST", "ItemLabel": "Đề nghị thanh toán", "IsRequired": true, "MinFileCount": 1, "DisplayOrder": 1 },
+    { "PaymentTypeCode": "SPV_PAYMENT", "VersionNo": 1, "ItemCode": "DOC_INVOICE", "ItemLabel": "Hóa đơn / chứng từ", "IsRequired": true, "MinFileCount": 1, "DisplayOrder": 2 },
+    { "PaymentTypeCode": "SPV_PAYMENT", "VersionNo": 1, "ItemCode": "DOC_CONTRACT", "ItemLabel": "Hợp đồng liên quan", "IsRequired": false, "MinFileCount": 0, "DisplayOrder": 3 }
+  ]
+}

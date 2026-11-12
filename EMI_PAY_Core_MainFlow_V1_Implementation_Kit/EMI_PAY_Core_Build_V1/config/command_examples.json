@@ -1,0 +1,7 @@
+{
+  "warning": "These are examples for admin-only pilot. Never trust ActorUPN from PayloadJson.",
+  "create": {"CommandType":"CREATE_REQUEST","CommandKey":"TST-0001-CREATE","DedupeKey":"TST-0001-CREATE","State":"NEW","PayloadJson":{"title":"DEMO – thanh toán SPV","createdOUCode":"OU_CODE_HERE","paymentTypeCode":"PAYMENT_TYPE_HERE","amount":1000000,"explanation":"Dữ liệu giả lập"}},
+  "submit": {"CommandType":"SUBMIT","CommandKey":"TST-0001-SUBMIT-01","RequestKey":"PAY-TST-0001-CREATE","DedupeKey":"TST-0001-SUBMIT-01","State":"NEW","PayloadJson":{"expectedStepKey":"BPCM1_PREPARE","expectedReviewRound":1}},
+  "decide": {"CommandType":"DECIDE","CommandKey":"TST-0001-DECIDE-02","RequestKey":"PAY-TST-0001-CREATE","DedupeKey":"TST-0001-DECIDE-02","State":"NEW","PayloadJson":{"expectedStepKey":"BPCM2_TECH","expectedStepInstanceKey":"VALUE_FROM_REQUEST","expectedReviewRound":1,"decision":"PASS","note":"Đạt"}},
+  "confirmPayment": {"CommandType":"CONFIRM_PAYMENT","CommandKey":"TST-0001-PAID","RequestKey":"PAY-TST-0001-CREATE","DedupeKey":"TST-0001-PAID","State":"NEW","PayloadJson":{"expectedStepKey":"TCKT_PAY","expectedStepInstanceKey":"VALUE_FROM_REQUEST","expectedReviewRound":1,"uncDocumentKey":"DOCUMENT_KEY_IN_INDEX"}}
+}

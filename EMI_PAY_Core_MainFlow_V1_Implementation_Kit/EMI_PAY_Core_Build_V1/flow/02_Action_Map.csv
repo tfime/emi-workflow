@@ -1,0 +1,22 @@
+﻿Block,Action,Connector,Operation,SourceList,ListGuid,Purpose
+S01,TRG_CommandCreated,SharePoint,When an item is created,EMI_PAY_Commands,e16b76dc-7686-43e9-b232-18c80e2b31d2,Concurrency=1
+S01,C01_ParsePayload,Data Operations,Compose,EMI_PAY_Commands,e16b76dc-7686-43e9-b232-18c80e2b31d2,"json(coalesce(triggerBody()[?PayloadJson],{}))"
+S02,HTTP_GetCommandByDedupe,SharePoint,Send HTTP request GET,EMI_PAY_Commands,e16b76dc-7686-43e9-b232-18c80e2b31d2,"Find matching DedupeKey, current CommandKey; ignore previously SUCCEEDED, detect conflicting reused key"
+S02,HTTP_ClaimCommand,SharePoint,Send HTTP request MERGE,EMI_PAY_Commands,e16b76dc-7686-43e9-b232-18c80e2b31d2,"NEW=>PROCESSING, server ETag"
+S03,HTTP_FindMaster,SharePoint,Send HTTP request GET,EMI_PAY_Requests,12b3051d-7642-4f90-a39d-5364df561fbf,RequestKey exact; 0 allowed only for CREATE
+S03,HTTP_GetWorkflowVersion,SharePoint,Send HTTP request GET,EMI_PAY_WorkflowVersions,b263446d-7cea-4fd8-bfde-b22dd2de4281,Published/pinned version; do not read new version for in-progress requests
+S03,HTTP_GetCurrentWorkItem,SharePoint,Send HTTP request GET,EMI_PAY_WorkItems,e21ef6e7-ee31-466a-be3b-65ae30ca7722,CurrentStepInstanceKey exact
+S03,HTTP_GetRecipient,SharePoint,Send HTTP request GET,EMI_PAY_StepRecipients,7ebac733-193d-4216-bf63-785c6a5f06a2,"WorkflowCode + VersionNo + StepKey, 1 default recipient"
+S04,IF_TrustedCaller,Control,Condition,EMI_PAY_Commands,e16b76dc-7686-43e9-b232-18c80e2b31d2,Pilot: verify AuthorEmail in explicit admin allowlist; production gateway required
+S04,IF_ExpectedState,Control,Condition,EMI_PAY_Requests,12b3051d-7642-4f90-a39d-5364df561fbf,"Expected StepKey, StepInstanceKey and ReviewRound all match"
+S04,HTTP_GetRequiredChecklist,SharePoint,Send HTTP request GET,EMI_PAY_ChecklistItems,d02c6a03-9561-4d90-b5d5-ad30a2fef88b,Read required checklist and UploadedCount/MinFileCount
+S04,HTTP_GetVerifiedUnc,SharePoint,Send HTTP request GET,EMI_PAY_DocumentIndex,a45c74cd-1f21-454c-9fcc-6812692b801b,Ensure actual current UNC document belongs to request and has FileUrl
+S05,SW_CommandType,Control,Switch,EMI_PAY_Commands,e16b76dc-7686-43e9-b232-18c80e2b31d2,CREATE_REQUEST / SUBMIT / DECIDE / CONFIRM_PAYMENT; others REJECTED
+S05,C_CreateTransitionPlan,Data Operations,Compose,EMI_PAY_Requests,12b3051d-7642-4f90-a39d-5364df561fbf,Compute no-op/target-step/review-round in memory
+S06,HTTP_CreateMasterIfAbsent,SharePoint,Send HTTP request POST,EMI_PAY_Requests,12b3051d-7642-4f90-a39d-5364df561fbf,"Only CREATE; exact RequestKey, DRAFT; no cloned Master"
+S06,HTTP_CloseCurrentWork,SharePoint,Send HTTP request MERGE,EMI_PAY_WorkItems,e21ef6e7-ee31-466a-be3b-65ae30ca7722,Only when transition valid; ETag guard
+S06,HTTP_OpenWorkIfAbsent,SharePoint,Send HTTP request POST,EMI_PAY_WorkItems,e21ef6e7-ee31-466a-be3b-65ae30ca7722,Idempotent StepInstanceKey based on CommandKey
+S06,HTTP_UpdateMaster,SharePoint,Send HTTP request MERGE,EMI_PAY_Requests,12b3051d-7642-4f90-a39d-5364df561fbf,"ETag guard; Status, CurrentStep, ReviewRound, PaidAt, PaymentDueAt"
+S07,HTTP_CreateActivityIfAbsent,SharePoint,Send HTTP request POST,EMI_PAY_ActivityPublic,84b57c9e-6b90-4a6b-a200-b3afb4499895,ActivityKey=CommandKey|EventType
+S08,HTTP_MarkSucceeded,SharePoint,Send HTTP request MERGE,EMI_PAY_Commands,e16b76dc-7686-43e9-b232-18c80e2b31d2,"State SUCCEEDED, ProcessedAt; after other writes"
+S08,SCP_Catch,Control,Scope runAfter failed/timedOut,EMI_PAY_Commands,e16b76dc-7686-43e9-b232-18c80e2b31d2,"If partial write, NEEDS_RECONCILIATION, else FAILED; never blind retry"

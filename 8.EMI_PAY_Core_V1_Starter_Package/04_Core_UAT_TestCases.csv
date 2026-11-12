@@ -1,0 +1,15 @@
+﻿TestCaseID,Command,Scenario,InputCondition,ExpectedResult,ExecutionStatus
+TC01,CREATE_REQUEST,Tạo mới,Một command hợp lệ,"Tạo một Requests item Draft, checklist, WorkItem PBCM; chưa nhân bản",PENDING
+TC02,SUBMIT,Gửi lần đầu,Hồ sơ Draft bước PBCM,Chốt WorkflowVersion; mở WorkItem PBCM2; Status WaitingAcceptance/InReview,PENDING
+TC03,COMPLETE_STEP,Hoàn thành bước 2,"Người có thẩm quyền","Master bước PBCM3, đóng WI PBCM2, tạo WI PBCM3",PENDING
+TC04,COMPLETE_STEP,Đi qua bước 3-6,Từng bước có quyền/đủ điều kiện,Tiếp tục PBCM3→TCKT_REVIEW→CHAIR→TCKT_UNC; sau UNC Status=PendingPayment + WI PAYMENT_CONFIRM,PENDING
+TC05,CONFIRM_PAYMENT,Xác nhận thanh toán,Đang PendingPayment sau UNC,"Status=PaymentConfirmed, PaidAt có giá trị; đóng WI bước 7; chưa ArchiveJob",PENDING
+TC06,RETURN_STEP,Trả từ CHAIR,Có lý do,"Master Status=Returned về người tạo; ActivityInternal RETURNED chứa returnFromStepKey=CHAIR_APPROVAL",PENDING
+TC07,SUBMIT,Gửi lại sau trả,Master Returned + returnFromStepKey=CHAIR_APPROVAL,"Mở lại WorkItem CHAIR_APPROVAL (không về PBCM2); không clone Master",PENDING
+TC08,RETURN_STEP,Trả không lý do,Reason rỗng,"Rejected; Master/WorkItems không đổi",PENDING
+TC09,COMPLETE_STEP,Sai thẩm quyền,Actor không thuộc OU bước,"Rejected; không cập nhật Master",PENDING
+TC10,COMPLETE_STEP,Bước cũ,Command nhắm bước cũ trong khi Master đã sang bước khác,Rejected thao tác ngoài trình tự,PENDING
+TC11,DUPLICATE,Xử lý lại command,DedupeKey đã Succeeded,No-op; không sinh WI/log nghiệp vụ trùng,PENDING
+TC12,SUBMIT,Thiếu checklist,Checklist bắt buộc Missing,"Rejected; không chuyển bước",PENDING
+TC13,RECOVERY,Gián đoạn giữa cập nhật,Lỗi sau khi đổi Master,"Command Failed; ActivityInternal lỗi; không tuyên bố Succeeded giả",PENDING
+TC14,ACL,Không phá RBAC,Chạy bằng tài khoản vận hành,"23/23 static ACL giữ nguyên",PENDING

@@ -1,0 +1,232 @@
+[
+  {
+    "InternalName": "EMI_PAY_PaymentTypes",
+    "Guid": "60bb23f6-4702-4aed-b36f-b2b20b09e74d",
+    "DisplayNameInRBAC": "Danh mục loại hồ sơ thanh toán",
+    "LiveTitle": "Danh mục loại hồ sơ thanh toán",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 89
+  },
+  {
+    "InternalName": "EMI_PAY_OrgUnits",
+    "Guid": "a95e5ccf-00cc-4c7e-b375-828a07117530",
+    "DisplayNameInRBAC": "Danh mục phòng ban",
+    "LiveTitle": "Danh mục phòng ban",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 91
+  },
+  {
+    "InternalName": "EMI_PAY_OrgMembers",
+    "Guid": "58db4d66-1299-4edb-893e-50c8fe459253",
+    "DisplayNameInRBAC": "Nhân sự thuộc phòng ban",
+    "LiveTitle": "Nhân sự thuộc phòng ban",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 88
+  },
+  {
+    "InternalName": "EMI_PAY_WorkflowVersions",
+    "Guid": "b263446d-7cea-4fd8-bfde-b22dd2de4281",
+    "DisplayNameInRBAC": "Phiên bản quy trình",
+    "LiveTitle": "Phiên bản quy trình",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 90
+  },
+  {
+    "InternalName": "EMI_PAY_WorkflowSteps",
+    "Guid": "0135b54a-f4a3-4edc-a738-a64e12feb9ad",
+    "DisplayNameInRBAC": "Các bước xử lý quy trình",
+    "LiveTitle": "Các bước xử lý quy trình",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 92
+  },
+  {
+    "InternalName": "EMI_PAY_ChecklistTemplates",
+    "Guid": "81b94541-2e8e-4457-af28-e47f4d284477",
+    "DisplayNameInRBAC": "Cấu hình checklist tài liệu",
+    "LiveTitle": "Cấu hình checklist tài liệu",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 92
+  },
+  {
+    "InternalName": "EMI_PAY_StepRecipients",
+    "Guid": "7ebac733-193d-4216-bf63-785c6a5f06a2",
+    "DisplayNameInRBAC": "Phòng ban tiếp nhận theo bước",
+    "LiveTitle": "Phòng ban tiếp nhận theo bước",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 90
+  },
+  {
+    "InternalName": "EMI_PAY_SystemSettings",
+    "Guid": "2d065a1c-c5f3-42f4-9fba-351967e430c7",
+    "DisplayNameInRBAC": "Cấu hình hệ thống",
+    "LiveTitle": "Cấu hình hệ thống",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 88
+  },
+  {
+    "InternalName": "EMI_PAY_Commands",
+    "Guid": "e16b76dc-7686-43e9-b232-18c80e2b31d2",
+    "DisplayNameInRBAC": "Yêu cầu thao tác quy trình",
+    "LiveTitle": "Yêu cầu thao tác quy trình",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 94
+  },
+  {
+    "InternalName": "EMI_PAY_Assignments",
+    "Guid": "0ec1447a-6ff0-4071-b6c4-4d939d74d404",
+    "DisplayNameInRBAC": "Phân công nhân sự xử lý",
+    "LiveTitle": "Phân công nhân sự xử lý",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 91
+  },
+  {
+    "InternalName": "EMI_PAY_WorkItems",
+    "Guid": "e21ef6e7-ee31-466a-be3b-65ae30ca7722",
+    "DisplayNameInRBAC": "Công việc xử lý hồ sơ",
+    "LiveTitle": "Công việc xử lý hồ sơ",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 100
+  },
+  {
+    "InternalName": "EMI_PAY_StepReviews",
+    "Guid": "02a39987-5801-401e-8f3f-ba8caf1c1f4a",
+    "DisplayNameInRBAC": "Kết quả kiểm tra tài liệu",
+    "LiveTitle": "Kết quả kiểm tra tài liệu",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 93
+  },
+  {
+    "InternalName": "EMI_PAY_ActivityInternal",
+    "Guid": "b8ceb7ed-3925-4292-af35-4027f41c9d6a",
+    "DisplayNameInRBAC": "Nhật ký xử lý nội bộ",
+    "LiveTitle": "Nhật ký xử lý nội bộ",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 97
+  },
+  {
+    "InternalName": "EMI_PAY_ArchiveJobs",
+    "Guid": "4d959c76-7293-4c11-bca2-349f2e48f99a",
+    "DisplayNameInRBAC": "Công việc lưu trữ hồ sơ",
+    "LiveTitle": "Công việc lưu trữ hồ sơ",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 93
+  },
+  {
+    "InternalName": "EMI_PAY_DocumentIndex",
+    "Guid": "a45c74cd-1f21-454c-9fcc-6812692b801b",
+    "DisplayNameInRBAC": "Danh mục tài liệu đính kèm",
+    "LiveTitle": "Danh mục tài liệu đính kèm",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 100
+  },
+  {
+    "InternalName": "EMI_PAY_Notifications",
+    "Guid": "3d896def-8c43-412d-90e8-0cfc92140963",
+    "DisplayNameInRBAC": "Thông báo hệ thống",
+    "LiveTitle": "Thông báo hệ thống",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 93
+  },
+  {
+    "InternalName": "EMI_PAY_ChecklistItems",
+    "Guid": "d02c6a03-9561-4d90-b5d5-ad30a2fef88b",
+    "DisplayNameInRBAC": "Checklist tài liệu hồ sơ",
+    "LiveTitle": "Checklist tài liệu hồ sơ",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 94
+  },
+  {
+    "InternalName": "EMI_PAY_ActivityPublic",
+    "Guid": "84b57c9e-6b90-4a6b-a200-b3afb4499895",
+    "DisplayNameInRBAC": "Nhật ký tiến trình hồ sơ",
+    "LiveTitle": "Nhật ký tiến trình hồ sơ",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 96
+  },
+  {
+    "InternalName": "EMI_PAY_Requests",
+    "Guid": "12b3051d-7642-4f90-a39d-5364df561fbf",
+    "DisplayNameInRBAC": "Hồ sơ thanh toán",
+    "LiveTitle": "Hồ sơ thanh toán",
+    "Type": "List",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 104
+  },
+  {
+    "InternalName": "EMI_PAY_DocsWorking",
+    "Guid": "c2b4ef47-2c55-41e4-8b3c-c6480a27bbb2",
+    "DisplayNameInRBAC": "Tài liệu hồ sơ đang xử lý",
+    "LiveTitle": "Tài liệu hồ sơ đang xử lý",
+    "Type": "Library",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 148
+  },
+  {
+    "InternalName": "EMI_PAY_DocsInternal",
+    "Guid": "84ba461f-30ea-4d32-bb56-0ab1aa9cf456",
+    "DisplayNameInRBAC": "Tài liệu nội bộ bộ phận",
+    "LiveTitle": "Tài liệu nội bộ bộ phận",
+    "Type": "Library",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 148
+  },
+  {
+    "InternalName": "EMI_PAY_ArchiveCompleted",
+    "Guid": "bb7f6020-1fb6-448b-af3b-2cb36d793cc1",
+    "DisplayNameInRBAC": "Kho hồ sơ thanh toán hoàn tất",
+    "LiveTitle": "Kho hồ sơ thanh toán hoàn tất",
+    "Type": "Library",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 148
+  },
+  {
+    "InternalName": "EMI_PAY_ArchiveCancelled",
+    "Guid": "e64e349b-2fca-4925-b18b-08e387163601",
+    "DisplayNameInRBAC": "Kho hồ sơ thanh toán đã hủy",
+    "LiveTitle": "Kho hồ sơ thanh toán đã hủy",
+    "Type": "Library",
+    "ItemCount": 0,
+    "UniqueACL": true,
+    "FieldCountIncludingSystem": 148
+  }
+]

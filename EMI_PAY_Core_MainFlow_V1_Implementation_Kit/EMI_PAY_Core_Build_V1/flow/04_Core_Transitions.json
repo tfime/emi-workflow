@@ -1,0 +1,81 @@
+{
+  "mainFlow": "EMI_PAY_CORE_Orchestrator_V1",
+  "trigger": "EMI_PAY_Commands WHEN ITEM CREATED",
+  "order": [
+    "BPCM1_PREPARE",
+    "BPCM2_TECH",
+    "BPCM3_PRICE",
+    "TCKT_CHECK",
+    "CHAIR_APPROVE",
+    "TCKT_PAY",
+    "SYSTEM_ARCHIVE"
+  ],
+  "actions": {
+    "CREATE_REQUEST": {
+      "allowedStatus": null,
+      "step": "BPCM1_PREPARE",
+      "newStatus": "DRAFT",
+      "newReviewRound": 1
+    },
+    "SUBMIT": {
+      "step": "BPCM1_PREPARE",
+      "allowedStatus": [
+        "DRAFT",
+        "RETURNED"
+      ],
+      "next": "BPCM2_TECH",
+      "reviewRound": "On RETURNED increase 1; on DRAFT unchanged"
+    },
+    "DECIDE_PASS": {
+      "step": [
+        "BPCM2_TECH",
+        "BPCM3_PRICE",
+        "TCKT_CHECK",
+        "CHAIR_APPROVE"
+      ],
+      "next": "Next StepOrder within pinned WorkflowVersion",
+      "requires": [
+        "trusted caller",
+        "current work item OPEN",
+        "checklist complete",
+        "paymentDueAt at CHAIR"
+      ]
+    },
+    "DECIDE_REJECT": {
+      "step": [
+        "BPCM2_TECH",
+        "BPCM3_PRICE",
+        "TCKT_CHECK",
+        "CHAIR_APPROVE"
+      ],
+      "next": "BPCM1_PREPARE",
+      "status": "RETURNED",
+      "reviewRound": "unchanged",
+      "requires": [
+        "reason"
+      ]
+    },
+    "CONFIRM_PAYMENT": {
+      "step": "TCKT_PAY",
+      "next": "SYSTEM_ARCHIVE",
+      "status": "ARCHIVE_PENDING",
+      "requires": [
+        "current DocumentIndex UNC with FileUrl"
+      ]
+    },
+    "ARCHIVE_RESULT": {
+      "available": false,
+      "reason": "Future Archive Manager must attest success; never accept from ordinary user"
+    }
+  },
+  "idempotency": {
+    "RequestKey": "PAY-{CommandKey_of_CREATE}",
+    "StepInstanceKey": "{RequestKey}|{NextStepKey}|{CommandKey}",
+    "ActivityKey": "{CommandKey}|{EventType}"
+  },
+  "security": {
+    "phase": "PILOT_ADMIN_ONLY",
+    "actorFromPayloadTrusted": false,
+    "dynamicPermissionAvailable": false
+  }
+}

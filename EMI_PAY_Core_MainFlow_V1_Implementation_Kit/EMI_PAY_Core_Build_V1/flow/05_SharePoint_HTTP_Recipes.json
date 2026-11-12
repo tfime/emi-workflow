@@ -1,0 +1,102 @@
+{
+  "purpose": "Reference for SharePoint 'Send an HTTP request to SharePoint' actions in Power Automate. Replace ${...} via dynamic expressions. NOT an importable flow.",
+  "site": "https://emicomvn.sharepoint.com/sites/cecm",
+  "commonHeadersGet": {
+    "Accept": "application/json;odata=nometadata"
+  },
+  "commonHeadersPost": {
+    "Accept": "application/json;odata=nometadata",
+    "Content-Type": "application/json;odata=nometadata"
+  },
+  "requests": {
+    "findMaster": {
+      "method": "GET",
+      "uri": "_api/web/lists(guid'12b3051d-7642-4f90-a39d-5364df561fbf')/items?$filter=RequestKey eq '${REQUEST_KEY_ESCAPED}'&$top=2"
+    },
+    "createMaster": {
+      "method": "POST",
+      "uri": "_api/web/lists(guid'12b3051d-7642-4f90-a39d-5364df561fbf')/items",
+      "body": {
+        "Title": "${TITLE_FROM_VALIDATED_PAYLOAD}",
+        "RequestKey": "${SYSTEM_GENERATED_KEY}",
+        "CreatedOUCode": "${VALIDATED_OU_CODE}",
+        "CreatorUPN": "${TRUSTED_ACTOR_EMAIL}",
+        "PaymentTypeCode": "${VALIDATED_PAYMENT_TYPE_CODE}",
+        "WorkflowCode": "EMI_PAY_SPV",
+        "ReviewRound": 1,
+        "CurrentStepKey": "BPCM1_PREPARE",
+        "CurrentStepInstanceKey": "${REQUEST_KEY}|BPCM1_PREPARE|${COMMAND_KEY}",
+        "Status": "DRAFT",
+        "IsLocked": false
+      }
+    },
+    "updateMaster": {
+      "method": "POST",
+      "uri": "_api/web/lists(guid'12b3051d-7642-4f90-a39d-5364df561fbf')/items(${MASTER_ID})",
+      "extraHeaders": {
+        "X-HTTP-Method": "MERGE",
+        "IF-MATCH": "${ETAG_FROM_LAST_MASTER_GET}"
+      },
+      "body": {
+        "CurrentStepKey": "${NEXT_STEP_KEY}",
+        "CurrentStepInstanceKey": "${NEXT_STEP_INSTANCE_KEY}",
+        "ReviewRound": "${CALCULATED_INTEGER}",
+        "Status": "${CALCULATED_STATE}"
+      }
+    }
+  },
+  "workitems": {
+    "findByInstance": {
+      "method": "GET",
+      "uri": "_api/web/lists(guid'e21ef6e7-ee31-466a-be3b-65ae30ca7722')/items?$filter=StepInstanceKey eq '${STEP_INSTANCE_KEY}'&$top=2"
+    },
+    "openWork": {
+      "method": "POST",
+      "uri": "_api/web/lists(guid'e21ef6e7-ee31-466a-be3b-65ae30ca7722')/items",
+      "body": {
+        "Title": "${STEP_NAME}",
+        "RequestKey": "${REQUEST_KEY}",
+        "StepInstanceKey": "${STEP_INSTANCE_KEY}",
+        "ReviewRound": "${ROUND_INTEGER}",
+        "StepKey": "${STEP_KEY}",
+        "StepOrder": "${STEP_ORDER_INTEGER}",
+        "StepKind": "${STEP_KIND_CHOICE}",
+        "ResponsibleOUCode": "${RESOLVED_OU_CODE}",
+        "State": "OPEN"
+      }
+    }
+  },
+  "activity": {
+    "createActivity": {
+      "method": "POST",
+      "uri": "_api/web/lists(guid'84b57c9e-6b90-4a6b-a200-b3afb4499895')/items",
+      "body": {
+        "Title": "${EVENT_TYPE}",
+        "RequestKey": "${REQUEST_KEY}",
+        "ActivityKey": "${COMMAND_KEY}|${EVENT_TYPE}",
+        "StepInstanceKey": "${STEP_INSTANCE_KEY}",
+        "ReviewRound": "${ROUND_INTEGER}",
+        "EventType": "${EVENT_TYPE}",
+        "EventTime": "${UTC_NOW}",
+        "ActorUPN": "${TRUSTED_ACTOR_EMAIL}",
+        "FromState": "${FROM_STATE}",
+        "ToState": "${TO_STATE}"
+      }
+    }
+  },
+  "commands": {
+    "markCommand": {
+      "method": "POST",
+      "uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(${COMMAND_ID})",
+      "extraHeaders": {
+        "X-HTTP-Method": "MERGE",
+        "IF-MATCH": "${LATEST_ETAG}"
+      },
+      "body": {
+        "State": "${NEW_STATE}",
+        "ProcessedAt": "${UTC_NOW}",
+        "ErrorMessage": "${REDACTED_ERROR_TEXT}"
+      }
+    }
+  }
+}

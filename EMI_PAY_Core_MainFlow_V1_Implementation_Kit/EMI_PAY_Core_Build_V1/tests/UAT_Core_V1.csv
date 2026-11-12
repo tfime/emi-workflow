@@ -1,0 +1,20 @@
+ID,Scenario,Expected,MustNotHappen
+UAT-01,CREATE_REQUEST hợp lệ,DRAFT tại BPCM1 với một Master Record,Không tạo bản sao Master
+UAT-02,CREATE_REQUEST trùng CommandKey,Idempotent no-op,Không tạo master hoặc WorkItem thứ hai
+UAT-03,SUBMIT thiếu checklist bắt buộc,REJECTED và giữ BPCM1,Không chuyển sang BPCM2
+UAT-04,SUBMIT lần đầu hợp lệ,BPCM2 và ReviewRound=1,Không tăng ReviewRound lần đầu
+UAT-05,BPCM2 từ chối có lý do,Về BPCM1 giữ ReviewRound,Không trả về bước tùy ý
+UAT-06,BPCM1 sửa và gửi lại,BPCM2 và ReviewRound tăng 1,Không nhân bản Master
+UAT-07,BPCM3 từ chối,Về BPCM1,Không quay BPCM2
+UAT-08,TCKT kiểm tra từ chối,Về BPCM1,Không quay BPCM3
+UAT-09,CT.HĐQT không phê duyệt,Về BPCM1 có lý do,Không chuyển tới TCKT thanh toán
+UAT-10,Chấp nhận các bước theo thứ tự,TCKT_PAY sau CHAIR_APPROVE,Không bỏ qua bước
+UAT-11,Lệnh dùng sai StepInstanceKey,REJECTED stale precondition,Không đổi Master
+UAT-12,Lệnh không xác thực thẩm quyền,REJECTED,Không tin ActorUPN client khai
+UAT-13,CHAIR phê duyệt không có thời hạn thanh toán,REJECTED,Không tạo bước TCKT_PAY
+UAT-14,CONFIRM_PAYMENT không có UNC trong DocumentIndex,REJECTED,Không chuyển ARCHIVE_PENDING
+UAT-15,CONFIRM_PAYMENT có UNC hợp lệ,ARCHIVE_PENDING và PAYMENT_RECORDED,Không chuyển COMPLETED
+UAT-16,Chưa có Archive Manager,ARCHIVE_RESULT chưa cho chạy,Không hoàn tất giả
+UAT-17,Trùng DedupeKey từ Command khác,No-op hoặc REJECTED,Không tạo trùng Activity/WorkItem
+UAT-18,Lỗi giữa Master và WorkItem/Activity,NEEDS_RECONCILIATION và dừng,Không tự retry mù
+UAT-19,ACL sau kiểm thử,23/23 static RBAC giữ nguyên,Không mở quyền Users cả List

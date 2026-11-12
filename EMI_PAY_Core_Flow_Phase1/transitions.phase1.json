@@ -1,0 +1,53 @@
+{
+  "phase": 1,
+  "workflowCode": "EMI_PAY_SPV",
+  "workflowVersion": 1,
+  "site": "https://emicomvn.sharepoint.com/sites/cecm",
+  "lists": {
+    "EMI_PAY_Commands": "e16b76dc-7686-43e9-b232-18c80e2b31d2",
+    "EMI_PAY_Requests": "12b3051d-7642-4f90-a39d-5364df561fbf",
+    "EMI_PAY_WorkItems": "e21ef6e7-ee31-466a-be3b-65ae30ca7722",
+    "EMI_PAY_ChecklistItems": "d02c6a03-9561-4d90-b5d5-ad30a2fef88b",
+    "EMI_PAY_DocumentIndex": "a45c74cd-1f21-454c-9fcc-6812692b801b"
+  },
+  "choiceMap": {
+    "commandPending": "Pending",
+    "commandProcessing": "Processing",
+    "commandSucceeded": "Succeeded",
+    "commandRejected": "Rejected",
+    "commandFailed": "Failed",
+    "requestDraft": "Draft",
+    "requestInReview": "InReview",
+    "requestAwaitManager": "AwaitManager",
+    "requestReturned": "Returned",
+    "requestPendingPayment": "PendingPayment",
+    "requestArchiving": "Archiving",
+    "workInReview": "InReview",
+    "workAwaitManager": "AwaitManager",
+    "workCompleted": "Completed",
+    "archiveStatusPending": "Pending"
+  },
+  "steps": [
+    { "StepKey": "BPCM1_PREPARE", "StepOrder": 1, "StepKind": "Department", "OUCode": "OU_BPCM1", "wiState": "InReview", "reqStatusOnEnter": "Draft" },
+    { "StepKey": "BPCM2_TECH", "StepOrder": 2, "StepKind": "Department", "OUCode": "OU_BPCM2", "wiState": "InReview", "reqStatusOnEnter": "InReview" },
+    { "StepKey": "BPCM3_PRICE", "StepOrder": 3, "StepKind": "Department", "OUCode": "OU_BPCM3", "wiState": "InReview", "reqStatusOnEnter": "InReview" },
+    { "StepKey": "TCKT_CHECK", "StepOrder": 4, "StepKind": "Department", "OUCode": "OU_TCKT", "wiState": "InReview", "reqStatusOnEnter": "InReview" },
+    { "StepKey": "CHAIR_APPROVE", "StepOrder": 5, "StepKind": "Approval", "OUCode": "OU_CHAIR", "wiState": "AwaitManager", "reqStatusOnEnter": "AwaitManager" },
+    { "StepKey": "TCKT_PAY", "StepOrder": 6, "StepKind": "Payment", "OUCode": "OU_TCKT", "wiState": "InReview", "reqStatusOnEnter": "PendingPayment" },
+    { "StepKey": "SYSTEM_ARCHIVE", "StepOrder": 7, "StepKind": "Payment", "OUCode": "OU_SYSTEM", "wiState": "Completed", "reqStatusOnEnter": "Archiving" }
+  ],
+  "passNext": {
+    "BPCM2_TECH": "BPCM3_PRICE",
+    "BPCM3_PRICE": "TCKT_CHECK",
+    "TCKT_CHECK": "CHAIR_APPROVE",
+    "CHAIR_APPROVE": "TCKT_PAY"
+  },
+  "commands": ["CREATE_REQUEST", "SUBMIT", "DECIDE", "CONFIRM_PAYMENT"],
+  "phase1OutOfScope": [
+    "Trusted caller allowlist",
+    "NEEDS_RECONCILIATION",
+    "ActivityPublic/Internal audit",
+    "StepRecipients OU lookup",
+    "ETag conflict handling"
+  ]
+}

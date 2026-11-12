@@ -1,0 +1,29 @@
+<ImportExportXml version="9.2.26103.153" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="CrmLive" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" OrganizationVersion="9.2.26103.153" OrganizationSchemaType="Standard" CRMServerServiceabilityVersion="9.2.26103.00153">
+  <SolutionManifest>
+    <UniqueName>EMI_PAY_CORE_V1</UniqueName>
+    <LocalizedNames>
+      <LocalizedName description="EMI_PAY_CORE_V1" languagecode="1033" />
+    </LocalizedNames>
+    <Descriptions>
+      <Description description="Core Orchestrator: checklist+UNC+CHAIR PaymentDueAt, DECIDE PASS/REJECT, CONFIRM" languagecode="1033" />
+    </Descriptions>
+    <Version>1.0.0.9</Version>
+    <Managed>0</Managed>
+    <Publisher>
+      <UniqueName>tfime</UniqueName>
+      <LocalizedNames>
+        <LocalizedName description="tfime" languagecode="1033" />
+      </LocalizedNames>
+      <Descriptions />
+      <EMailAddress xsi:nil="true"></EMailAddress>
+      <SupportingWebsiteUrl xsi:nil="true"></SupportingWebsiteUrl>
+      <CustomizationPrefix>tfime</CustomizationPrefix>
+      <CustomizationOptionValuePrefix>93743</CustomizationOptionValuePrefix>
+      <Addresses />
+    </Publisher>
+    <RootComponents>
+      <RootComponent type="29" id="{1703d2f2-46de-f111-84ea-000d3aa191f1}" behavior="0" />
+    </RootComponents>
+    <MissingDependencies />
+  </SolutionManifest>
+</ImportExportXml>

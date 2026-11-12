@@ -1,0 +1,102 @@
+{
+  "project": "EMI PAY",
+  "version": "Core V1 blueprint 0.2-codefirst",
+  "siteUrl": "https://emicomvn.sharepoint.com/sites/cecm",
+  "status": "CODE_FIRST_ORCHESTRATOR",
+  "runtime": {
+    "type": "PnP.PowerShell module",
+    "package": "9.EMI_PAY_Core_Orchestrator_V1",
+    "queueList": "EMI_PAY_Commands",
+    "executionModel": "one short run per Pending command (poll/claim)",
+    "powerAutomateCloudFlow": "NOT_IN_CORE_V1"
+  },
+  "rules": {
+    "singleMasterRecord": true,
+    "rejectionRoute": "return_to_creator_then_resume_rejecting_step",
+    "firstStepHasNoReturn": true,
+    "versionPinnedAtFirstSubmit": true,
+    "listLibraryACLAlreadyVerified": true,
+    "returnFromStepKeyStorage": "EMI_PAY_ActivityInternal.DetailsJson on event RETURNED",
+    "endUserDynamicAccess": "NOT_YET_IMPLEMENTED"
+  },
+  "commandTypes": [
+    "CREATE_REQUEST",
+    "SUBMIT",
+    "COMPLETE_STEP",
+    "RETURN_STEP",
+    "CONFIRM_PAYMENT"
+  ],
+  "steps": [
+    {
+      "stepNo": 1,
+      "code": "PBCM",
+      "label": "Khởi tạo / điều chỉnh hồ sơ",
+      "previousStepNo": null,
+      "nextStepNo": 2,
+      "allowedCommands": ["SUBMIT"]
+    },
+    {
+      "stepNo": 2,
+      "code": "PBCM2",
+      "label": "Kiểm tra kỹ thuật",
+      "previousStepNo": 1,
+      "nextStepNo": 3,
+      "allowedCommands": ["COMPLETE_STEP", "RETURN_STEP"]
+    },
+    {
+      "stepNo": 3,
+      "code": "PBCM3",
+      "label": "Kiểm tra giá",
+      "previousStepNo": 2,
+      "nextStepNo": 4,
+      "allowedCommands": ["COMPLETE_STEP", "RETURN_STEP"]
+    },
+    {
+      "stepNo": 4,
+      "code": "TCKT_REVIEW",
+      "label": "TCKT – Kiểm tra hồ sơ",
+      "previousStepNo": 3,
+      "nextStepNo": 5,
+      "allowedCommands": ["COMPLETE_STEP", "RETURN_STEP"]
+    },
+    {
+      "stepNo": 5,
+      "code": "CHAIR_APPROVAL",
+      "label": "CT.HĐQT – Phê duyệt",
+      "previousStepNo": 4,
+      "nextStepNo": 6,
+      "allowedCommands": ["COMPLETE_STEP", "RETURN_STEP"]
+    },
+    {
+      "stepNo": 6,
+      "code": "TCKT_UNC",
+      "label": "TCKT – Tải UNC",
+      "previousStepNo": 5,
+      "nextStepNo": 7,
+      "allowedCommands": ["COMPLETE_STEP", "RETURN_STEP"]
+    },
+    {
+      "stepNo": 7,
+      "code": "PAYMENT_CONFIRM",
+      "label": "Xác nhận đã thanh toán",
+      "previousStepNo": 6,
+      "nextStepNo": null,
+      "allowedCommands": ["CONFIRM_PAYMENT"]
+    }
+  ],
+  "sourceLists": {
+    "commandQueue": "EMI_PAY_Commands",
+    "master": "EMI_PAY_Requests",
+    "workItems": "EMI_PAY_WorkItems",
+    "assignments": "EMI_PAY_Assignments",
+    "versions": "EMI_PAY_WorkflowVersions",
+    "steps": "EMI_PAY_WorkflowSteps",
+    "stepRecipients": "EMI_PAY_StepRecipients",
+    "types": "EMI_PAY_PaymentTypes",
+    "checklistTemplates": "EMI_PAY_ChecklistTemplates",
+    "checklistItems": "EMI_PAY_ChecklistItems",
+    "stepReviews": "EMI_PAY_StepReviews",
+    "activityPublic": "EMI_PAY_ActivityPublic",
+    "activityInternal": "EMI_PAY_ActivityInternal"
+  }
+}

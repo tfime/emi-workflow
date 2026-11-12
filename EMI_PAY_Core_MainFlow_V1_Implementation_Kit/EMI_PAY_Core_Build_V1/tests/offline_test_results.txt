@@ -1,0 +1,19 @@
+PASS 01 Create a single master
+PASS 02 Duplicate command is no-op
+PASS 03 Unauthorized command blocked
+PASS 04 Invalid step rejected
+PASS 05 Checklist missing blocks submit
+PASS 06 Submit 1 routes to BPCM2
+PASS 07 Reject routes directly to BPCM1
+PASS 08 ReviewRound not incremented on reject
+PASS 09 Resubmit increments ReviewRound
+PASS 10 Resubmit goes to BPCM2
+PASS 11 Stale expected round blocked
+PASS 12 Pass approvals reaches TCKT_PAY
+PASS 13 UNC is mandatory
+PASS 14 Payment ends at ARCHIVE_PENDING
+PASS 15 No automatic COMPLETED without archive
+PASS 16 Archive result not yet enabled
+PASS 17 No duplicate WorkItems
+PASS 18 Activity keys unique
+OFFLINE MODEL PASS: 18 assertions; no SharePoint/Power Automate execution performed

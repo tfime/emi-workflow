@@ -1,0 +1,8 @@
+StepKey,OUCode,ManagerUPN,Note
+BPCM1_PREPARE,,,Mã OU BPCM1 theo danh mục EMI thực tế
+BPCM2_TECH,,,Mã OU BPCM2 theo danh mục EMI thực tế
+BPCM3_PRICE,,,Mã OU BPCM3 theo danh mục EMI thực tế
+TCKT_CHECK,,,Mã OU TCKT kiểm tra
+CHAIR_APPROVE,,,Mã OU chứa người phê duyệt
+TCKT_PAY,,,Mã OU TCKT thanh toán
+SYSTEM_ARCHIVE,,,Mã OU/nhóm hệ thống hoặc để trống nếu dùng SYSTEM

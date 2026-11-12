@@ -1,0 +1,8 @@
+﻿StepNo,StepCodeLogical,StepDisplayName,AllowedCommands,PreviousStepNo,NextStepNo,ActualOrgUnitId,ActualAssigneeUPN,Notes
+1,PBCM,Khởi tạo / điều chỉnh hồ sơ,SUBMIT,,2,,,Return luôn về bước này; SUBMIT lại resume ReturnFromStepKey
+2,PBCM2,Kiểm tra kỹ thuật,COMPLETE_STEP / RETURN_STEP,1,3,,,RETURN → người tạo; không về bước liền trước
+3,PBCM3,Kiểm tra giá,COMPLETE_STEP / RETURN_STEP,2,4,,,RETURN → người tạo
+4,TCKT_REVIEW,TCKT – Kiểm tra hồ sơ,COMPLETE_STEP / RETURN_STEP,3,5,,,RETURN → người tạo
+5,CHAIR_APPROVAL,CT.HĐQT – Phê duyệt,COMPLETE_STEP / RETURN_STEP,4,6,,,RETURN → người tạo
+6,TCKT_UNC,TCKT – Tải UNC,COMPLETE_STEP / RETURN_STEP,5,7,,,Xong → PendingPayment; RETURN → người tạo
+7,PAYMENT_CONFIRM,Xác nhận đã thanh toán,CONFIRM_PAYMENT,6,,,,Thay SPV_DIRECTOR_SIGN; ấn cập nhật trạng thái thanh toán
