@@ -1,0 +1,1569 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "tfime_sharedsharepointonline_5e343"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.2",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "When_Command_Created": {
+          "recurrence": {
+            "interval": 5,
+            "frequency": "Minute"
+          },
+          "splitOn": "@triggerOutputs()?['body/value']",
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetOnNewItems",
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+            },
+            "parameters": {
+              "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+              "table": "e16b76dc-7686-43e9-b232-18c80e2b31d2"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      },
+      "actions": {
+        "C00_PilotEnabled": {
+          "type": "Compose",
+          "inputs": "false",
+          "runAfter": {}
+        },
+        "C00_AllowedActorUPN": {
+          "type": "Compose",
+          "inputs": "__SET_TRUSTED_ADMIN_UPN__",
+          "runAfter": {
+            "C00_PilotEnabled": [
+              "Succeeded"
+            ]
+          }
+        },
+        "V00_InitializeMasterId": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "vMasterId",
+                "type": "integer",
+                "value": 0
+              }
+            ]
+          },
+          "runAfter": {
+            "C00_AllowedActorUPN": [
+              "Succeeded"
+            ]
+          }
+        },
+        "V00_InitializeWriteFlag": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "vWriteStarted",
+                "type": "boolean",
+                "value": false
+              }
+            ]
+          },
+          "runAfter": {
+            "V00_InitializeMasterId": [
+              "Succeeded"
+            ]
+          }
+        },
+        "IF00_PilotGate": {
+          "type": "If",
+          "expression": "@equals(outputs('C00_PilotEnabled'),'true')",
+          "actions": {},
+          "else": {
+            "actions": {
+              "END00_Hold": {
+                "type": "Terminate",
+                "inputs": {
+                  "runStatus": "Succeeded"
+                },
+                "runAfter": {}
+              }
+            }
+          },
+          "runAfter": {
+            "V00_InitializeWriteFlag": [
+              "Succeeded"
+            ]
+          }
+        },
+        "S01_S08_MainCore": {
+          "type": "Scope",
+          "actions": {
+            "C01_CommandType": {
+              "type": "Compose",
+              "inputs": "@coalesce(triggerBody()?['CommandType'],'')",
+              "runAfter": {}
+            },
+            "C01_CommandKey": {
+              "type": "Compose",
+              "inputs": "@coalesce(triggerBody()?['CommandKey'],'')",
+              "runAfter": {
+                "C01_CommandType": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C01_DedupeKey": {
+              "type": "Compose",
+              "inputs": "@coalesce(triggerBody()?['DedupeKey'],'')",
+              "runAfter": {
+                "C01_CommandKey": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C01_RequestKey": {
+              "type": "Compose",
+              "inputs": "@if(equals(outputs('C01_CommandType'),'CREATE_REQUEST'),concat('PAY-',outputs('C01_CommandKey')),coalesce(triggerBody()?['RequestKey'],''))",
+              "runAfter": {
+                "C01_DedupeKey": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C01_Payload": {
+              "type": "Compose",
+              "inputs": "@json(coalesce(triggerBody()?['PayloadJson'],'{}'))",
+              "runAfter": {
+                "C01_RequestKey": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP01_ReadCommandAndAuthor": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})?$select=Id,State,CommandKey,DedupeKey,CommandType,RequestKey,Author/EMail&$expand=Author",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "C01_Payload": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C01_ActorUPN": {
+              "type": "Compose",
+              "inputs": "@toLower(coalesce(body('HTTP01_ReadCommandAndAuthor')?['Author']?['EMail'],''))",
+              "runAfter": {
+                "HTTP01_ReadCommandAndAuthor": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF02_ValidateActorAndEnvelope": {
+              "type": "If",
+              "expression": "@and(equals(outputs('C01_ActorUPN'),toLower(outputs('C00_AllowedActorUPN'))),equals(body('HTTP01_ReadCommandAndAuthor')?['State'],'NEW'),not(empty(outputs('C01_CommandKey'))),not(empty(outputs('C01_DedupeKey'))),not(empty(outputs('C01_RequestKey'))),contains(createArray('CREATE_REQUEST','SUBMIT','DECIDE','CONFIRM_PAYMENT'),outputs('C01_CommandType')),not(contains(outputs('C01_CommandKey'),decodeUriComponent('%27'))),not(contains(outputs('C01_DedupeKey'),decodeUriComponent('%27'))),not(contains(outputs('C01_RequestKey'),decodeUriComponent('%27'))))",
+              "actions": {},
+              "else": {
+                "actions": {
+                  "HTTP_S02Guard_RejectCommand": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_sharepointonline",
+                        "operationId": "HttpRequest",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                      },
+                      "parameters": {
+                        "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                        "parameters/method": "POST",
+                        "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                        "parameters/headers": {
+                          "Accept": "application/json;odata=nometadata",
+                          "Content-Type": "application/json;odata=nometadata",
+                          "X-HTTP-Method": "MERGE",
+                          "IF-MATCH": "*"
+                        },
+                        "parameters/body": "@string(setProperty(setProperty(setProperty(setProperty(json('{}'),'Title',triggerBody()?['Title']),'State','REJECTED'),'ErrorMessage','Command actor/state/envelope not approved for PILOT_ADMIN_ONLY.'),'ProcessedAt',utcNow()))"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    },
+                    "runAfter": {}
+                  },
+                  "END_S02Guard_Reject": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Succeeded"
+                    },
+                    "runAfter": {
+                      "HTTP_S02Guard_RejectCommand": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "C01_ActorUPN": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP02_FindDuplicateCommands": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items?$filter=DedupeKey eq '@{outputs('C01_DedupeKey')}'&$top=3",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "IF02_ValidateActorAndEnvelope": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF02_OnlyOneCommandForDedupe": {
+              "type": "If",
+              "expression": "@equals(length(body('HTTP02_FindDuplicateCommands')?['value']),1)",
+              "actions": {},
+              "else": {
+                "actions": {
+                  "HTTP_S02Dedupe_RejectCommand": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_sharepointonline",
+                        "operationId": "HttpRequest",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                      },
+                      "parameters": {
+                        "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                        "parameters/method": "POST",
+                        "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                        "parameters/headers": {
+                          "Accept": "application/json;odata=nometadata",
+                          "Content-Type": "application/json;odata=nometadata",
+                          "X-HTTP-Method": "MERGE",
+                          "IF-MATCH": "*"
+                        },
+                        "parameters/body": "@string(setProperty(setProperty(setProperty(setProperty(json('{}'),'Title',triggerBody()?['Title']),'State','REJECTED'),'ErrorMessage','DedupeKey is not unique. No business data changed.'),'ProcessedAt',utcNow()))"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    },
+                    "runAfter": {}
+                  },
+                  "END_S02Dedupe_Reject": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Succeeded"
+                    },
+                    "runAfter": {
+                      "HTTP_S02Dedupe_RejectCommand": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "HTTP02_FindDuplicateCommands": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP02_ClaimCommand": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "POST",
+                  "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata",
+                    "Content-Type": "application/json;odata=nometadata",
+                    "X-HTTP-Method": "MERGE",
+                    "IF-MATCH": "@{body('HTTP01_ReadCommandAndAuthor')?['@odata.etag']}"
+                  },
+                  "parameters/body": "@string(setProperty(json('{}'),'State','PROCESSING'))"
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "IF02_OnlyOneCommandForDedupe": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP03_FindMaster": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'12b3051d-7642-4f90-a39d-5364df561fbf')/items?$filter=RequestKey eq '@{outputs('C01_RequestKey')}'&$top=2",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "HTTP02_ClaimCommand": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF03_MasterCardinality": {
+              "type": "If",
+              "expression": "@if(equals(outputs('C01_CommandType'),'CREATE_REQUEST'),equals(length(body('HTTP03_FindMaster')?['value']),0),equals(length(body('HTTP03_FindMaster')?['value']),1))",
+              "actions": {},
+              "else": {
+                "actions": {
+                  "HTTP_S03Master_RejectCommand": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_sharepointonline",
+                        "operationId": "HttpRequest",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                      },
+                      "parameters": {
+                        "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                        "parameters/method": "POST",
+                        "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                        "parameters/headers": {
+                          "Accept": "application/json;odata=nometadata",
+                          "Content-Type": "application/json;odata=nometadata",
+                          "X-HTTP-Method": "MERGE",
+                          "IF-MATCH": "*"
+                        },
+                        "parameters/body": "@string(setProperty(setProperty(setProperty(setProperty(json('{}'),'Title',triggerBody()?['Title']),'State','REJECTED'),'ErrorMessage','Master cardinality conflict (0/2 records); investigate before retry.'),'ProcessedAt',utcNow()))"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    },
+                    "runAfter": {}
+                  },
+                  "END_S03Master_Reject": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Succeeded"
+                    },
+                    "runAfter": {
+                      "HTTP_S03Master_RejectCommand": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "HTTP03_FindMaster": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C03_CurrentMaster": {
+              "type": "Compose",
+              "inputs": "@if(equals(length(body('HTTP03_FindMaster')?['value']),0),json('{}'),first(body('HTTP03_FindMaster')?['value']))",
+              "runAfter": {
+                "IF03_MasterCardinality": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C03_CurrentStatus": {
+              "type": "Compose",
+              "inputs": "@coalesce(outputs('C03_CurrentMaster')?['Status'],'')",
+              "runAfter": {
+                "C03_CurrentMaster": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C03_CurrentStep": {
+              "type": "Compose",
+              "inputs": "@coalesce(outputs('C03_CurrentMaster')?['CurrentStepKey'],'')",
+              "runAfter": {
+                "C03_CurrentStatus": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C03_CurrentInstance": {
+              "type": "Compose",
+              "inputs": "@coalesce(outputs('C03_CurrentMaster')?['CurrentStepInstanceKey'],'')",
+              "runAfter": {
+                "C03_CurrentStep": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C03_CurrentRound": {
+              "type": "Compose",
+              "inputs": "@int(coalesce(outputs('C03_CurrentMaster')?['ReviewRound'],1))",
+              "runAfter": {
+                "C03_CurrentInstance": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C03_Version": {
+              "type": "Compose",
+              "inputs": "@int(coalesce(outputs('C03_CurrentMaster')?['WorkflowVersionNo'],1))",
+              "runAfter": {
+                "C03_CurrentRound": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP03_CurrentWork": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'e21ef6e7-ee31-466a-be3b-65ae30ca7722')/items?$filter=StepInstanceKey eq '@{outputs('C03_CurrentInstance')}'&$top=2",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "C03_Version": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C03_CurrentWorkObj": {
+              "type": "Compose",
+              "inputs": "@if(equals(length(body('HTTP03_CurrentWork')?['value']),0),json('{}'),first(body('HTTP03_CurrentWork')?['value']))",
+              "runAfter": {
+                "HTTP03_CurrentWork": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP03_WorkflowIsPublished": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'b263446d-7cea-4fd8-bfde-b22dd2de4281')/items?$filter=WorkflowCode eq 'EMI_PAY_SPV' and VersionNo eq @{outputs('C03_Version')} and Lifecycle eq 'PUBLISHED'&$top=2",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "C03_CurrentWorkObj": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C04_Decision": {
+              "type": "Compose",
+              "inputs": "@toUpper(coalesce(outputs('C01_Payload')?['decision'],''))",
+              "runAfter": {
+                "HTTP03_WorkflowIsPublished": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C04_Reason": {
+              "type": "Compose",
+              "inputs": "@coalesce(outputs('C01_Payload')?['note'],'')",
+              "runAfter": {
+                "C04_Decision": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF04_ValidateStateAndPreconditions": {
+              "type": "If",
+              "expression": "@and(or(and(equals(outputs('C01_CommandType'),'CREATE_REQUEST'),and(not(empty(outputs('C01_Payload')?['title'])),not(empty(outputs('C01_Payload')?['createdOUCode'])),not(empty(outputs('C01_Payload')?['paymentTypeCode'])),not(empty(outputs('C01_Payload')?['paymentLECode'])),not(contains(coalesce(outputs('C01_Payload')?['createdOUCode'],''),decodeUriComponent('%27'))),not(contains(coalesce(outputs('C01_Payload')?['paymentTypeCode'],''),decodeUriComponent('%27'))))),and(equals(outputs('C01_CommandType'),'SUBMIT'),and(equals(outputs('C03_CurrentStep'),'BPCM1_PREPARE'),contains(createArray('DRAFT','RETURNED'),outputs('C03_CurrentStatus')),and(equals(coalesce(outputs('C01_Payload')?['expectedStepKey'],''),outputs('C03_CurrentStep')),equals(string(coalesce(outputs('C01_Payload')?['expectedReviewRound'],'')),string(outputs('C03_CurrentRound'))),equals(length(body('HTTP03_CurrentWork')?['value']),1),equals(outputs('C03_CurrentWorkObj')?['State'],'OPEN'),not(empty(outputs('C03_CurrentMaster')?['@odata.etag']))))),and(equals(outputs('C01_CommandType'),'DECIDE'),and(contains(createArray('BPCM2_TECH','BPCM3_PRICE','TCKT_CHECK','CHAIR_APPROVE'),outputs('C03_CurrentStep')),equals(outputs('C03_CurrentStatus'),'IN_PROGRESS'),contains(createArray('PASS','REJECT'),outputs('C04_Decision')),and(equals(coalesce(outputs('C01_Payload')?['expectedStepKey'],''),outputs('C03_CurrentStep')),equals(string(coalesce(outputs('C01_Payload')?['expectedReviewRound'],'')),string(outputs('C03_CurrentRound'))),equals(length(body('HTTP03_CurrentWork')?['value']),1),equals(outputs('C03_CurrentWorkObj')?['State'],'OPEN'),not(empty(outputs('C03_CurrentMaster')?['@odata.etag']))),equals(coalesce(outputs('C01_Payload')?['expectedStepInstanceKey'],''),outputs('C03_CurrentInstance')),or(not(equals(outputs('C04_Decision'),'REJECT')),not(empty(outputs('C04_Reason')))),or(not(and(equals(outputs('C03_CurrentStep'),'CHAIR_APPROVE'),equals(outputs('C04_Decision'),'PASS'))),not(empty(outputs('C01_Payload')?['paymentDueAt']))))),and(equals(outputs('C01_CommandType'),'CONFIRM_PAYMENT'),and(equals(outputs('C03_CurrentStep'),'TCKT_PAY'),equals(outputs('C03_CurrentStatus'),'IN_PROGRESS'),and(equals(coalesce(outputs('C01_Payload')?['expectedStepKey'],''),outputs('C03_CurrentStep')),equals(string(coalesce(outputs('C01_Payload')?['expectedReviewRound'],'')),string(outputs('C03_CurrentRound'))),equals(length(body('HTTP03_CurrentWork')?['value']),1),equals(outputs('C03_CurrentWorkObj')?['State'],'OPEN'),not(empty(outputs('C03_CurrentMaster')?['@odata.etag']))),equals(coalesce(outputs('C01_Payload')?['expectedStepInstanceKey'],''),outputs('C03_CurrentInstance')),not(empty(outputs('C01_Payload')?['uncDocumentKey']))))),equals(length(body('HTTP03_WorkflowIsPublished')?['value']),1))",
+              "actions": {},
+              "else": {
+                "actions": {
+                  "HTTP_S04Business_RejectCommand": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_sharepointonline",
+                        "operationId": "HttpRequest",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                      },
+                      "parameters": {
+                        "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                        "parameters/method": "POST",
+                        "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                        "parameters/headers": {
+                          "Accept": "application/json;odata=nometadata",
+                          "Content-Type": "application/json;odata=nometadata",
+                          "X-HTTP-Method": "MERGE",
+                          "IF-MATCH": "*"
+                        },
+                        "parameters/body": "@string(setProperty(setProperty(setProperty(setProperty(json('{}'),'Title',triggerBody()?['Title']),'State','REJECTED'),'ErrorMessage','Business guard/pinned workflow failed. No Master change.'),'ProcessedAt',utcNow()))"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    },
+                    "runAfter": {}
+                  },
+                  "END_S04Business_Reject": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Succeeded"
+                    },
+                    "runAfter": {
+                      "HTTP_S04Business_RejectCommand": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "C04_Reason": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP04_ValidateCreatorOU": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'a95e5ccf-00cc-4c7e-b375-828a07117530')/items?$filter=OUCode eq '@{coalesce(outputs('C01_Payload')?['createdOUCode'],'')}'&$top=2",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "IF04_ValidateStateAndPreconditions": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP04_ValidatePaymentType": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'60bb23f6-4702-4aed-b36f-b2b20b09e74d')/items?$filter=PaymentTypeCode eq '@{coalesce(outputs('C01_Payload')?['paymentTypeCode'],'')}' and IsActive eq 1&$top=2",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "HTTP04_ValidateCreatorOU": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF04_CreateCatalogsValid": {
+              "type": "If",
+              "expression": "@or(not(equals(outputs('C01_CommandType'),'CREATE_REQUEST')),and(equals(length(body('HTTP04_ValidateCreatorOU')?['value']),1),equals(length(body('HTTP04_ValidatePaymentType')?['value']),1)))",
+              "actions": {},
+              "else": {
+                "actions": {
+                  "HTTP_S04Catalog_RejectCommand": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_sharepointonline",
+                        "operationId": "HttpRequest",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                      },
+                      "parameters": {
+                        "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                        "parameters/method": "POST",
+                        "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                        "parameters/headers": {
+                          "Accept": "application/json;odata=nometadata",
+                          "Content-Type": "application/json;odata=nometadata",
+                          "X-HTTP-Method": "MERGE",
+                          "IF-MATCH": "*"
+                        },
+                        "parameters/body": "@string(setProperty(setProperty(setProperty(setProperty(json('{}'),'Title',triggerBody()?['Title']),'State','REJECTED'),'ErrorMessage','Unknown OU/payment type. Confirm approved configuration.'),'ProcessedAt',utcNow()))"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    },
+                    "runAfter": {}
+                  },
+                  "END_S04Catalog_Reject": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Succeeded"
+                    },
+                    "runAfter": {
+                      "HTTP_S04Catalog_RejectCommand": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "HTTP04_ValidatePaymentType": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP04_ChecklistItems": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'd02c6a03-9561-4d90-b5d5-ad30a2fef88b')/items?$filter=RequestKey eq '@{outputs('C01_RequestKey')}' and IsRequired eq 1&$top=250",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "IF04_CreateCatalogsValid": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Q04_MissingRequiredChecklist": {
+              "type": "Query",
+              "inputs": {
+                "from": "@body('HTTP04_ChecklistItems')?['value']",
+                "where": "@less(int(coalesce(item()?['UploadedCount'],0)),int(coalesce(item()?['MinFileCount'],1)))"
+              },
+              "runAfter": {
+                "HTTP04_ChecklistItems": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF04_RequiredDocsValid": {
+              "type": "If",
+              "expression": "@or(not(or(equals(outputs('C01_CommandType'),'SUBMIT'),and(equals(outputs('C01_CommandType'),'DECIDE'),equals(outputs('C04_Decision'),'PASS')))),and(greater(length(body('HTTP04_ChecklistItems')?['value']),0),equals(length(body('Q04_MissingRequiredChecklist')),0)))",
+              "actions": {},
+              "else": {
+                "actions": {
+                  "HTTP_S04Docs_RejectCommand": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_sharepointonline",
+                        "operationId": "HttpRequest",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                      },
+                      "parameters": {
+                        "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                        "parameters/method": "POST",
+                        "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                        "parameters/headers": {
+                          "Accept": "application/json;odata=nometadata",
+                          "Content-Type": "application/json;odata=nometadata",
+                          "X-HTTP-Method": "MERGE",
+                          "IF-MATCH": "*"
+                        },
+                        "parameters/body": "@string(setProperty(setProperty(setProperty(setProperty(json('{}'),'Title',triggerBody()?['Title']),'State','REJECTED'),'ErrorMessage','Missing/unfinished mandatory checklist or checklist not configured.'),'ProcessedAt',utcNow()))"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    },
+                    "runAfter": {}
+                  },
+                  "END_S04Docs_Reject": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Succeeded"
+                    },
+                    "runAfter": {
+                      "HTTP_S04Docs_RejectCommand": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Q04_MissingRequiredChecklist": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP04_GetUncEvidence": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'a45c74cd-1f21-454c-9fcc-6812692b801b')/items?$filter=RequestKey eq '@{outputs('C01_RequestKey')}' and DocumentKey eq '@{coalesce(outputs('C01_Payload')?['uncDocumentKey'],'')}' and IsCurrent eq 1&$top=2",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "IF04_RequiredDocsValid": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C04_UncEvidenceObj": {
+              "type": "Compose",
+              "inputs": "@if(equals(length(body('HTTP04_GetUncEvidence')?['value']),0),json('{}'),first(body('HTTP04_GetUncEvidence')?['value']))",
+              "runAfter": {
+                "HTTP04_GetUncEvidence": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF04_ConfirmUncValid": {
+              "type": "If",
+              "expression": "@or(not(equals(outputs('C01_CommandType'),'CONFIRM_PAYMENT')),and(equals(length(body('HTTP04_GetUncEvidence')?['value']),1),not(empty(outputs('C04_UncEvidenceObj')?['FileUrl']))))",
+              "actions": {},
+              "else": {
+                "actions": {
+                  "HTTP_S04UNC_RejectCommand": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_sharepointonline",
+                        "operationId": "HttpRequest",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                      },
+                      "parameters": {
+                        "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                        "parameters/method": "POST",
+                        "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                        "parameters/headers": {
+                          "Accept": "application/json;odata=nometadata",
+                          "Content-Type": "application/json;odata=nometadata",
+                          "X-HTTP-Method": "MERGE",
+                          "IF-MATCH": "*"
+                        },
+                        "parameters/body": "@string(setProperty(setProperty(setProperty(setProperty(json('{}'),'Title',triggerBody()?['Title']),'State','REJECTED'),'ErrorMessage','UNC evidence missing from DocumentIndex or not current.'),'ProcessedAt',utcNow()))"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    },
+                    "runAfter": {}
+                  },
+                  "END_S04UNC_Reject": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Succeeded"
+                    },
+                    "runAfter": {
+                      "HTTP_S04UNC_RejectCommand": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "C04_UncEvidenceObj": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C05_NextStep": {
+              "type": "Compose",
+              "inputs": "@if(equals(outputs('C01_CommandType'),'CREATE_REQUEST'),'BPCM1_PREPARE',if(equals(outputs('C01_CommandType'),'SUBMIT'),'BPCM2_TECH',if(equals(outputs('C01_CommandType'),'CONFIRM_PAYMENT'),'SYSTEM_ARCHIVE',if(equals(outputs('C04_Decision'),'REJECT'),'BPCM1_PREPARE',if(equals(outputs('C03_CurrentStep'),'BPCM2_TECH'),'BPCM3_PRICE',if(equals(outputs('C03_CurrentStep'),'BPCM3_PRICE'),'TCKT_CHECK',if(equals(outputs('C03_CurrentStep'),'TCKT_CHECK'),'CHAIR_APPROVE','TCKT_PAY')))))))",
+              "runAfter": {
+                "IF04_ConfirmUncValid": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C05_NextStatus": {
+              "type": "Compose",
+              "inputs": "@if(equals(outputs('C01_CommandType'),'CREATE_REQUEST'),'DRAFT',if(equals(outputs('C01_CommandType'),'CONFIRM_PAYMENT'),'ARCHIVE_PENDING',if(and(equals(outputs('C01_CommandType'),'DECIDE'),equals(outputs('C04_Decision'),'REJECT')),'RETURNED','IN_PROGRESS')))",
+              "runAfter": {
+                "C05_NextStep": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C05_NextReviewRound": {
+              "type": "Compose",
+              "inputs": "@if(equals(outputs('C01_CommandType'),'CREATE_REQUEST'),1,if(and(equals(outputs('C01_CommandType'),'SUBMIT'),equals(outputs('C03_CurrentStatus'),'RETURNED')),add(outputs('C03_CurrentRound'),1),outputs('C03_CurrentRound')))",
+              "runAfter": {
+                "C05_NextStatus": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C05_Event": {
+              "type": "Compose",
+              "inputs": "@if(equals(outputs('C01_CommandType'),'CREATE_REQUEST'),'REQUEST_CREATED',if(equals(outputs('C01_CommandType'),'SUBMIT'),'REQUEST_SUBMITTED',if(equals(outputs('C01_CommandType'),'CONFIRM_PAYMENT'),'PAYMENT_RECORDED',if(equals(outputs('C04_Decision'),'REJECT'),'REQUEST_RETURNED','STEP_APPROVED'))))",
+              "runAfter": {
+                "C05_NextReviewRound": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C05_NextInstance": {
+              "type": "Compose",
+              "inputs": "@concat(outputs('C01_RequestKey'),'|',outputs('C05_NextStep'),'|',outputs('C01_CommandKey'))",
+              "runAfter": {
+                "C05_Event": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP05_TargetWorkflowStep": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'0135b54a-f4a3-4edc-a738-a64e12feb9ad')/items?$filter=WorkflowCode eq 'EMI_PAY_SPV' and VersionNo eq @{outputs('C03_Version')} and StepKey eq '@{outputs('C05_NextStep')}' and IsActive eq 1&$top=2",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "C05_NextInstance": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP05_TargetRecipient": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'7ebac733-193d-4216-bf63-785c6a5f06a2')/items?$filter=WorkflowCode eq 'EMI_PAY_SPV' and VersionNo eq @{outputs('C03_Version')} and StepKey eq '@{outputs('C05_NextStep')}' and IsDefault eq 1&$top=2",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "HTTP05_TargetWorkflowStep": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF05_ValidConfiguredTarget": {
+              "type": "If",
+              "expression": "@and(equals(length(body('HTTP05_TargetWorkflowStep')?['value']),1),or(equals(outputs('C05_NextStep'),'SYSTEM_ARCHIVE'),equals(length(body('HTTP05_TargetRecipient')?['value']),1)))",
+              "actions": {},
+              "else": {
+                "actions": {
+                  "HTTP_S05Route_RejectCommand": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_sharepointonline",
+                        "operationId": "HttpRequest",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                      },
+                      "parameters": {
+                        "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                        "parameters/method": "POST",
+                        "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                        "parameters/headers": {
+                          "Accept": "application/json;odata=nometadata",
+                          "Content-Type": "application/json;odata=nometadata",
+                          "X-HTTP-Method": "MERGE",
+                          "IF-MATCH": "*"
+                        },
+                        "parameters/body": "@string(setProperty(setProperty(setProperty(setProperty(json('{}'),'Title',triggerBody()?['Title']),'State','REJECTED'),'ErrorMessage','Target workflow step / default recipient not uniquely configured.'),'ProcessedAt',utcNow()))"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    },
+                    "runAfter": {}
+                  },
+                  "END_S05Route_Reject": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Succeeded"
+                    },
+                    "runAfter": {
+                      "HTTP_S05Route_RejectCommand": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "HTTP05_TargetRecipient": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C05_NextRecipientObj": {
+              "type": "Compose",
+              "inputs": "@if(equals(length(body('HTTP05_TargetRecipient')?['value']),0),json('{}'),first(body('HTTP05_TargetRecipient')?['value']))",
+              "runAfter": {
+                "IF05_ValidConfiguredTarget": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C05_NextOU": {
+              "type": "Compose",
+              "inputs": "@coalesce(outputs('C05_NextRecipientObj')?['OUCode'],'')",
+              "runAfter": {
+                "C05_NextRecipientObj": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C05_NextOrder": {
+              "type": "Compose",
+              "inputs": "@int(first(body('HTTP05_TargetWorkflowStep')?['value'])?['StepOrder'])",
+              "runAfter": {
+                "C05_NextOU": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C05_NextKind": {
+              "type": "Compose",
+              "inputs": "@first(body('HTTP05_TargetWorkflowStep')?['value'])?['StepKind']",
+              "runAfter": {
+                "C05_NextOrder": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP05_ExistingNextWork": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'e21ef6e7-ee31-466a-be3b-65ae30ca7722')/items?$filter=StepInstanceKey eq '@{outputs('C05_NextInstance')}'&$top=2",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "C05_NextKind": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF05_NoDuplicateNextWork": {
+              "type": "If",
+              "expression": "@less(length(body('HTTP05_ExistingNextWork')?['value']),2)",
+              "actions": {},
+              "else": {
+                "actions": {
+                  "HTTP_S05Work_RejectCommand": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "host": {
+                        "connectionName": "shared_sharepointonline",
+                        "operationId": "HttpRequest",
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                      },
+                      "parameters": {
+                        "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                        "parameters/method": "POST",
+                        "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                        "parameters/headers": {
+                          "Accept": "application/json;odata=nometadata",
+                          "Content-Type": "application/json;odata=nometadata",
+                          "X-HTTP-Method": "MERGE",
+                          "IF-MATCH": "*"
+                        },
+                        "parameters/body": "@string(setProperty(setProperty(setProperty(setProperty(json('{}'),'Title',triggerBody()?['Title']),'State','REJECTED'),'ErrorMessage','Duplicate StepInstanceKey in WorkItems. Investigate.'),'ProcessedAt',utcNow()))"
+                      },
+                      "authentication": "@parameters('$authentication')"
+                    },
+                    "runAfter": {}
+                  },
+                  "END_S05Work_Reject": {
+                    "type": "Terminate",
+                    "inputs": {
+                      "runStatus": "Succeeded"
+                    },
+                    "runAfter": {
+                      "HTTP_S05Work_RejectCommand": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "HTTP05_ExistingNextWork": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "V06_BeginWrites": {
+              "type": "SetVariable",
+              "inputs": {
+                "name": "vWriteStarted",
+                "value": true
+              },
+              "runAfter": {
+                "IF05_NoDuplicateNextWork": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF06_CreateOrUseMaster": {
+              "type": "If",
+              "expression": "@equals(outputs('C01_CommandType'),'CREATE_REQUEST')",
+              "actions": {
+                "C06_NewMasterJson": {
+                  "type": "Compose",
+                  "inputs": {
+                    "Title": "@coalesce(outputs('C01_Payload')?['title'],outputs('C01_RequestKey'))",
+                    "RequestKey": "@outputs('C01_RequestKey')",
+                    "RequestCode": "@outputs('C01_RequestKey')",
+                    "CreatedOUCode": "@outputs('C01_Payload')?['createdOUCode']",
+                    "CreatorUPN": "@outputs('C01_ActorUPN')",
+                    "PaymentLECode": "@outputs('C01_Payload')?['paymentLECode']",
+                    "PaymentTypeCode": "@outputs('C01_Payload')?['paymentTypeCode']",
+                    "Amount": "@float(coalesce(outputs('C01_Payload')?['amount'],0))",
+                    "Explanation": "@coalesce(outputs('C01_Payload')?['explanation'],'')",
+                    "WorkflowCode": "EMI_PAY_SPV",
+                    "WorkflowVersionNo": "@outputs('C03_Version')",
+                    "ChecklistVersion": "@int(first(body('HTTP04_ValidatePaymentType')?['value'])?['ChecklistVersion'])",
+                    "ReviewRound": "@outputs('C05_NextReviewRound')",
+                    "CurrentStepKey": "@outputs('C05_NextStep')",
+                    "CurrentStepInstanceKey": "@outputs('C05_NextInstance')",
+                    "CurrentOUCode": "@outputs('C05_NextOU')",
+                    "Status": "DRAFT",
+                    "IsLocked": false
+                  },
+                  "runAfter": {}
+                },
+                "HTTP06_CreateMaster": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                    },
+                    "parameters": {
+                      "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/web/lists(guid'12b3051d-7642-4f90-a39d-5364df561fbf')/items",
+                      "parameters/headers": {
+                        "Accept": "application/json;odata=nometadata",
+                        "Content-Type": "application/json;odata=nometadata"
+                      },
+                      "parameters/body": "@string(outputs('C06_NewMasterJson'))"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "runAfter": {
+                    "C06_NewMasterJson": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "V06_SetMasterID_Create": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "vMasterId",
+                    "value": "@int(body('HTTP06_CreateMaster')?['Id'])"
+                  },
+                  "runAfter": {
+                    "HTTP06_CreateMaster": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "V06_SetMasterID_Existing": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "vMasterId",
+                      "value": "@int(outputs('C03_CurrentMaster')?['Id'])"
+                    },
+                    "runAfter": {}
+                  }
+                }
+              },
+              "runAfter": {
+                "V06_BeginWrites": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF06_ClosePreviousWork": {
+              "type": "If",
+              "expression": "@not(equals(outputs('C01_CommandType'),'CREATE_REQUEST'))",
+              "actions": {
+                "IF06_CloseCurrentWorkByAction": {
+                  "type": "If",
+                  "expression": "@equals(outputs('C01_CommandType'),'DECIDE')",
+                  "actions": {
+                    "HTTP06_CloseReviewedWork": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "host": {
+                          "connectionName": "shared_sharepointonline",
+                          "operationId": "HttpRequest",
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                        },
+                        "parameters": {
+                          "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                          "parameters/method": "POST",
+                          "parameters/uri": "_api/web/lists(guid'e21ef6e7-ee31-466a-be3b-65ae30ca7722')/items(@{first(body('HTTP03_CurrentWork')?['value'])?['Id']})",
+                          "parameters/headers": {
+                            "Accept": "application/json;odata=nometadata",
+                            "Content-Type": "application/json;odata=nometadata",
+                            "X-HTTP-Method": "MERGE",
+                            "IF-MATCH": "@{first(body('HTTP03_CurrentWork')?['value'])?['@odata.etag']}"
+                          },
+                          "parameters/body": "@string(setProperty(setProperty(setProperty(setProperty(json('{}'),'State','CLOSED'),'ClosedAt',utcNow()),'Decision',outputs('C04_Decision')),'DecisionNote',outputs('C04_Reason')))"
+                        },
+                        "authentication": "@parameters('$authentication')"
+                      },
+                      "runAfter": {}
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "HTTP06_CloseOtherWork": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "host": {
+                            "connectionName": "shared_sharepointonline",
+                            "operationId": "HttpRequest",
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                          },
+                          "parameters": {
+                            "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                            "parameters/method": "POST",
+                            "parameters/uri": "_api/web/lists(guid'e21ef6e7-ee31-466a-be3b-65ae30ca7722')/items(@{first(body('HTTP03_CurrentWork')?['value'])?['Id']})",
+                            "parameters/headers": {
+                              "Accept": "application/json;odata=nometadata",
+                              "Content-Type": "application/json;odata=nometadata",
+                              "X-HTTP-Method": "MERGE",
+                              "IF-MATCH": "@{first(body('HTTP03_CurrentWork')?['value'])?['@odata.etag']}"
+                            },
+                            "parameters/body": "@string(setProperty(setProperty(json('{}'),'State','CLOSED'),'ClosedAt',utcNow()))"
+                          },
+                          "authentication": "@parameters('$authentication')"
+                        },
+                        "runAfter": {}
+                      }
+                    }
+                  },
+                  "runAfter": {}
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "IF06_CreateOrUseMaster": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF06_EnsureNextWork": {
+              "type": "If",
+              "expression": "@and(not(equals(outputs('C05_NextStep'),'SYSTEM_ARCHIVE')),equals(length(body('HTTP05_ExistingNextWork')?['value']),0))",
+              "actions": {
+                "C06_NewWorkJson": {
+                  "type": "Compose",
+                  "inputs": {
+                    "Title": "@concat(outputs('C01_RequestKey'),'|',outputs('C05_NextStep'))",
+                    "RequestKey": "@outputs('C01_RequestKey')",
+                    "StepInstanceKey": "@outputs('C05_NextInstance')",
+                    "ReviewRound": "@outputs('C05_NextReviewRound')",
+                    "StepKey": "@outputs('C05_NextStep')",
+                    "StepOrder": "@outputs('C05_NextOrder')",
+                    "StepKind": "@outputs('C05_NextKind')",
+                    "ResponsibleOUCode": "@outputs('C05_NextOU')",
+                    "State": "OPEN"
+                  },
+                  "runAfter": {}
+                },
+                "HTTP06_CreateNextWork": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                    },
+                    "parameters": {
+                      "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/web/lists(guid'e21ef6e7-ee31-466a-be3b-65ae30ca7722')/items",
+                      "parameters/headers": {
+                        "Accept": "application/json;odata=nometadata",
+                        "Content-Type": "application/json;odata=nometadata"
+                      },
+                      "parameters/body": "@string(outputs('C06_NewWorkJson'))"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "runAfter": {
+                    "C06_NewWorkJson": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "IF06_ClosePreviousWork": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C06_MasterPatch_Base": {
+              "type": "Compose",
+              "inputs": {
+                "CurrentStepKey": "@outputs('C05_NextStep')",
+                "CurrentStepInstanceKey": "@outputs('C05_NextInstance')",
+                "CurrentOUCode": "@outputs('C05_NextOU')",
+                "Status": "@outputs('C05_NextStatus')",
+                "ReviewRound": "@outputs('C05_NextReviewRound')"
+              },
+              "runAfter": {
+                "IF06_EnsureNextWork": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C06_MasterPatch_Final": {
+              "type": "Compose",
+              "inputs": "@if(equals(outputs('C01_CommandType'),'CONFIRM_PAYMENT'),setProperty(if(and(equals(outputs('C01_CommandType'),'DECIDE'),equals(outputs('C03_CurrentStep'),'CHAIR_APPROVE'),equals(outputs('C04_Decision'),'PASS')),setProperty(if(and(equals(outputs('C01_CommandType'),'SUBMIT'),equals(outputs('C03_CurrentStatus'),'DRAFT')),setProperty(outputs('C06_MasterPatch_Base'),'FirstSubmittedAt',utcNow()),outputs('C06_MasterPatch_Base')),'PaymentDueAt',outputs('C01_Payload')?['paymentDueAt']),if(and(equals(outputs('C01_CommandType'),'SUBMIT'),equals(outputs('C03_CurrentStatus'),'DRAFT')),setProperty(outputs('C06_MasterPatch_Base'),'FirstSubmittedAt',utcNow()),outputs('C06_MasterPatch_Base'))),'PaidAt',utcNow()),if(and(equals(outputs('C01_CommandType'),'DECIDE'),equals(outputs('C03_CurrentStep'),'CHAIR_APPROVE'),equals(outputs('C04_Decision'),'PASS')),setProperty(if(and(equals(outputs('C01_CommandType'),'SUBMIT'),equals(outputs('C03_CurrentStatus'),'DRAFT')),setProperty(outputs('C06_MasterPatch_Base'),'FirstSubmittedAt',utcNow()),outputs('C06_MasterPatch_Base')),'PaymentDueAt',outputs('C01_Payload')?['paymentDueAt']),if(and(equals(outputs('C01_CommandType'),'SUBMIT'),equals(outputs('C03_CurrentStatus'),'DRAFT')),setProperty(outputs('C06_MasterPatch_Base'),'FirstSubmittedAt',utcNow()),outputs('C06_MasterPatch_Base'))))",
+              "runAfter": {
+                "C06_MasterPatch_Base": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF06_UpdateExistingMaster": {
+              "type": "If",
+              "expression": "@not(equals(outputs('C01_CommandType'),'CREATE_REQUEST'))",
+              "actions": {
+                "HTTP06_PatchMaster": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                    },
+                    "parameters": {
+                      "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/web/lists(guid'12b3051d-7642-4f90-a39d-5364df561fbf')/items(@{variables('vMasterId')})",
+                      "parameters/headers": {
+                        "Accept": "application/json;odata=nometadata",
+                        "Content-Type": "application/json;odata=nometadata",
+                        "X-HTTP-Method": "MERGE",
+                        "IF-MATCH": "@{outputs('C03_CurrentMaster')?['@odata.etag']}"
+                      },
+                      "parameters/body": "@string(outputs('C06_MasterPatch_Final'))"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "runAfter": {}
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "C06_MasterPatch_Final": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "C07_ActivityKey": {
+              "type": "Compose",
+              "inputs": "@concat(outputs('C01_CommandKey'),'|',outputs('C05_Event'))",
+              "runAfter": {
+                "IF06_UpdateExistingMaster": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP07_FindActivity": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists(guid'84b57c9e-6b90-4a6b-a200-b3afb4499895')/items?$filter=ActivityKey eq '@{outputs('C07_ActivityKey')}'&$top=2",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata"
+                  }
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "C07_ActivityKey": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "IF07_AuditOnce": {
+              "type": "If",
+              "expression": "@equals(length(body('HTTP07_FindActivity')?['value']),0)",
+              "actions": {
+                "C07_ActivityBody": {
+                  "type": "Compose",
+                  "inputs": {
+                    "Title": "@concat(outputs('C01_RequestKey'),'|',outputs('C05_Event'))",
+                    "RequestKey": "@outputs('C01_RequestKey')",
+                    "ActivityKey": "@outputs('C07_ActivityKey')",
+                    "StepInstanceKey": "@outputs('C05_NextInstance')",
+                    "ReviewRound": "@outputs('C05_NextReviewRound')",
+                    "EventType": "@outputs('C05_Event')",
+                    "EventTime": "@utcNow()",
+                    "ActorUPN": "@outputs('C01_ActorUPN')",
+                    "FromState": "@outputs('C03_CurrentStatus')",
+                    "ToState": "@outputs('C05_NextStatus')",
+                    "Note": "@outputs('C04_Reason')"
+                  },
+                  "runAfter": {}
+                },
+                "HTTP07_CreateActivity": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "HttpRequest",
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                    },
+                    "parameters": {
+                      "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                      "parameters/method": "POST",
+                      "parameters/uri": "_api/web/lists(guid'84b57c9e-6b90-4a6b-a200-b3afb4499895')/items",
+                      "parameters/headers": {
+                        "Accept": "application/json;odata=nometadata",
+                        "Content-Type": "application/json;odata=nometadata"
+                      },
+                      "parameters/body": "@string(outputs('C07_ActivityBody'))"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  },
+                  "runAfter": {
+                    "C07_ActivityBody": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              },
+              "runAfter": {
+                "HTTP07_FindActivity": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "HTTP08_CompleteCommand": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "POST",
+                  "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata",
+                    "Content-Type": "application/json;odata=nometadata",
+                    "X-HTTP-Method": "MERGE",
+                    "IF-MATCH": "*"
+                  },
+                  "parameters/body": "@string(setProperty(setProperty(setProperty(json('{}'),'State','SUCCEEDED'),'ProcessedAt',utcNow()),'ErrorMessage',''))"
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {
+                "IF07_AuditOnce": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "IF00_PilotGate": [
+              "Succeeded"
+            ]
+          }
+        },
+        "S08_Catch": {
+          "type": "Scope",
+          "actions": {
+            "HTTP08_MarkFailed": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
+                },
+                "parameters": {
+                  "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
+                  "parameters/method": "POST",
+                  "parameters/uri": "_api/web/lists(guid'e16b76dc-7686-43e9-b232-18c80e2b31d2')/items(@{triggerBody()?['ID']})",
+                  "parameters/headers": {
+                    "Accept": "application/json;odata=nometadata",
+                    "Content-Type": "application/json;odata=nometadata",
+                    "X-HTTP-Method": "MERGE",
+                    "IF-MATCH": "*"
+                  },
+                  "parameters/body": "@string(setProperty(setProperty(json('{}'),'State',if(variables('vWriteStarted'),'NEEDS_RECONCILIATION','FAILED')),'ErrorMessage','Core run failed. Inspect run history; reconcile partial writes manually.'))"
+                },
+                "authentication": "@parameters('$authentication')"
+              },
+              "runAfter": {}
+            }
+          },
+          "runAfter": {
+            "S01_S08_MainCore": [
+              "Failed",
+              "TimedOut"
+            ]
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

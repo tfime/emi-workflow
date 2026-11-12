@@ -1,0 +1,97 @@
+{
+  "WorkflowCode": "EMI_PAY_SPV",
+  "VersionNo": 1,
+  "Lifecycle": "DRAFT",
+  "SiteUrl": "https://emicomvn.sharepoint.com/sites/cecm",
+  "testMode": "ADMIN_ONLY",
+  "steps": [
+    {
+      "StepOrder": 1,
+      "StepKey": "BPCM1_PREPARE",
+      "StepName": "BPCM1 / NH2 – Tạo và điều chỉnh hồ sơ",
+      "StepKind": "PREPARE",
+      "accept": "SUBMIT",
+      "next": "BPCM2_TECH"
+    },
+    {
+      "StepOrder": 2,
+      "StepKey": "BPCM2_TECH",
+      "StepName": "BPCM2 – Kiểm tra kỹ thuật",
+      "StepKind": "REVIEW",
+      "pass": "BPCM3_PRICE",
+      "reject": "BPCM1_PREPARE"
+    },
+    {
+      "StepOrder": 3,
+      "StepKey": "BPCM3_PRICE",
+      "StepName": "BPCM3 – Kiểm tra giá",
+      "StepKind": "REVIEW",
+      "pass": "TCKT_CHECK",
+      "reject": "BPCM1_PREPARE"
+    },
+    {
+      "StepOrder": 4,
+      "StepKey": "TCKT_CHECK",
+      "StepName": "TCKT – Kiểm tra hồ sơ thanh toán",
+      "StepKind": "REVIEW",
+      "pass": "CHAIR_APPROVE",
+      "reject": "BPCM1_PREPARE"
+    },
+    {
+      "StepOrder": 5,
+      "StepKey": "CHAIR_APPROVE",
+      "StepName": "CT.HĐQT – Phê duyệt",
+      "StepKind": "APPROVAL",
+      "pass": "TCKT_PAY",
+      "reject": "BPCM1_PREPARE"
+    },
+    {
+      "StepOrder": 6,
+      "StepKey": "TCKT_PAY",
+      "StepName": "TCKT – Thực hiện thanh toán ngoài hệ thống và tải UNC",
+      "StepKind": "PAYMENT",
+      "onPayment": "SYSTEM_ARCHIVE"
+    },
+    {
+      "StepOrder": 7,
+      "StepKey": "SYSTEM_ARCHIVE",
+      "StepName": "Hệ thống – Chờ lưu trữ",
+      "StepKind": "SYSTEM",
+      "completeOnlyAfterArchive": true
+    }
+  ],
+  "commandTypes": [
+    "CREATE_REQUEST",
+    "SUBMIT",
+    "DECIDE",
+    "CONFIRM_PAYMENT"
+  ],
+  "futureCommandTypes": [
+    "ARCHIVE_RESULT"
+  ],
+  "states": {
+    "Commands": [
+      "NEW",
+      "PROCESSING",
+      "SUCCEEDED",
+      "REJECTED",
+      "FAILED",
+      "NEEDS_RECONCILIATION"
+    ],
+    "Requests": [
+      "DRAFT",
+      "IN_PROGRESS",
+      "RETURNED",
+      "ARCHIVE_PENDING",
+      "COMPLETED"
+    ],
+    "WorkItems": [
+      "OPEN",
+      "CLOSED"
+    ],
+    "Decisions": [
+      "PASS",
+      "REJECT"
+    ]
+  }
+}
