@@ -13,12 +13,12 @@ export function liveActionsFor(
 
   if (step === 'BPCM1_PREPARE' && (status === 'Draft' || status === 'Returned')) {
     const actions: IPayAction[] = [
-      { id: 'upload', label: 'Tải checklist', ghost: true, dialog: 'attach' }
+      { id: 'upload', label: 'Tải tài liệu checklist', ghost: true, dialog: 'attach' }
     ];
     if (requiredChecklistReady(checklist)) {
       actions.unshift({
         id: 'submit',
-        label: status === 'Returned' ? 'Gửi lại' : 'Gửi hồ sơ',
+        label: status === 'Returned' ? 'Gửi lại hồ sơ' : 'Gửi hồ sơ',
         primary: true,
         command: 'SUBMIT',
         dialog: 'submit'
@@ -29,21 +29,27 @@ export function liveActionsFor(
 
   if (step === 'BPCM2_TECH' || step === 'BPCM3_PRICE' || step === 'TCKT_CHECK') {
     return [
-      { id: 'forward', label: 'Gửi tiếp (PASS)', primary: true, command: 'DECIDE', dialog: 'forward' },
-      { id: 'return', label: 'Trả hồ sơ', danger: true, command: 'DECIDE', dialog: 'return' }
+      { id: 'forward', label: 'Chuyển bước tiếp theo', primary: true, command: 'DECIDE', dialog: 'forward' },
+      { id: 'return', label: 'Trả về người tạo', danger: true, command: 'DECIDE', dialog: 'return' }
     ];
   }
 
   if (step === 'CHAIR_APPROVE') {
     return [
-      { id: 'approve', label: 'Duyệt', primary: true, command: 'DECIDE', dialog: 'approve' },
-      { id: 'reject', label: 'Không duyệt', danger: true, command: 'DECIDE', dialog: 'reject' }
+      { id: 'approve', label: 'Phê duyệt', primary: true, command: 'DECIDE', dialog: 'approve' },
+      { id: 'reject', label: 'Không phê duyệt', danger: true, command: 'DECIDE', dialog: 'reject' }
     ];
   }
 
   if (step === 'TCKT_PAY') {
     const actions: IPayAction[] = [
-      { id: 'unc', label: hasUnc ? 'Tải / thay UNC' : 'Tải UNC', ghost: !hasUnc, primary: !hasUnc, dialog: 'unc' }
+      {
+        id: 'unc',
+        label: hasUnc ? 'Tải lại ủy nhiệm chi (UNC)' : 'Tải ủy nhiệm chi (UNC)',
+        ghost: !hasUnc,
+        primary: !hasUnc,
+        dialog: 'unc'
+      }
     ];
     if (hasUnc) {
       actions.push({

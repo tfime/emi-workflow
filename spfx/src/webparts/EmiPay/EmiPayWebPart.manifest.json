@@ -15,12 +15,12 @@
       "group": { "default": "EMI PAY" },
       "title": { "default": "EMI PAY" },
       "description": {
-        "default": "Hồ sơ thanh toán SPV — việc của tôi, tạo hồ sơ, chi tiết theo vai trò"
+        "default": "EMI PAY full-bleed — đặt trong section Full-width. Tạo hồ sơ, checklist, gửi duyệt CECM."
       },
       "officeFabricIconFontName": "Money",
       "properties": {
         "title": "EMI PAY",
-        "demoMode": true
+        "demoMode": false
       }
     }
   ]

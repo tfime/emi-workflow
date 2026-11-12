@@ -11,6 +11,7 @@ import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import * as strings from 'EmiPayWebPartStrings';
 import EmiPay from './components/EmiPay';
 import { IEmiPayProps } from './components/EmiPay';
+import { expandCanvasParents } from '../../shared/ui/expandCanvas';
 
 export interface IEmiPayWebPartProps {
   title: string;
@@ -29,6 +30,10 @@ export default class EmiPayWebPart extends BaseClientSideWebPart<IEmiPayWebPartP
     });
 
     ReactDom.render(element, this.domElement);
+    // Match emi-uikit EmiEcm: expand now and again after SharePoint finishes layout.
+    expandCanvasParents(this.domElement);
+    window.setTimeout(() => expandCanvasParents(this.domElement), 100);
+    window.setTimeout(() => expandCanvasParents(this.domElement), 400);
   }
 
   protected onDispose(): void {

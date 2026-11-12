@@ -56,6 +56,13 @@ https://emicomvn.sharepoint.com/sites/cecm/_layouts/15/workbench.aspx?debug=true
 4. Upload UNC → Xác nhận → `SYSTEM_ARCHIVE` / Archiving.
 5. File thử trong DocsWorking có thể xóa sau.
 
+## Full-bleed (như emi-uikit)
+
+- Manifest: `supportsFullBleed` + `SharePointFullPage`.
+- Trang: section **Full-width**, một web part.
+- Runtime: `expandCanvasParents` (0 / 100 / 400 ms) + shell `calc(100vh - 48px)`.
+- Feedback: Fluent **Dialog + Spinner** khi chờ; **MessageBar** khi xong/lỗi — không toast debug.
+
 ## Ghi chú
 
 - `demoMode=true`: mock persona UI, không ghi Commands.

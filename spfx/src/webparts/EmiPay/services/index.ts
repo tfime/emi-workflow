@@ -6,3 +6,4 @@ export * from './RequestService';
 export * from './ChecklistService';
 export * from './UploadService';
 export * from './liveActions';
+export * from './viLabels';

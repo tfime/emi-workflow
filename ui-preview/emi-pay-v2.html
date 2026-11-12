@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EMI PAY · Preview v2</title>
+  <style>
+    :root {
+      --brand: #0f766e;
+      --brand-dark: #0c5f59;
+      --brand-mid: #1aa394;
+      --brand-soft: #e7f5f3;
+      --surface: #f3f4f6;
+      --card: #ffffff;
+      --text: #111111;
+      --muted: #4b5563;
+      --line: #e5e7eb;
+      --ok: #166534;
+      --ok-soft: #dcfce7;
+      --warn: #92400e;
+      --warn-soft: #fef3c7;
+      --danger: #b91c1c;
+      --danger-soft: #fee2e2;
+      --info: #1d4ed8;
+      --info-soft: #dbeafe;
+      --shadow: 0 1px 2px rgba(16,24,40,.04);
+      --radius: 4px;
+      --font: "Segoe UI", "Segoe UI Web (West European)", system-ui, sans-serif;
+      --nav-w: 232px;
+      --rail-w: 300px;
+      --fs: 14px;
+      --fs-sm: 13px;
+      --fs-xs: 12px;
+      --fs-lg: 18px;
+      --fs-xl: 24px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: var(--font);
+      font-size: var(--fs);
+      color: var(--text);
+      background: var(--surface);
+      line-height: 1.45;
+    }
+    button, input, select, textarea { font: inherit; color: var(--text); }
+    button { cursor: pointer; }
+    a { color: var(--text); }
+
+    .app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .top {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px;
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      z-index: 5;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .mark {
+      width: 36px; height: 36px; border-radius: var(--radius);
+      background: var(--brand);
+      color: #fff; display: grid; place-items: center;
+      font-weight: 700; font-size: var(--fs-xs); flex-shrink: 0;
+    }
+    .brand h1 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text); }
+    .brand p { margin: 2px 0 0; font-size: var(--fs-xs); color: var(--muted); }
+    .top-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .role-select {
+      border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 7px 10px; background: #fff; font-size: var(--fs-sm); max-width: 240px;
+    }
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--brand); color: #fff;
+      display: grid; place-items: center; font-size: var(--fs-xs); font-weight: 700;
+    }
+
+    .shell {
+      flex: 1; min-height: 0;
+      display: grid;
+      grid-template-columns: var(--nav-w) minmax(0, 1fr);
+    }
+    .nav {
+      background: #fff;
+      border-right: 1px solid var(--line);
+      padding: 14px 10px;
+      display: flex; flex-direction: column; gap: 2px;
+      overflow: auto;
+    }
+    .nav-group {
+      margin: 12px 8px 6px;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .04em; text-transform: uppercase;
+      color: var(--muted);
+    }
+    .nav-group:first-child { margin-top: 0; }
+    .nav-btn {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; border: 0; background: transparent;
+      text-align: left; padding: 10px 12px; border-radius: var(--radius);
+      font-size: var(--fs-sm); color: var(--text);
+    }
+    .nav-btn:hover { background: var(--brand-soft); color: var(--text); }
+    .nav-btn.on { background: var(--brand-soft); color: var(--text); font-weight: 650; }
+    .nav-btn:disabled { opacity: .4; cursor: default; }
+    .nav-note {
+      margin: auto 8px 8px; font-size: var(--fs-xs); line-height: 1.45; color: var(--muted);
+    }
+    .nav-profile {
+      margin-top: auto; padding: 12px 10px; border-top: 1px solid var(--line);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-profile strong { display: block; font-size: var(--fs-sm); color: var(--text); }
+    .nav-profile span { font-size: var(--fs-xs); color: var(--muted); }
+
+    .workspace {
+      min-width: 0; min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) var(--rail-w);
+      overflow: hidden;
+    }
+    .workspace.no-rail { grid-template-columns: 1fr; }
+    .main {
+      min-width: 0; overflow: auto;
+      padding: 16px 20px 28px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .rail {
+      border-left: 1px solid var(--line);
+      background: #fafafa;
+      overflow: auto;
+      padding: 16px 14px 24px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .page-head {
+      display: flex; justify-content: space-between; gap: 12px;
+      align-items: flex-start; flex-wrap: wrap;
+    }
+    .crumb {
+      margin: 0 0 4px; font-size: var(--fs-xs); color: var(--muted);
+    }
+    .crumb b { color: var(--text); font-weight: 650; }
+    .page-head h2 {
+      margin: 0; font-size: var(--fs-xl); letter-spacing: -.02em; font-weight: 700; color: var(--text);
+    }
+    .head-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .card-h {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .card-h h3 { margin: 0; font-size: 15px; font-weight: 700; color: var(--text); }
+    .card-b { padding: 14px; }
+
+    .banner {
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex; justify-content: space-between; gap: 12px; align-items: center;
+      flex-wrap: wrap;
+      color: #fff;
+      background: #111;
+    }
+    .banner.warn-tone { background: #78350f; }
+    .banner.info-tone { background: #1e3a8a; }
+    .banner.ok-tone { background: #14532d; }
+    .banner h3 { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: #fff; }
+    .banner p { margin: 0; font-size: var(--fs-sm); opacity: .92; max-width: 560px; color: #fff; }
+    .banner .btn { background: #fff; color: #111; border-color: #fff; }
+    .banner .btn:hover { background: #f3f4f6; }
+
+    .summary3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .sum-cell {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+    }
+    .sum-cell .lbl {
+      margin: 0 0 6px; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+    }
+    .sum-cell .val { margin: 0; font-size: 16px; font-weight: 700; color: var(--text); }
+    .sum-cell .hint { margin: 4px 0 0; font-size: var(--fs-xs); color: var(--muted); }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px 16px;
+    }
+    .meta-item .lbl {
+      display: block; font-size: var(--fs-xs); color: var(--muted); margin-bottom: 4px;
+    }
+    .meta-item .val { font-size: var(--fs-sm); font-weight: 650; color: var(--text); }
+
+    .table {
+      width: 100%; border-collapse: collapse; font-size: var(--fs-sm);
+    }
+    .table th {
+      text-align: left; font-size: var(--fs-xs); font-weight: 700;
+      color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line);
+      background: #fafafa;
+    }
+    .table td {
+      padding: 12px; border-bottom: 1px solid var(--line); vertical-align: middle; color: var(--text);
+    }
+    .table tr:last-child td { border-bottom: 0; }
+    .table .dim { font-weight: 650; color: var(--text); }
+    .table .sub { display: block; font-size: var(--fs-xs); color: var(--muted); font-weight: 400; margin-top: 2px; }
+    .table button.linkish {
+      border: 0; background: transparent; padding: 0;
+      color: var(--text); font-weight: 650; text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .table button.linkish:hover { color: var(--brand-dark); }
+    .table tbody tr:hover { background: #fafafa; }
+
+    /* Vertical flow in right rail */
+    .flow-v { display: flex; flex-direction: column; gap: 0; }
+    .flow-step {
+      position: relative;
+      padding: 0 0 16px 36px;
+    }
+    .flow-step:last-child { padding-bottom: 0; }
+    .flow-step::before {
+      content: "";
+      position: absolute;
+      left: 13px; top: 28px; bottom: 0;
+      width: 1px; background: #d1d5db;
+    }
+    .flow-step:last-child::before { display: none; }
+    .flow-step .dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: grid; place-items: center; font-size: 12px; font-weight: 650;
+      position: absolute; left: 0; top: 0;
+      border: 1.5px solid #d1d5db; background: #fff; color: var(--muted);
+    }
+    .flow-step.done .dot { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-dark); }
+    .flow-step.now .dot { border-color: var(--brand); background: var(--brand); color: #fff; }
+    .flow-step.done::before { background: #c5ddd9; }
+    .flow-step strong { display: block; font-size: 13px; color: var(--text); line-height: 1.3; font-weight: 600; padding-top: 4px; }
+    .flow-step.now strong { font-weight: 700; }
+    .flow-step .meta { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.45; font-weight: 400; }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: 0; border-bottom: 1px solid var(--line); padding: 0 8px;
+    }
+    .tab {
+      border: 0; background: transparent;
+      padding: 11px 14px; font-size: var(--fs-sm); font-weight: 650;
+      color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.on { color: var(--text); border-bottom-color: var(--brand); }
+    .tab-panel { display: none; }
+    .tab-panel.on { display: block; }
+
+    .rail-card {
+      background: #fff; border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 14px;
+    }
+    .rail-card h4 { margin: 0 0 10px; font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+    .req-key {
+      font-size: 15px; font-weight: 700; color: var(--text);
+      margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line);
+      word-break: break-all;
+    }
+    .req-key span { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+    .big-num {
+      font-size: 22px; font-weight: 750; letter-spacing: -.02em;
+      color: var(--text); line-height: 1.15;
+    }
+    .big-num span { display: block; font-size: var(--fs-xs); font-weight: 500; color: var(--muted); margin-top: 4px; }
+    .kv { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: var(--fs-xs); color: var(--text); }
+    .kv:last-child { border-bottom: 0; }
+    .kv b { color: var(--muted); font-weight: 500; }
+
+    .form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); font-weight: 650; color: var(--text); }
+    .field.full { grid-column: 1 / -1; }
+    .field input, .field select, .field textarea {
+      border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 9px 10px; font-weight: 400; background: #fff; color: var(--text);
+    }
+    .field textarea { resize: vertical; min-height: 72px; }
+    .hint { margin: 0; font-size: var(--fs-xs); color: var(--muted); font-weight: 400; }
+
+    .btn {
+      border: 1px solid var(--line); background: #fff; color: var(--text);
+      border-radius: var(--radius); padding: 8px 12px; font-size: var(--fs-sm); font-weight: 650;
+    }
+    .btn:hover { background: #f3f4f6; }
+    .btn:disabled { opacity: .45; cursor: default; }
+    /* Primary = hành động tiến — nền xanh, chữ trắng */
+    .btn-primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .btn-primary:hover { background: var(--brand-dark); border-color: var(--brand-dark); color: #fff; }
+    /* Danger = trả về / không duyệt — nền đỏ, chữ trắng */
+    .btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #991b1b; border-color: #991b1b; color: #fff; }
+    .btn-ghost { background: transparent; border-color: transparent; color: var(--text); }
+    .btn-sm { padding: 6px 10px; font-size: var(--fs-xs); }
+
+    .tag {
+      display: inline-flex; align-items: center;
+      border-radius: var(--radius); padding: 3px 8px;
+      font-size: 11px; font-weight: 700;
+      background: #f3f4f6; color: var(--text);
+    }
+    .tag.ok { background: var(--ok-soft); color: var(--ok); }
+    .tag.warn { background: var(--warn-soft); color: var(--warn); }
+    .tag.danger { background: var(--danger-soft); color: var(--danger); }
+    .tag.info { background: var(--info-soft); color: var(--info); }
+
+    .notice {
+      border-radius: var(--radius); padding: 10px 12px; font-size: var(--fs-sm);
+      display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;
+      color: var(--text); background: #f3f4f6; border: 1px solid var(--line);
+    }
+    .notice.ok { background: var(--ok-soft); border-color: #bbf7d0; color: var(--ok); }
+    .notice.err { background: var(--danger-soft); border-color: #fecaca; color: var(--danger); }
+    .notice.warn { background: var(--warn-soft); border-color: #fde68a; color: var(--warn); }
+    .notice.info { background: var(--info-soft); border-color: #bfdbfe; color: var(--info); }
+    .notice button { border: 0; background: transparent; color: inherit; font-weight: 700; padding: 0; }
+
+    .scenario {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+      padding: 10px 12px; background: #fff; border: 1px dashed #d1d5db;
+      border-radius: var(--radius); font-size: var(--fs-xs); color: var(--text);
+    }
+    .scenario > span { color: var(--muted); margin-right: 4px; }
+    .chip {
+      border: 1px solid var(--line); background: #fff; border-radius: var(--radius);
+      padding: 5px 10px; font-size: 11px; font-weight: 650; color: var(--text);
+    }
+    .chip.on { background: var(--brand-soft); border-color: var(--brand); color: var(--text); }
+
+    .empty { margin: 0; padding: 20px; text-align: center; color: var(--muted); font-size: var(--fs-sm); }
+    .panel-warn {
+      border: 1px solid #fde68a; background: var(--warn-soft); border-radius: var(--radius);
+      padding: 12px 14px; color: var(--warn);
+    }
+    .panel-warn h4 { margin: 0 0 6px; font-size: 14px; color: var(--warn); }
+    .panel-warn ul { margin: 6px 0 0; padding-left: 18px; font-size: var(--fs-sm); color: var(--text); }
+    .panel-info {
+      border: 1px solid var(--line); background: #f9fafb; border-radius: var(--radius);
+      padding: 12px 14px; color: var(--text);
+    }
+    .panel-info h4 { margin: 0 0 6px; font-size: 14px; }
+    .vis-tag {
+      display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px;
+      border-radius: var(--radius); background: #f3f4f6; color: var(--muted); margin-left: 6px;
+    }
+    .vis-tag.internal { background: #ede9fe; color: #5b21b6; }
+    .vis-tag.working { background: #e0f2fe; color: #075985; }
+    .comment-box textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 10px; min-height: 72px; resize: vertical; color: var(--text);
+    }
+    .tl-row {
+      display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;
+      padding: 12px; border-bottom: 1px solid var(--line);
+    }
+    .tl-row:last-child { border-bottom: 0; }
+    .tl-row strong { display: block; font-size: var(--fs-sm); color: var(--text); }
+    .tl-row .meta { font-size: var(--fs-xs); color: var(--muted); margin-top: 2px; }
+    .tl-left { display: flex; gap: 10px; }
+    .tl-mark {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--brand);
+      margin-top: 6px; flex-shrink: 0;
+    }
+
+    .overlay {
+      position: fixed; inset: 0; background: rgba(16,24,40,.45);
+      display: none; place-items: center; z-index: 1000; padding: 16px;
+    }
+    .overlay.show { display: grid; }
+    .overlay.drawer-mode { place-items: stretch end; padding: 0; }
+    .modal {
+      width: min(520px, 100%);
+      background: #fff; border-radius: var(--radius); border: 1px solid var(--line);
+      box-shadow: 0 16px 48px rgba(16,24,40,.18);
+      max-height: 86vh; overflow: auto;
+    }
+    .drawer {
+      width: min(33.333vw, 640px);
+      min-width: min(420px, 100%);
+      max-width: 100%;
+      height: 100%;
+      background: #fff;
+      border-left: 1px solid var(--line);
+      box-shadow: -8px 0 32px rgba(16,24,40,.12);
+      display: flex; flex-direction: column;
+      animation: slideIn .18s ease-out;
+    }
+    @keyframes slideIn { from { transform: translateX(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+    .drawer-h, .modal-h, .modal-f {
+      padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--line); flex-shrink: 0;
+    }
+    .modal-f { border-bottom: 0; border-top: 1px solid var(--line); justify-content: flex-end; }
+    .drawer-h h3, .modal-h h3 { margin: 0; font-size: 15px; color: var(--text); }
+    .drawer-b, .modal-b { padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow: auto; flex: 1; }
+    .file-preview {
+      border: 1px solid var(--line); border-radius: var(--radius);
+      background: #f9fafb; min-height: 320px; flex: 1;
+      display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted);
+    }
+    .file-preview strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 6px; }
+    .doc-comments {
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .doc-comments h4 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); }
+    .doc-cmt {
+      padding: 8px 10px; background: #f9fafb; border: 1px solid var(--line);
+      border-radius: var(--radius); font-size: var(--fs-sm); color: var(--text);
+    }
+    .doc-cmt .meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .doc-cmt-form textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 8px 10px; min-height: 64px; resize: vertical; color: var(--text);
+    }
+    .spinner {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 3px solid #e5e7eb; border-top-color: var(--brand);
+      animation: spin .8s linear infinite; margin: 8px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .busy-msg { text-align: center; font-size: var(--fs-sm); color: var(--muted); }
+
+    .preview-bar {
+      position: fixed; left: 12px; bottom: 12px; z-index: 20;
+      background: var(--brand-dark); color: #fff; border-radius: var(--radius);
+      padding: 8px 12px; font-size: 11px; opacity: .9;
+      max-width: min(420px, calc(100vw - 24px));
+    }
+
+    @media (max-width: 1100px) {
+      .workspace { grid-template-columns: 1fr; }
+      .rail { border-left: 0; border-top: 1px solid var(--line); }
+      .summary3, .meta-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 800px) {
+      .shell { grid-template-columns: 1fr; }
+      .nav { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); }
+      .nav-group, .nav-note, .nav-profile { display: none; }
+      .summary3, .meta-grid, .form { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div class="brand">
+        <div class="mark">PAY</div>
+        <div>
+          <h1>EMI PAY</h1>
+          <p>Hồ sơ thanh toán</p>
+        </div>
+      </div>
+      <div class="top-right">
+        <label style="font-size:13px;color:var(--muted)">Vai trò xem UI</label>
+        <select id="roleSelect" class="role-select">
+          <option value="creator">R01 · BPCM1 Người tạo</option>
+          <option value="bpcm2">R02 · BPCM2 KT kỹ thuật</option>
+          <option value="bpcm3">R03 · BPCM3 KT giá</option>
+          <option value="tckt_check">R04 · TCKT Kiểm tra</option>
+          <option value="chair">R05 · CT.HĐQT</option>
+          <option value="tckt_pay">R06 · TCKT Thanh toán</option>
+          <option value="procadm">R08 · Quản trị quy trình</option>
+          <option value="audit">R10 · Kiểm toán</option>
+        </select>
+        <div class="avatar" id="avatar">NT</div>
+      </div>
+    </header>
+
+    <div class="shell">
+      <nav class="nav" aria-label="Điều hướng">
+        <div class="nav-group">Không gian làm việc</div>
+        <button type="button" class="nav-btn on" data-view="inbox">Việc của tôi</button>
+        <button type="button" class="nav-btn" data-view="create" id="navCreate">Tạo hồ sơ</button>
+        <button type="button" class="nav-btn" data-view="detail" id="navDetail">Hồ sơ đang mở</button>
+
+        <div class="nav-group">Theo vai trò</div>
+        <button type="button" class="nav-btn" data-view="inbox" data-filter="todo">Cần tôi xử lý</button>
+        <button type="button" class="nav-btn" data-view="inbox" data-filter="mine">Hồ sơ của tôi</button>
+
+        <div class="nav-group">Quản trị / kiểm toán</div>
+        <button type="button" class="nav-btn" data-view="config" id="navConfig">Cấu hình quy trình</button>
+        <button type="button" class="nav-btn" data-view="audit" id="navAudit">Nhật ký nội bộ</button>
+
+        <p class="nav-note">Preview full ma trận — đổi vai trò để xem đúng thành phần UI.</p>
+        <div class="nav-profile">
+          <div class="avatar" style="width:32px;height:32px;font-size:10px" id="avatar2">NT</div>
+          <div>
+            <strong id="roleName">Nguyễn Văn A</strong>
+            <span id="roleMeta">Người tạo · BPCM1</span>
+          </div>
+        </div>
+      </nav>
+
+      <div class="workspace" id="workspace">
+        <main class="main" id="main"></main>
+        <aside class="rail" id="rail"></aside>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true"></div>
+  <div class="preview-bar">Preview HTML · không gọi SharePoint</div>
+
+  <script>
+    const ROLES = {
+      creator: { name: 'Nguyễn Văn A', meta: 'R01 · BPCM1 Người tạo', av: 'NA' },
+      bpcm2: { name: 'Trần Thị B', meta: 'R02 · BPCM2 KT kỹ thuật', av: 'TB' },
+      bpcm3: { name: 'Lê Văn C', meta: 'R03 · BPCM3 KT giá', av: 'LC' },
+      tckt_check: { name: 'Phạm Thu D', meta: 'R04 · TCKT Kiểm tra', av: 'PD' },
+      chair: { name: 'Hoàng Minh E', meta: 'R05 · CT.HĐQT', av: 'HE' },
+      tckt_pay: { name: 'Đỗ Minh F', meta: 'R06 · TCKT Thanh toán', av: 'DF' },
+      procadm: { name: 'Admin Quy trình', meta: 'R08 · PROCADM', av: 'PQ' },
+      audit: { name: 'Kiểm toán G', meta: 'R10 · AUDIT', av: 'KG' }
+    };
+
+    const STEPS = [
+      { key: 'BPCM1_PREPARE', label: 'Khởi tạo', short: 'Khởi tạo' },
+      { key: 'BPCM2_TECH', label: 'KT kỹ thuật', short: 'KT kỹ thuật' },
+      { key: 'BPCM3_PRICE', label: 'KT giá', short: 'KT giá' },
+      { key: 'TCKT_CHECK', label: 'TCKT kiểm tra', short: 'TCKT KT' },
+      { key: 'CHAIR_APPROVE', label: 'CT.HĐQT', short: 'CT.HĐQT' },
+      { key: 'TCKT_PAY', label: 'Thanh toán', short: 'Thanh toán' },
+      { key: 'SYSTEM_ARCHIVE', label: 'Lưu trữ', short: 'Lưu trữ' }
+    ];
+
+    /** Comment theo từng tệp (preview) */
+    const fileComments = {};
+
+    const STATUS_VI = {
+      Draft: 'Nháp', InReview: 'Đang xử lý', Returned: 'Đã trả về',
+      PendingPayment: 'Chờ thanh toán', Archiving: 'Chờ lưu trữ', Completed: 'Hoàn tất'
+    };
+
+    const state = {
+      view: 'inbox',
+      role: 'creator',
+      notice: null,
+      scenario: 'prepare_missing',
+      filter: null,
+      docsTab: 'checklist',
+      activityTab: 'timeline',
+      create: {
+        type: 'SPV_PAYMENT',
+        ou: 'OU_BPCM1',
+        amount: '125000000',
+        title: 'Thanh toán đợt 2 theo HĐ SPV-2026-08',
+        expl: 'Thanh toán khối lượng nghiệm thu tháng 10/2026'
+      }
+    };
+
+    const SCENARIOS = {
+      prepare_missing: {
+        requestKey: 'PAY-2026-0012',
+        title: 'Thanh toán đợt 2 theo HĐ SPV-2026-08',
+        status: 'Draft', step: 'BPCM1_PREPARE', amount: 125000000,
+        ou: 'OU_BPCM1', creator: 'nguyenvana@emicom.vn',
+        expl: 'Thanh toán khối lượng nghiệm thu tháng 10/2026',
+        type: 'Hồ sơ thanh toán SPV', round: 1,
+        checklist: [
+          { code: 'DOC_REQUEST', label: 'Đề nghị thanh toán', req: true, count: 1, min: 1, status: 'Uploaded', file: 'De_nghi_TT.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '12/11/2026 09:20' },
+          { code: 'DOC_INVOICE', label: 'Hóa đơn / chứng từ', req: true, count: 0, min: 1, status: 'Missing', file: null },
+          { code: 'DOC_CONTRACT', label: 'Hợp đồng / phụ lục', req: false, count: 0, min: 0, status: 'Missing', file: null }
+        ],
+        unc: null,
+        returnReason: null,
+        failItems: [],
+        archiveStatus: null,
+        docs: [
+          { name: 'De_nghi_TT.pdf', size: '420 KB', item: 'Đề nghị thanh toán', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '12/11/2026 09:20', status: 'Uploaded', visibility: 'Working' }
+        ]
+      },
+      prepare_ready: {
+        requestKey: 'PAY-2026-0012',
+        title: 'Thanh toán đợt 2 theo HĐ SPV-2026-08',
+        status: 'Draft', step: 'BPCM1_PREPARE', amount: 125000000,
+        ou: 'OU_BPCM1', creator: 'nguyenvana@emicom.vn',
+        expl: 'Thanh toán khối lượng nghiệm thu tháng 10/2026',
+        type: 'Hồ sơ thanh toán SPV', round: 1,
+        checklist: [
+          { code: 'DOC_REQUEST', label: 'Đề nghị thanh toán', req: true, count: 1, min: 1, status: 'Uploaded', file: 'De_nghi_TT.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '12/11/2026 09:20' },
+          { code: 'DOC_INVOICE', label: 'Hóa đơn / chứng từ', req: true, count: 1, min: 1, status: 'Uploaded', file: 'Hoa_don_10.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '12/11/2026 09:35' },
+          { code: 'DOC_CONTRACT', label: 'Hợp đồng / phụ lục', req: false, count: 1, min: 0, status: 'Uploaded', file: 'HD_SPV.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '12/11/2026 09:40' }
+        ],
+        unc: null,
+        returnReason: null,
+        failItems: [],
+        archiveStatus: null,
+        docs: [
+          { name: 'De_nghi_TT.pdf', size: '420 KB', item: 'Đề nghị thanh toán', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '12/11/2026 09:20', status: 'Uploaded', visibility: 'Working' },
+          { name: 'Hoa_don_10.pdf', size: '1.1 MB', item: 'Hóa đơn / chứng từ', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '12/11/2026 09:35', status: 'Uploaded', visibility: 'Working' },
+          { name: 'HD_SPV.pdf', size: '2.4 MB', item: 'Hợp đồng / phụ lục', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '12/11/2026 09:40', status: 'Uploaded', visibility: 'Working' }
+        ]
+      },
+      returned: {
+        requestKey: 'PAY-2026-0009',
+        title: 'Thanh toán phí tư vấn Q3',
+        status: 'Returned', step: 'BPCM1_PREPARE', amount: 48000000,
+        ou: 'OU_BPCM1', creator: 'nguyenvana@emicom.vn',
+        expl: 'Thanh toán phí tư vấn quý 3/2026',
+        type: 'Hồ sơ thanh toán SPV', round: 2,
+        checklist: [
+          { code: 'DOC_REQUEST', label: 'Đề nghị thanh toán', req: true, count: 1, min: 1, status: 'Pass', file: 'DN.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '08/11/2026 10:05', reviewReason: '' },
+          { code: 'DOC_INVOICE', label: 'Hóa đơn / chứng từ', req: true, count: 1, min: 1, status: 'Fail', file: 'HD.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '08/11/2026 10:12', reviewReason: 'Thiếu biên bản nghiệm thu đi kèm' },
+          { code: 'DOC_CONTRACT', label: 'Hợp đồng / phụ lục', req: false, count: 0, min: 0, status: 'Missing', file: null }
+        ],
+        unc: null,
+        returnReason: 'Không đạt kiểm tra kỹ thuật: thiếu biên bản nghiệm thu theo BB-441.',
+        returnBy: 'Trần Thị B · BPCM2',
+        returnAt: '10/11/2026 15:40',
+        returnStep: 'BPCM2_TECH',
+        failItems: [
+          { code: 'DOC_INVOICE', label: 'Hóa đơn / chứng từ', reason: 'Thiếu biên bản nghiệm thu đi kèm' }
+        ],
+        archiveStatus: null,
+        docs: [
+          { name: 'DN.pdf', size: '210 KB', item: 'Đề nghị thanh toán', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '08/11/2026 10:05', status: 'Pass', visibility: 'Working' },
+          { name: 'HD.pdf', size: '880 KB', item: 'Hóa đơn / chứng từ', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '08/11/2026 10:12', status: 'Fail', visibility: 'Working' }
+        ]
+      },
+      review_tech: {
+        requestKey: 'PAY-2026-0015',
+        title: 'Thanh toán thiết bị mạng đợt 1',
+        status: 'InReview', step: 'BPCM2_TECH', amount: 86000000,
+        ou: 'OU_BPCM1', creator: 'nguyenvana@emicom.vn',
+        expl: 'Nghiệm thu thiết bị theo BB-441',
+        type: 'Hồ sơ thanh toán SPV', round: 1,
+        checklist: [
+          { code: 'DOC_REQUEST', label: 'Đề nghị thanh toán', req: true, count: 1, min: 1, status: 'Uploaded', file: 'DN.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '11/11/2026 14:02' },
+          { code: 'DOC_INVOICE', label: 'Hóa đơn / chứng từ', req: true, count: 1, min: 1, status: 'Uploaded', file: 'HD.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '11/11/2026 14:08' }
+        ],
+        unc: null,
+        returnReason: null,
+        failItems: [],
+        archiveStatus: null,
+        docs: [
+          { name: 'DN.pdf', size: '300 KB', item: 'Đề nghị thanh toán', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '11/11/2026 14:02', status: 'Uploaded', visibility: 'Working' },
+          { name: 'HD.pdf', size: '900 KB', item: 'Hóa đơn / chứng từ', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '11/11/2026 14:08', status: 'Uploaded', visibility: 'Working' },
+          { name: 'BB_441.pdf', size: '512 KB', item: 'Biên bản nghiệm thu', step: 'BPCM2_TECH', by: 'Trần Thị B', at: '12/11/2026 08:45', status: 'Uploaded', visibility: 'Internal' }
+        ]
+      },
+      chair: {
+        requestKey: 'PAY-2026-0007',
+        title: 'Thanh toán giai đoạn 3 dự án A',
+        status: 'InReview', step: 'CHAIR_APPROVE', amount: 320000000,
+        ou: 'OU_PBCM', creator: 'tranthib@emicom.vn',
+        expl: 'Theo tờ trình TCKT đã kiểm tra',
+        type: 'Hồ sơ thanh toán SPV', round: 1,
+        checklist: [
+          { code: 'DOC_REQUEST', label: 'Đề nghị thanh toán', req: true, count: 1, min: 1, status: 'Pass', file: 'DN.pdf', step: 'BPCM1_PREPARE', by: 'Trần Thị B', at: '05/11/2026 09:10' },
+          { code: 'DOC_INVOICE', label: 'Hóa đơn / chứng từ', req: true, count: 2, min: 1, status: 'Pass', file: 'HD.pdf', step: 'BPCM1_PREPARE', by: 'Trần Thị B', at: '05/11/2026 09:18' }
+        ],
+        unc: null,
+        returnReason: null,
+        failItems: [],
+        archiveStatus: null,
+        docs: [
+          { name: 'DN.pdf', size: '350 KB', item: 'Đề nghị thanh toán', step: 'BPCM1_PREPARE', by: 'Trần Thị B', at: '05/11/2026 09:10', status: 'Pass', visibility: 'Working' },
+          { name: 'HD.pdf', size: '1.2 MB', item: 'Hóa đơn / chứng từ', step: 'BPCM1_PREPARE', by: 'Trần Thị B', at: '05/11/2026 09:18', status: 'Pass', visibility: 'Working' },
+          { name: 'To_trinh.pdf', size: '180 KB', item: 'Tờ trình', step: 'TCKT_CHECK', by: 'Phạm Thu D', at: '06/11/2026 16:30', status: 'Uploaded', visibility: 'Internal' }
+        ]
+      },
+      pay: {
+        requestKey: 'PAY-2026-0004',
+        title: 'Thanh toán hợp đồng bảo trì',
+        status: 'PendingPayment', step: 'TCKT_PAY', amount: 55000000,
+        ou: 'OU_BPCM1', creator: 'nguyenvana@emicom.vn',
+        expl: 'Đã được CT.HĐQT phê duyệt · hạn 20/11/2026',
+        type: 'Hồ sơ thanh toán SPV', round: 1, paymentDue: '20/11/2026',
+        checklist: [
+          { code: 'DOC_REQUEST', label: 'Đề nghị thanh toán', req: true, count: 1, min: 1, status: 'Pass', file: 'DN.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '01/11/2026 11:00' },
+          { code: 'DOC_INVOICE', label: 'Hóa đơn / chứng từ', req: true, count: 1, min: 1, status: 'Pass', file: 'HD.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '01/11/2026 11:08' }
+        ],
+        unc: null,
+        returnReason: null,
+        failItems: [],
+        archiveStatus: null,
+        docs: [
+          { name: 'DN.pdf', size: '280 KB', item: 'Đề nghị thanh toán', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '01/11/2026 11:00', status: 'Pass', visibility: 'Working' },
+          { name: 'HD.pdf', size: '640 KB', item: 'Hóa đơn / chứng từ', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '01/11/2026 11:08', status: 'Pass', visibility: 'Working' }
+        ]
+      },
+      pay_unc: {
+        requestKey: 'PAY-2026-0004',
+        title: 'Thanh toán hợp đồng bảo trì',
+        status: 'PendingPayment', step: 'TCKT_PAY', amount: 55000000,
+        ou: 'OU_BPCM1', creator: 'nguyenvana@emicom.vn',
+        expl: 'Đã được CT.HĐQT phê duyệt · hạn 20/11/2026',
+        type: 'Hồ sơ thanh toán SPV', round: 1, paymentDue: '20/11/2026',
+        checklist: [
+          { code: 'DOC_REQUEST', label: 'Đề nghị thanh toán', req: true, count: 1, min: 1, status: 'Pass', file: 'DN.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '01/11/2026 11:00' },
+          { code: 'DOC_INVOICE', label: 'Hóa đơn / chứng từ', req: true, count: 1, min: 1, status: 'Pass', file: 'HD.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '01/11/2026 11:08' }
+        ],
+        unc: { name: 'UNC_20261112.pdf', key: 'UNC-0004' },
+        returnReason: null,
+        failItems: [],
+        archiveStatus: null,
+        docs: [
+          { name: 'DN.pdf', size: '280 KB', item: 'Đề nghị thanh toán', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '01/11/2026 11:00', status: 'Pass', visibility: 'Working' },
+          { name: 'HD.pdf', size: '640 KB', item: 'Hóa đơn / chứng từ', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '01/11/2026 11:08', status: 'Pass', visibility: 'Working' },
+          { name: 'UNC_20261112.pdf', size: '190 KB', item: 'Ủy nhiệm chi', step: 'TCKT_PAY', by: 'Đỗ Minh F', at: '12/11/2026 15:22', status: 'Uploaded', visibility: 'Working' }
+        ]
+      },
+      archive: {
+        requestKey: 'PAY-2026-0001',
+        title: 'Thanh toán đợt 1 HĐ SPV',
+        status: 'Archiving', step: 'SYSTEM_ARCHIVE', amount: 99000000,
+        ou: 'OU_BPCM1', creator: 'nguyenvana@emicom.vn',
+        expl: 'Đã thanh toán · chờ lưu trữ',
+        type: 'Hồ sơ thanh toán SPV', round: 1,
+        checklist: [
+          { code: 'DOC_REQUEST', label: 'Đề nghị thanh toán', req: true, count: 1, min: 1, status: 'Pass', file: 'DN.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '20/10/2026 09:00' },
+          { code: 'DOC_INVOICE', label: 'Hóa đơn / chứng từ', req: true, count: 1, min: 1, status: 'Pass', file: 'HD.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '20/10/2026 09:10' }
+        ],
+        unc: { name: 'UNC_final.pdf', key: 'UNC-0001' },
+        returnReason: null,
+        failItems: [],
+        archiveStatus: { state: 'Pending', job: 'ARC-0001', note: 'Đang chờ Archive Manager xử lý. Chưa COMPLETED.', error: null },
+        docs: [
+          { name: 'DN.pdf', size: '300 KB', item: 'Đề nghị thanh toán', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '20/10/2026 09:00', status: 'Pass', visibility: 'Working' },
+          { name: 'UNC_final.pdf', size: '200 KB', item: 'Ủy nhiệm chi', step: 'TCKT_PAY', by: 'Đỗ Minh F', at: '02/11/2026 17:05', status: 'Uploaded', visibility: 'Working' }
+        ]
+      },
+      archive_error: {
+        requestKey: 'PAY-2026-0002',
+        title: 'Thanh toán đợt 2 HĐ SPV (lỗi lưu trữ)',
+        status: 'Archiving', step: 'SYSTEM_ARCHIVE', amount: 45000000,
+        ou: 'OU_BPCM1', creator: 'nguyenvana@emicom.vn',
+        expl: 'Lưu trữ lỗi · chờ retry',
+        type: 'Hồ sơ thanh toán SPV', round: 1,
+        checklist: [
+          { code: 'DOC_REQUEST', label: 'Đề nghị thanh toán', req: true, count: 1, min: 1, status: 'Pass', file: 'DN2.pdf', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '18/10/2026 09:00' }
+        ],
+        unc: { name: 'UNC_err.pdf', key: 'UNC-0002' },
+        returnReason: null,
+        failItems: [],
+        archiveStatus: { state: 'Failed', job: 'ARC-0002', note: 'Lưu trữ thất bại — giữ ARCHIVE_PENDING.', error: 'Không copy được file sang ArchiveCompleted (timeout).' },
+        docs: [
+          { name: 'DN2.pdf', size: '290 KB', item: 'Đề nghị thanh toán', step: 'BPCM1_PREPARE', by: 'Nguyễn Văn A', at: '18/10/2026 09:00', status: 'Pass', visibility: 'Working' },
+          { name: 'UNC_err.pdf', size: '180 KB', item: 'Ủy nhiệm chi', step: 'TCKT_PAY', by: 'Đỗ Minh F', at: '25/10/2026 11:20', status: 'Uploaded', visibility: 'Working' }
+        ]
+      }
+    };
+
+    const INBOX = [
+      { key: 'PAY-2026-0012', title: 'Thanh toán đợt 2 theo HĐ SPV-2026-08', status: 'Draft', step: 'BPCM1_PREPARE', amount: 125000000, bucket: 'mine', roles: ['creator'], scenario: 'prepare_missing' },
+      { key: 'PAY-2026-0009', title: 'Thanh toán phí tư vấn Q3', status: 'Returned', step: 'BPCM1_PREPARE', amount: 48000000, bucket: 'todo', roles: ['creator'], scenario: 'returned' },
+      { key: 'PAY-2026-0015', title: 'Thanh toán thiết bị mạng đợt 1', status: 'InReview', step: 'BPCM2_TECH', amount: 86000000, bucket: 'todo', roles: ['bpcm2'], scenario: 'review_tech' },
+      { key: 'PAY-2026-0014', title: 'Thanh toán vật tư đợt 4', status: 'InReview', step: 'BPCM3_PRICE', amount: 22000000, bucket: 'todo', roles: ['bpcm3'], scenario: 'review_tech' },
+      { key: 'PAY-2026-0011', title: 'Thanh toán dịch vụ cloud', status: 'InReview', step: 'TCKT_CHECK', amount: 17500000, bucket: 'todo', roles: ['tckt_check'], scenario: 'review_tech' },
+      { key: 'PAY-2026-0007', title: 'Thanh toán giai đoạn 3 dự án A', status: 'InReview', step: 'CHAIR_APPROVE', amount: 320000000, bucket: 'todo', roles: ['chair'], scenario: 'chair' },
+      { key: 'PAY-2026-0004', title: 'Thanh toán hợp đồng bảo trì', status: 'PendingPayment', step: 'TCKT_PAY', amount: 55000000, bucket: 'todo', roles: ['tckt_pay'], scenario: 'pay' },
+      { key: 'PAY-2026-0001', title: 'Thanh toán đợt 1 HĐ SPV', status: 'Archiving', step: 'SYSTEM_ARCHIVE', amount: 99000000, bucket: 'mine', roles: ['creator', 'tckt_pay'], scenario: 'archive' },
+      { key: 'PAY-2026-0002', title: 'Thanh toán đợt 2 HĐ SPV (lỗi lưu trữ)', status: 'Archiving', step: 'SYSTEM_ARCHIVE', amount: 45000000, bucket: 'todo', roles: ['tckt_pay'], scenario: 'archive_error' }
+    ];
+
+    const INTERNAL_LOG = [
+      { time: '12/11/2026 09:12:01', actor: 'system', event: 'CREATE_REQUEST', field: 'Status', old: '', neu: 'Draft', reason: 'Tạo Master Record' },
+      { time: '12/11/2026 09:41:12', actor: 'nguyenvana@emicom.vn', event: 'SUBMIT', field: 'CurrentStepKey', old: 'BPCM1_PREPARE', neu: 'BPCM2_TECH', reason: 'Gửi hồ sơ' },
+      { time: '12/11/2026 10:05:44', actor: 'flow-svc', event: 'DECIDE', field: 'Commands.State', old: 'Processing', neu: 'Succeeded', reason: 'PASS BPCM2' },
+      { time: '12/11/2026 15:22:03', actor: 'dominhf@emicom.vn', event: 'CONFIRM_PAYMENT', field: 'PaidAt', old: '', neu: '2026-11-12T08:22:03Z', reason: 'UNC hợp lệ' },
+      { time: '12/11/2026 15:22:10', actor: 'flow-svc', event: 'ARCHIVE_PENDING', field: 'ArchiveStatus', old: '', neu: 'Pending', reason: 'Tạo ArchiveJob ARC-0001' }
+    ];
+
+    const TEMPLATES = [
+      { code: 'DOC_REQUEST', label: 'Đề nghị thanh toán', req: true },
+      { code: 'DOC_INVOICE', label: 'Hóa đơn / chứng từ', req: true },
+      { code: 'DOC_CONTRACT', label: 'Hợp đồng / phụ lục', req: false }
+    ];
+
+    function money(n) { return (n || 0).toLocaleString('vi-VN') + ' ₫'; }
+    function stepLabel(key) { const s = STEPS.find(x => x.key === key); return s ? s.label : key; }
+    function stepShort(key) {
+      const map = {
+        BPCM1_PREPARE: 'Khởi tạo', BPCM2_TECH: 'KT kỹ thuật', BPCM3_PRICE: 'KT giá',
+        TCKT_CHECK: 'TCKT kiểm tra', CHAIR_APPROVE: 'CT.HĐQT', TCKT_PAY: 'Thanh toán', SYSTEM_ARCHIVE: 'Lưu trữ'
+      };
+      return map[key] || key;
+    }
+    function statusTag(status) {
+      const cls = status === 'Draft' || status === 'Returned' ? 'warn'
+        : status === 'Completed' || status === 'Archiving' ? 'ok'
+        : status === 'PendingPayment' ? 'info' : '';
+      return `<span class="tag ${cls}">${STATUS_VI[status] || status}</span>`;
+    }
+    function checkTag(st) {
+      const cls = st === 'Uploaded' || st === 'Pass' ? 'ok' : st === 'Missing' || st === 'Fail' ? 'warn' : '';
+      const vi = { Missing: 'Thiếu tài liệu', Uploaded: 'Đã tải đủ', Pass: 'Đạt', Fail: 'Không đạt', Open: 'Chưa đánh giá' };
+      return `<span class="tag ${cls}">${vi[st] || st}</span>`;
+    }
+    function current() { return SCENARIOS[state.scenario]; }
+    function checklistReady(d) {
+      return d.checklist.filter(c => c.req).every(c => c.count >= c.min && (c.status === 'Uploaded' || c.status === 'Pass'));
+    }
+    function stepIndex(key) { return STEPS.findIndex(s => s.key === key); }
+
+    function setNotice(kind, text) { state.notice = { kind, text }; render(); }
+    function clearNotice() { state.notice = null; render(); }
+
+    function openBusy(title, msg, thenFn) {
+      const ov = document.getElementById('overlay');
+      ov.className = 'overlay show';
+      ov.innerHTML = `
+        <div class="modal">
+          <div class="modal-h"><h3>${title}</h3></div>
+          <div class="modal-b"><div class="spinner"></div><p class="busy-msg">${msg}</p></div>
+        </div>`;
+      setTimeout(() => { ov.className = 'overlay'; ov.innerHTML = ''; if (thenFn) thenFn(); }, 1400);
+    }
+
+    function openFileDrawer(fileName, meta) {
+      const ov = document.getElementById('overlay');
+      const comments = fileComments[fileName] || [];
+      ov.className = 'overlay show drawer-mode';
+      ov.innerHTML = `
+        <aside class="drawer" role="dialog" aria-label="Xem tài liệu">
+          <div class="drawer-h">
+            <h3>Xem tài liệu</h3>
+            <div style="display:flex;gap:8px">
+              <button type="button" class="btn btn-sm" id="btnDl">Tải xuống</button>
+              <button type="button" class="btn btn-sm" data-close>Đóng</button>
+            </div>
+          </div>
+          <div class="drawer-b">
+            <div class="kv"><b>Tên tệp</b><span>${fileName}</span></div>
+            <div class="kv"><b>Thông tin</b><span>${meta || '—'}</span></div>
+            <div class="file-preview">
+              <div>
+                <strong>${fileName}</strong>
+                Xem trước tài liệu (preview).<br/>SPFx sẽ mở/stream file thật từ DocsWorking.
+              </div>
+            </div>
+            <div class="doc-comments">
+              <h4>Ghi chú trên tài liệu</h4>
+              <div id="docCmtList">
+                ${comments.length
+                  ? comments.map(c => `<div class="doc-cmt"><div>${c.text}</div><div class="meta">${c.by} · ${c.at}</div></div>`).join('')
+                  : `<p class="hint">Chưa có ghi chú trên tệp này.</p>`}
+              </div>
+              <div class="doc-cmt-form">
+                <textarea id="docCmtInput" placeholder="Nhập ghi chú gắn với tài liệu này…"></textarea>
+                <div style="margin-top:8px;display:flex;justify-content:flex-end">
+                  <button type="button" class="btn btn-primary btn-sm" id="btnDocCmt">Gửi ghi chú</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>`;
+      const close = () => { ov.className = 'overlay'; ov.innerHTML = ''; };
+      ov.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
+      ov.onclick = (e) => { if (e.target === ov) close(); };
+      document.getElementById('btnDl').onclick = () => setNotice('ok', 'Đã bắt đầu tải xuống (preview).');
+      document.getElementById('btnDocCmt').onclick = () => {
+        const input = document.getElementById('docCmtInput');
+        const text = (input.value || '').trim();
+        if (!text) { input.focus(); return; }
+        const role = ROLES[state.role];
+        if (!fileComments[fileName]) fileComments[fileName] = [];
+        fileComments[fileName].push({
+          text,
+          by: role.name,
+          at: new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
+        });
+        openFileDrawer(fileName, meta);
+      };
+    }
+
+    function openDialog(kind, extra) {
+      const d = current();
+      const ov = document.getElementById('overlay');
+      const titles = {
+        attach: 'Tải tài liệu checklist',
+        attachInternal: 'Tải tài liệu nội bộ (bước hiện tại)',
+        unc: 'Tải ủy nhiệm chi (UNC)', submit: 'Gửi hồ sơ',
+        forward: 'Chuyển bước tiếp theo', return: 'Trả về người tạo', approve: 'Phê duyệt của CT.HĐQT',
+        reject: 'Không phê duyệt', confirmPay: 'Xác nhận đã thanh toán',
+        edit: 'Sửa thông tin hồ sơ',
+        review: 'Đánh giá mục checklist'
+      };
+      let body = '';
+      if (kind === 'attach' || kind === 'attachInternal') {
+        body = `
+          <label class="field">Mục / loại tài liệu
+            <select id="dlgItem">${d.checklist.map(c => `<option value="${c.code}">${c.label}</option>`).join('')}
+              <option value="OTHER">Tài liệu bổ sung khác</option></select>
+          </label>
+          <label class="field">Phân loại
+            <select id="dlgVis" ${kind === 'attachInternal' ? '' : ''}>
+              <option value="Working" ${kind !== 'attachInternal' ? 'selected' : ''}>DocsWorking · Tài liệu hồ sơ</option>
+              <option value="Internal" ${kind === 'attachInternal' ? 'selected' : ''}>DocsInternal · Tài liệu nội bộ bộ phận</option>
+            </select>
+          </label>
+          <label class="field">Chọn tệp<input type="file" id="dlgFile" /></label>
+          <p class="hint">Giai đoạn đính kèm: ${stepShort(d.step)} · Người: ${ROLES[state.role].name}</p>`;
+      } else if (kind === 'unc') {
+        body = `<label class="field">Chọn tệp UNC<input type="file" id="dlgFile" /></label>`;
+      } else if (kind === 'approve') {
+        body = `<label class="field">Thời hạn thanh toán<input type="date" id="dlgDue" value="2026-11-20" /></label>`;
+      } else if (kind === 'return' || kind === 'reject') {
+        body = `<label class="field">Lý do (bắt buộc)<textarea id="dlgReason" rows="3"></textarea></label>`;
+      } else if (kind === 'submit') {
+        const miss = missingRequired(d);
+        body = miss.length
+          ? `<div class="panel-warn"><h4>Chưa đủ tài liệu bắt buộc</h4><ul>${miss.map(m => `<li>${m.label}</li>`).join('')}</ul><p class="hint" style="margin-top:8px;color:var(--warn)">Main Flow sẽ từ chối SUBMIT.</p></div>`
+          : `<p class="hint">Checklist đủ điều kiện. Xác nhận gửi hồ sơ ${d.requestKey}.</p>`;
+      } else if (kind === 'forward') {
+        body = `<p class="hint">Xác nhận chuyển bước trên hồ sơ ${d.requestKey}.</p>`;
+      } else if (kind === 'confirmPay') {
+        body = `<p class="hint">Xác nhận dựa trên UNC: <b>${d.unc ? d.unc.name : '(chưa có)'}</b></p>`;
+      } else if (kind === 'edit') {
+        body = `
+          <label class="field">Tiêu đề hồ sơ<input id="dlgTitle" value="${d.title}" /></label>
+          <label class="field">Số tiền (VND)<input id="dlgAmount" value="${d.amount}" inputmode="numeric" /></label>
+          <label class="field">Diễn giải<textarea id="dlgExpl" rows="3">${d.expl || ''}</textarea></label>
+          <p class="hint">Chỉ cho phép khi Nháp / Đã trả về (A03). Preview — chưa có lệnh EDIT Core.</p>`;
+      } else if (kind === 'review') {
+        const item = d.checklist.find(c => c.code === (extra || '')) || d.checklist[0];
+        body = `
+          <p class="hint">Mục: <b>${item ? item.label : ''}</b></p>
+          <label class="field">Kết quả
+            <select id="dlgReviewResult">
+              <option value="Pass">Đạt</option>
+              <option value="Fail">Không đạt</option>
+            </select>
+          </label>
+          <label class="field">Lý do (bắt buộc nếu không đạt)<textarea id="dlgReviewReason" rows="3">${item && item.reviewReason ? item.reviewReason : ''}</textarea></label>
+          <input type="hidden" id="dlgReviewCode" value="${item ? item.code : ''}" />`;
+      }
+
+      ov.className = 'overlay show';
+      ov.innerHTML = `
+        <div class="modal">
+          <div class="modal-h"><h3>${titles[kind] || 'Xác nhận'}</h3><button type="button" class="btn btn-ghost btn-sm" data-close>Đóng</button></div>
+          <div class="modal-b">${body}</div>
+          <div class="modal-f">
+            <button type="button" class="btn" data-close>Hủy</button>
+            <button type="button" class="btn ${kind === 'return' || kind === 'reject' ? 'btn-danger' : 'btn-primary'}" data-ok="${kind}">Xác nhận</button>
+          </div>
+        </div>`;
+      ov.querySelectorAll('[data-close]').forEach(b => b.onclick = () => { ov.className = 'overlay'; ov.innerHTML = ''; });
+      ov.querySelector('[data-ok]').onclick = () => confirmDialog(kind);
+    }
+
+    function confirmDialog(kind) {
+      const ov = document.getElementById('overlay');
+      const d = current();
+      if (kind === 'return' || kind === 'reject') {
+        const reason = (document.getElementById('dlgReason') || {}).value || '';
+        if (!reason.trim()) { setNotice('warn', 'Vui lòng nhập lý do'); return; }
+      }
+      if (kind === 'attach' || kind === 'attachInternal' || kind === 'unc') {
+        const f = document.getElementById('dlgFile');
+        if (!f || !f.files || !f.files.length) { setNotice('warn', 'Vui lòng chọn tệp để tải lên'); return; }
+      }
+      if (kind === 'submit') {
+        const miss = missingRequired(d);
+        if (miss.length) {
+          setNotice('warn', 'Không gửi được: còn ' + miss.length + ' mục checklist bắt buộc thiếu tài liệu.');
+          ov.className = 'overlay'; ov.innerHTML = '';
+          return;
+        }
+      }
+      if (kind === 'review') {
+        const result = (document.getElementById('dlgReviewResult') || {}).value || 'Pass';
+        const reason = (document.getElementById('dlgReviewReason') || {}).value || '';
+        const code = (document.getElementById('dlgReviewCode') || {}).value || '';
+        if (result === 'Fail' && !reason.trim()) { setNotice('warn', 'Vui lòng nhập lý do không đạt'); return; }
+        const item = d.checklist.find(c => c.code === code);
+        if (item) {
+          item.status = result;
+          item.reviewReason = reason.trim();
+        }
+        ov.className = 'overlay'; ov.innerHTML = '';
+        openBusy('Đang lưu đánh giá', 'Đang ghi StepReviews…', () => {
+          setNotice('ok', result === 'Pass' ? 'Đã đánh dấu Đạt.' : 'Đã đánh dấu Không đạt kèm lý do.');
+        });
+        return;
+      }
+      if (kind === 'edit') {
+        const title = (document.getElementById('dlgTitle') || {}).value || d.title;
+        const amount = Number((document.getElementById('dlgAmount') || {}).value) || d.amount;
+        const expl = (document.getElementById('dlgExpl') || {}).value || '';
+        d.title = title; d.amount = amount; d.expl = expl;
+        ov.className = 'overlay'; ov.innerHTML = '';
+        openBusy('Đang lưu', 'Đang cập nhật thông tin hồ sơ…', () => setNotice('ok', 'Đã cập nhật thông tin hồ sơ (preview A03).'));
+        return;
+      }
+      ov.className = 'overlay'; ov.innerHTML = '';
+      const msgs = {
+        attach: ['Đang tải tài liệu…', 'Đã tải tài liệu vào checklist.'],
+        attachInternal: ['Đang tải tài liệu nội bộ…', 'Đã tải tài liệu nội bộ (DocsInternal).'],
+        unc: ['Đang tải ủy nhiệm chi…', 'Đã tải UNC.'],
+        submit: ['Đang gửi hồ sơ…', 'Đã gửi hồ sơ thành công.'],
+        forward: ['Đang chuyển bước…', 'Đã chuyển bước tiếp theo.'],
+        return: ['Đang trả hồ sơ…', 'Đã trả hồ sơ về người tạo.'],
+        approve: ['Đang ghi nhận phê duyệt…', 'Đã phê duyệt hồ sơ.'],
+        reject: ['Đang ghi nhận quyết định…', 'Đã không phê duyệt hồ sơ.'],
+        confirmPay: ['Đang xác nhận thanh toán…', 'Đã xác nhận thanh toán.']
+      };
+      const m = msgs[kind] || ['Đang xử lý…', 'Hoàn tất.'];
+      openBusy('Đang xử lý', m[0], () => {
+        if (kind === 'attach') state.scenario = 'prepare_ready';
+        else if (kind === 'attachInternal') {
+          const vis = 'Internal';
+          d.docs.push({
+            name: 'Tai_lieu_noi_bo_' + stepShort(d.step).replace(/\s/g, '_') + '.pdf',
+            size: '256 KB', item: 'Tài liệu bổ sung', step: d.step,
+            by: ROLES[state.role].name, at: new Date().toLocaleString('vi-VN'),
+            status: 'Uploaded', visibility: vis
+          });
+        }
+        else if (kind === 'unc') state.scenario = 'pay_unc';
+        else if (kind === 'submit') state.scenario = 'review_tech';
+        else if (kind === 'forward') state.scenario = state.role === 'tckt_check' ? 'chair' : (state.role === 'bpcm2' ? 'review_tech' : 'chair');
+        else if (kind === 'approve') state.scenario = 'pay';
+        else if (kind === 'confirmPay') state.scenario = 'archive';
+        else if (kind === 'return' || kind === 'reject') state.scenario = 'returned';
+        setNotice('ok', m[1]);
+      });
+    }
+
+    function canReviewDocs(d) {
+      const role = state.role; const step = d.step;
+      return (step === 'BPCM2_TECH' && role === 'bpcm2')
+        || (step === 'BPCM3_PRICE' && role === 'bpcm3')
+        || (step === 'TCKT_CHECK' && role === 'tckt_check');
+    }
+
+    function canUploadAtStep(d) {
+      if (state.role === 'creator' && d.step === 'BPCM1_PREPARE' && (d.status === 'Draft' || d.status === 'Returned')) return true;
+      if (canReviewDocs(d)) return true;
+      if (state.role === 'tckt_pay' && d.step === 'TCKT_PAY') return true;
+      return false;
+    }
+
+    function canEditRequest(d) {
+      return state.role === 'creator' && d.step === 'BPCM1_PREPARE' && (d.status === 'Draft' || d.status === 'Returned');
+    }
+
+    function missingRequired(d) {
+      return d.checklist.filter(c => c.req && !(c.count >= (c.min || 1) && (c.status === 'Uploaded' || c.status === 'Pass')));
+    }
+
+    function actionsFor(d) {
+      const step = d.step; const role = state.role; const ready = checklistReady(d); const list = [];
+      if (step === 'BPCM1_PREPARE' && role === 'creator') {
+        list.push({ id: 'edit', label: 'Sửa thông tin hồ sơ', ghost: true });
+        list.push({ id: 'attach', label: 'Tải tài liệu checklist', ghost: true });
+        if (ready) list.unshift({ id: 'submit', label: d.status === 'Returned' ? 'Gửi lại hồ sơ' : 'Gửi hồ sơ', primary: true });
+        else list.unshift({ id: 'submit', label: 'Gửi hồ sơ (chặn nếu thiếu file)', primary: true });
+      }
+      if (canReviewDocs(d)) {
+        list.push({ id: 'attachInternal', label: 'Tải tài liệu nội bộ (bước này)', ghost: true });
+        list.push({ id: 'forward', label: 'Chuyển bước tiếp theo', primary: true });
+        list.push({ id: 'return', label: 'Trả về người tạo', danger: true });
+      }
+      if (step === 'CHAIR_APPROVE' && role === 'chair') {
+        list.push({ id: 'approve', label: 'Phê duyệt', primary: true });
+        list.push({ id: 'reject', label: 'Không phê duyệt', danger: true });
+      }
+      if (step === 'TCKT_PAY' && role === 'tckt_pay') {
+        list.push({ id: 'unc', label: d.unc ? 'Tải lại UNC' : 'Tải ủy nhiệm chi (UNC)', primary: !d.unc });
+        if (d.unc) list.push({ id: 'confirmPay', label: 'Xác nhận đã thanh toán', primary: true });
+      }
+      return list;
+    }
+
+    function renderNotice() {
+      if (!state.notice) return '';
+      const k = state.notice.kind === 'ok' ? 'ok' : state.notice.kind === 'warn' ? 'warn' : state.notice.kind === 'err' ? 'err' : 'info';
+      return `<div class="notice ${k}"><span>${state.notice.text}</span><button type="button" id="dismissNotice">Đóng</button></div>`;
+    }
+
+    function inboxTable(items) {
+      if (!items.length) return `<p class="empty">Không có hồ sơ.</p>`;
+      return `
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Mã hồ sơ</th>
+              <th>Tiêu đề</th>
+              <th>Bước</th>
+              <th>Số tiền</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(i => `
+              <tr data-open="${i.scenario}" style="cursor:pointer">
+                <td class="dim">${i.key}</td>
+                <td>${i.title}</td>
+                <td>${stepShort(i.step)}</td>
+                <td>${money(i.amount)}</td>
+                <td>${statusTag(i.status)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    function renderInbox() {
+      const role = state.role;
+      if (role === 'procadm') { state.view = 'config'; render(); return; }
+      if (role === 'audit') { state.view = 'audit'; render(); return; }
+      let rows = INBOX.filter(i => i.roles.includes(role) || (i.bucket === 'mine' && role === 'creator'));
+      if (state.filter === 'todo') rows = rows.filter(i => i.bucket === 'todo' || (i.status === 'Returned' && role === 'creator'));
+      if (state.filter === 'mine') rows = rows.filter(i => i.bucket === 'mine' || (i.roles.includes('creator') && role === 'creator'));
+      const todo = rows.filter(i => i.bucket === 'todo' || i.status === 'Returned');
+      const mine = rows.filter(i => !todo.includes(i));
+
+      document.getElementById('workspace').classList.add('no-rail');
+      document.getElementById('rail').style.display = 'none';
+      document.getElementById('main').innerHTML = `
+        ${renderNotice()}
+        <div class="page-head">
+          <div>
+            <h2>Việc của tôi</h2>
+          </div>
+          <div class="head-actions">
+            <button type="button" class="btn" id="btnRefresh">Làm mới</button>
+            ${role === 'creator' ? '<button type="button" class="btn btn-primary" data-view="create">Tạo hồ sơ mới</button>' : ''}
+          </div>
+        </div>
+        <section class="card">
+          <div class="card-h"><h3>Cần tôi xử lý</h3><span class="tag">${todo.length}</span></div>
+          <div class="card-b" style="padding:0">${inboxTable(todo)}</div>
+        </section>
+        <section class="card">
+          <div class="card-h"><h3>Hồ sơ liên quan</h3><span class="tag">${mine.length}</span></div>
+          <div class="card-b" style="padding:0">${inboxTable(mine.length ? mine : rows.filter(r => !todo.includes(r)))}</div>
+        </section>`;
+      bindCommon();
+      document.querySelectorAll('[data-open]').forEach(b => b.onclick = () => {
+        state.scenario = b.getAttribute('data-open');
+        state.view = 'detail';
+        state.filter = null;
+        render();
+      });
+      document.getElementById('btnRefresh').onclick = () => {
+        openBusy('Đang tải', 'Đang làm mới danh sách hồ sơ…', () => setNotice('ok', 'Đã làm mới danh sách.'));
+      };
+    }
+
+    function renderCreate() {
+      const c = state.create;
+      document.getElementById('workspace').classList.remove('no-rail');
+      document.getElementById('rail').style.display = '';
+      document.getElementById('main').innerHTML = `
+        ${renderNotice()}
+        <div class="page-head">
+          <div><h2>Tạo hồ sơ thanh toán</h2></div>
+          <div class="head-actions"><button type="button" class="btn" data-view="inbox">Quay lại</button></div>
+        </div>
+        <section class="card">
+          <div class="card-h"><h3>Thông tin hồ sơ</h3></div>
+          <div class="card-b">
+            <div class="form">
+              <label class="field full">Loại hồ sơ
+                <select id="cType">
+                  <option value="SPV_PAYMENT" selected>Hồ sơ thanh toán SPV</option>
+                  <option value="SPV_ADVANCE">Tạm ứng SPV</option>
+                </select>
+              </label>
+              <label class="field">Đơn vị khởi tạo
+                <select id="cOu">
+                  <option value="OU_BPCM1">OU_BPCM1 · Bộ phận chuyên môn 1</option>
+                  <option value="OU_PBCM">OU_PBCM · Bộ phận chuyên môn</option>
+                </select>
+              </label>
+              <label class="field">Số tiền đề nghị (VND)
+                <input id="cAmount" value="${c.amount}" inputmode="numeric" />
+              </label>
+              <label class="field full">Tiêu đề hồ sơ
+                <input id="cTitle" value="${c.title}" />
+              </label>
+              <label class="field full">Diễn giải
+                <textarea id="cExpl">${c.expl}</textarea>
+              </label>
+            </div>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-h"><h3>Checklist sẽ yêu cầu</h3><span class="tag">${TEMPLATES.filter(t=>t.req).length} bắt buộc</span></div>
+          <div class="card-b" style="padding:0">
+            <table class="table">
+              <thead><tr><th>Mục tài liệu</th><th>Bắt buộc</th><th>Tối thiểu</th></tr></thead>
+              <tbody>
+                ${TEMPLATES.map(t => `
+                  <tr>
+                    <td class="dim">${t.label}<span class="sub">${t.code}</span></td>
+                    <td>${t.req ? '<span class="tag warn">Bắt buộc</span>' : '<span class="tag">Tuỳ chọn</span>'}</td>
+                    <td>${t.req ? '1 tệp' : '—'}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <div class="head-actions"><button type="button" class="btn btn-primary" id="btnCreate">Tạo hồ sơ</button></div>`;
+
+      document.getElementById('rail').innerHTML = `
+        <div class="rail-card">
+          <h4>Xem trước</h4>
+          <div class="big-num" id="railAmt">${money(Number(c.amount)||0)}<span>Số tiền đề nghị</span></div>
+        </div>
+        <div class="rail-card">
+          <h4>Tóm tắt</h4>
+          <div class="kv"><b>Loại</b><span>Hồ sơ thanh toán SPV</span></div>
+          <div class="kv"><b>Đơn vị</b><span id="railOu">${c.ou}</span></div>
+          <div class="kv"><b>Checklist</b><span>${TEMPLATES.filter(t=>t.req).length} mục bắt buộc</span></div>
+          <div class="kv"><b>Bước đầu</b><span>BPCM 1 · Khởi tạo</span></div>
+        </div>`;
+      bindCommon();
+      const sync = () => {
+        state.create = {
+          type: document.getElementById('cType').value,
+          ou: document.getElementById('cOu').value,
+          amount: document.getElementById('cAmount').value,
+          title: document.getElementById('cTitle').value,
+          expl: document.getElementById('cExpl').value
+        };
+        document.getElementById('railAmt').innerHTML = money(Number(state.create.amount)||0) + '<span>Số tiền đề nghị</span>';
+        document.getElementById('railOu').textContent = state.create.ou;
+      };
+      ['cType','cOu','cAmount','cTitle','cExpl'].forEach(id => {
+        document.getElementById(id).oninput = sync;
+        document.getElementById(id).onchange = sync;
+      });
+      document.getElementById('btnCreate').onclick = () => {
+        openBusy('Đang tạo hồ sơ', 'Đang tạo hồ sơ… Hệ thống đang xử lý, vui lòng chờ.', () => {
+          state.scenario = 'prepare_missing';
+          state.view = 'detail';
+          setNotice('ok', 'Đã tạo hồ sơ thành công.');
+        });
+      };
+    }
+
+    function docsTableHead() {
+      return `<thead><tr>
+        <th>Mục</th>
+        <th>Tài liệu</th>
+        <th>Thư viện</th>
+        <th>Giai đoạn đính kèm</th>
+        <th>Người đính kèm</th>
+        <th>Thời gian</th>
+        <th>Trạng thái</th>
+        <th>Thao tác</th>
+      </tr></thead>`;
+    }
+
+    function visLabel(v) {
+      if (v === 'Internal') return '<span class="vis-tag internal">DocsInternal</span>';
+      return '<span class="vis-tag working">DocsWorking</span>';
+    }
+
+    /** Mock timeline từng bước: tg nhận / tg duyệt / người duyệt */
+    function flowStepsMeta(d) {
+      const idx = stepIndex(d.step);
+      const seed = {
+        BPCM1_PREPARE: { actor: 'Nguyễn Văn A', receivedAt: '12/11/2026 09:12', decidedAt: '12/11/2026 09:41', decision: 'Gửi' },
+        BPCM2_TECH: { actor: 'Trần Thị B', receivedAt: '12/11/2026 09:42', decidedAt: '12/11/2026 11:05', decision: 'PASS' },
+        BPCM3_PRICE: { actor: 'Lê Văn C', receivedAt: '12/11/2026 11:06', decidedAt: '12/11/2026 14:20', decision: 'PASS' },
+        TCKT_CHECK: { actor: 'Phạm Thu D', receivedAt: '12/11/2026 14:21', decidedAt: '12/11/2026 16:10', decision: 'PASS' },
+        CHAIR_APPROVE: { actor: 'Hoàng Minh E', receivedAt: '12/11/2026 16:11', decidedAt: '13/11/2026 10:00', decision: 'PASS' },
+        TCKT_PAY: { actor: 'Đỗ Minh F', receivedAt: '13/11/2026 10:01', decidedAt: '13/11/2026 15:22', decision: 'Xác nhận TT' },
+        SYSTEM_ARCHIVE: { actor: 'Hệ thống', receivedAt: '13/11/2026 15:22', decidedAt: null, decision: null }
+      };
+      if (d.status === 'Returned') {
+        seed.BPCM2_TECH = { actor: 'Trần Thị B', receivedAt: '09/11/2026 10:00', decidedAt: '10/11/2026 15:40', decision: 'REJECT' };
+        seed.BPCM1_PREPARE = { actor: 'Nguyễn Văn A', receivedAt: '10/11/2026 15:41', decidedAt: null, decision: null };
+      }
+      return STEPS.map((s, i) => {
+        const base = seed[s.key] || {};
+        const done = i < idx;
+        const now = i === idx;
+        let receivedAt = '—';
+        let decidedAt = '—';
+        let actor = '—';
+        if (done) {
+          receivedAt = base.receivedAt || '—';
+          decidedAt = base.decidedAt || '—';
+          actor = base.actor || '—';
+        } else if (now) {
+          receivedAt = base.receivedAt || '—';
+          decidedAt = '—';
+          actor = base.actor || '—';
+        }
+        return { ...s, i, done, now, receivedAt, decidedAt, actor, decision: done ? (base.decision || 'Đã xong') : (now ? 'Đang xử lý' : 'Chưa tới') };
+      });
+    }
+
+    function renderFlowRail(d) {
+      const rows = flowStepsMeta(d);
+      return `
+        <div class="rail-card">
+          <h4>Luồng duyệt</h4>
+          <div class="flow-v">
+            ${rows.map(s => {
+              const cls = s.done ? 'done' : s.now ? 'now' : '';
+              const mark = s.done ? '✓' : (s.i + 1);
+              const lines = [];
+              if (s.now || s.done) {
+                if (s.receivedAt && s.receivedAt !== '—') lines.push('Nhận: ' + s.receivedAt);
+                if (s.done && s.decidedAt && s.decidedAt !== '—') lines.push('Duyệt: ' + s.decidedAt);
+                if (s.actor && s.actor !== '—') lines.push('Người: ' + s.actor);
+              }
+              return `
+                <div class="flow-step ${cls}">
+                  <div class="dot">${mark}</div>
+                  <strong>${s.short}</strong>
+                  ${lines.length ? `<div class="meta">${lines.join('<br/>')}</div>` : ''}
+                </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+    }
+
+    function renderDetail() {
+      const d = current();
+      const ready = checklistReady(d);
+      const actions = actionsFor(d);
+      document.getElementById('workspace').classList.remove('no-rail');
+      document.getElementById('rail').style.display = '';
+
+      document.getElementById('main').innerHTML = `
+        ${renderNotice()}
+        <div class="scenario">
+          <span>Kịch bản:</span>
+          ${Object.keys(SCENARIOS).map(k => `
+            <button type="button" class="chip ${state.scenario===k?'on':''}" data-sc="${k}">${{
+              prepare_missing: 'Khởi tạo · thiếu file',
+              prepare_ready: 'Khởi tạo · đủ file',
+              returned: 'Đã trả về',
+              review_tech: 'Đang kiểm tra',
+              chair: 'Chờ CT.HĐQT',
+              pay: 'Chờ UNC',
+              pay_unc: 'Có UNC',
+              archive: 'Lưu trữ',
+              archive_error: 'Lưu trữ lỗi'
+            }[k]}</button>`).join('')}
+        </div>
+
+        <div class="page-head">
+          <div>
+            <h2>${d.title}</h2>
+            <div class="tags">
+              ${statusTag(d.status)}
+              <span class="tag">${stepShort(d.step)}</span>
+              <span class="tag">Lượt ${d.round}</span>
+            </div>
+          </div>
+          <div class="head-actions">
+            ${actions.map(a => `
+              <button type="button" class="btn ${a.primary?'btn-primary':a.danger?'btn-danger':''}" data-act="${a.id}">${a.label}</button>
+            `).join('') || '<span class="tag">Không có thao tác với vai trò này</span>'}
+          </div>
+        </div>
+
+        ${d.status === 'Returned' && d.returnReason ? `
+        <div class="panel-warn">
+          <h4>Hồ sơ đã được trả về</h4>
+          <div><b>Lý do:</b> ${d.returnReason}</div>
+          <div class="hint" style="margin-top:6px;color:var(--warn)">${d.returnBy || ''} · ${d.returnAt || ''} · từ bước ${stepShort(d.returnStep || '')}</div>
+          ${(d.failItems || []).length ? `<ul>${d.failItems.map(f => `<li><b>${f.label}</b> — ${f.reason}</li>`).join('')}</ul>` : ''}
+        </div>` : ''}
+
+        ${state.role === 'creator' && d.step === 'BPCM1_PREPARE' && missingRequired(d).length ? `
+        <div class="panel-warn">
+          <h4>Thiếu tài liệu bắt buộc (chặn gửi)</h4>
+          <ul>${missingRequired(d).map(m => `<li>${m.label}${m.status === 'Fail' && m.reviewReason ? ' — ' + m.reviewReason : ''}</li>`).join('')}</ul>
+        </div>` : ''}
+
+        ${d.archiveStatus ? `
+        <div class="panel-info">
+          <h4>Trạng thái lưu trữ</h4>
+          <div>Job <b>${d.archiveStatus.job}</b> · ${d.archiveStatus.state}</div>
+          <div class="hint" style="margin-top:4px">${d.archiveStatus.note}</div>
+          ${d.archiveStatus.error ? `<div class="panel-warn" style="margin-top:8px"><b>Lỗi:</b> ${d.archiveStatus.error}</div>` : ''}
+        </div>` : ''}
+
+        <section class="card">
+          <div class="card-h">
+            <h3>Tài liệu</h3>
+            <div style="display:flex;gap:6px">
+              ${canUploadAtStep(d) ? `<button type="button" class="btn btn-sm" data-act="${canReviewDocs(d) ? 'attachInternal' : 'attach'}">Tải tài liệu</button>` : ''}
+            </div>
+          </div>
+          <div class="tabs">
+            <button type="button" class="tab ${state.docsTab==='checklist'?'on':''}" data-docs-tab="checklist">Checklist</button>
+            <button type="button" class="tab ${state.docsTab==='files'?'on':''}" data-docs-tab="files">Tài liệu hỗ trợ</button>
+          </div>
+          <div class="tab-panel ${state.docsTab==='checklist'?'on':''}" style="padding:0">
+            <table class="table">
+              ${docsTableHead()}
+              <tbody>
+                ${d.checklist.map(c => `
+                  <tr>
+                    <td class="dim">${c.label}<span class="sub">${c.code}${c.req?' · Bắt buộc':' · Tuỳ chọn'}${c.reviewReason ? ' · ' + c.reviewReason : ''}</span></td>
+                    <td>${c.file
+                      ? `<button type="button" class="linkish" data-file="${c.file}" data-meta="${c.label} · ${c.by || ''} · ${c.at || ''}">${c.file}</button>`
+                      : '—'}</td>
+                    <td>${c.file ? visLabel('Working') : '—'}</td>
+                    <td>${c.file ? stepShort(c.step) : '—'}</td>
+                    <td>${c.file ? (c.by || '—') : '—'}</td>
+                    <td>${c.file ? (c.at || '—') : '—'}</td>
+                    <td>${checkTag(c.status)}</td>
+                    <td>
+                      ${c.file ? `<button type="button" class="btn btn-sm" data-file="${c.file}" data-meta="${c.label} · ${c.by || ''} · ${c.at || ''}">Xem</button>` : ''}
+                      ${!c.file && canEditRequest(d) ? `<button type="button" class="btn btn-sm btn-primary" data-act="attach">Tải lên</button>` : ''}
+                      ${canReviewDocs(d) && c.file ? `<button type="button" class="btn btn-sm" data-review="${c.code}">Đánh giá</button>` : ''}
+                      ${!c.file && !canEditRequest(d) && !(canReviewDocs(d) && c.file) ? '—' : ''}
+                    </td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="tab-panel ${state.docsTab==='files'?'on':''}" style="padding:0">
+            <table class="table">
+              ${docsTableHead()}
+              <tbody>
+                ${d.docs.length ? d.docs.map(doc => `
+                  <tr>
+                    <td class="dim">${doc.item}</td>
+                    <td><button type="button" class="linkish" data-file="${doc.name}" data-meta="${doc.item} · ${doc.by} · ${doc.at}">${doc.name}</button>
+                      <span class="sub">${doc.size || ''}</span></td>
+                    <td>${visLabel(doc.visibility || 'Working')}</td>
+                    <td>${stepShort(doc.step)}</td>
+                    <td>${doc.by}</td>
+                    <td>${doc.at}</td>
+                    <td>${checkTag(doc.status || 'Uploaded')}</td>
+                    <td><button type="button" class="btn btn-sm" data-file="${doc.name}" data-meta="${doc.item} · ${doc.by} · ${doc.at}">Xem</button></td>
+                  </tr>`).join('') : `<tr><td colspan="8"><p class="empty">Chưa có tài liệu.</p></td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-h"><h3>Hoạt động</h3></div>
+          <div class="tabs">
+            <button type="button" class="tab ${state.activityTab==='timeline'?'on':''}" data-act-tab="timeline">Nhật ký</button>
+            <button type="button" class="tab ${state.activityTab==='comment'?'on':''}" data-act-tab="comment">Ghi chú</button>
+          </div>
+          <div class="tab-panel ${state.activityTab==='timeline'?'on':''}" style="padding:0">
+            <div class="tl-row"><div class="tl-left"><span class="tl-mark"></span><div><strong>Hồ sơ được tạo</strong><div class="meta">12/11/2026 09:12 · ${d.creator}</div></div></div><span class="tag">Hệ thống</span></div>
+            <div class="tl-row"><div class="tl-left"><span class="tl-mark"></span><div><strong>Tải Đề nghị thanh toán</strong><div class="meta">12/11/2026 09:20 · Người tạo</div></div></div><span class="tag">Tài liệu</span></div>
+            <div class="tl-row"><div class="tl-left"><span class="tl-mark"></span><div><strong>Trạng thái: ${STATUS_VI[d.status]}</strong><div class="meta">${stepLabel(d.step)}</div></div></div><span class="tag">Bước</span></div>
+          </div>
+          <div class="tab-panel ${state.activityTab==='comment'?'on':''}">
+            <div class="card-b comment-box" style="padding-top:14px">
+              <textarea placeholder="Thêm ghi chú…" id="commentBox"></textarea>
+              <div style="margin-top:8px;display:flex;justify-content:flex-end">
+                <button type="button" class="btn btn-primary btn-sm" id="btnComment">Gửi ghi chú</button>
+              </div>
+            </div>
+          </div>
+        </section>`;
+
+      document.getElementById('rail').innerHTML = `
+        <div class="rail-card">
+          <div class="req-key"><span>Mã hồ sơ</span>${d.requestKey}</div>
+          <div class="big-num">${money(d.amount)}<span>Số tiền đề nghị · ${STATUS_VI[d.status]}</span></div>
+        </div>
+        <div class="rail-card">
+          <h4>Tóm tắt nhanh</h4>
+          <div class="kv"><b>Loại</b><span>${d.type}</span></div>
+          <div class="kv"><b>Đơn vị</b><span>${d.ou}</span></div>
+          <div class="kv"><b>Người tạo</b><span>${d.creator}</span></div>
+          <div class="kv"><b>Trạng thái</b><span>${STATUS_VI[d.status]}</span></div>
+          <div class="kv"><b>Bước</b><span>${stepShort(d.step)}</span></div>
+          <div class="kv"><b>Lượt</b><span>${d.round}</span></div>
+          <div class="kv"><b>Checklist</b><span>${ready ? 'Đã đủ' : 'Còn thiếu'}</span></div>
+          <div class="kv"><b>Thời hạn TT</b><span>${d.paymentDue || '—'}</span></div>
+          <div class="kv"><b>UNC</b><span>${d.unc ? d.unc.name : 'Chưa có'}</span></div>
+          ${d.archiveStatus ? `<div class="kv"><b>Lưu trữ</b><span>${d.archiveStatus.state}</span></div>` : ''}
+          <div class="kv" style="flex-direction:column;align-items:flex-start;gap:4px"><b>Diễn giải</b><span>${d.expl}</span></div>
+        </div>
+        ${renderFlowRail(d)}`;
+
+      bindCommon();
+      document.querySelectorAll('[data-sc]').forEach(b => b.onclick = () => { state.scenario = b.getAttribute('data-sc'); render(); });
+      document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => openDialog(b.getAttribute('data-act')));
+      document.querySelectorAll('[data-review]').forEach(b => b.onclick = () => openDialog('review', b.getAttribute('data-review')));
+      document.querySelectorAll('[data-docs-tab]').forEach(b => b.onclick = () => { state.docsTab = b.getAttribute('data-docs-tab'); render(); });
+      document.querySelectorAll('[data-act-tab]').forEach(b => b.onclick = () => { state.activityTab = b.getAttribute('data-act-tab'); render(); });
+      document.querySelectorAll('[data-file]').forEach(b => b.onclick = (e) => {
+        e.stopPropagation();
+        openFileDrawer(b.getAttribute('data-file'), b.getAttribute('data-meta'));
+      });
+      const btnComment = document.getElementById('btnComment');
+      if (btnComment) btnComment.onclick = () => {
+        const t = document.getElementById('commentBox').value.trim();
+        if (!t) { setNotice('warn', 'Nhập nội dung ghi chú'); return; }
+        openBusy('Đang gửi', 'Đang lưu ghi chú…', () => setNotice('ok', 'Đã lưu ghi chú (preview).'));
+      };
+    }
+
+    function renderConfig() {
+      document.getElementById('workspace').classList.add('no-rail');
+      document.getElementById('rail').style.display = 'none';
+      document.getElementById('main').innerHTML = `
+        ${renderNotice()}
+        <div class="page-head"><div><h2>Cấu hình quy trình</h2></div></div>
+        <div class="panel-info"><b>R08 PROCADM</b> — Contribute trên 7 Lists cấu hình. Không sửa SystemSettings. Không phê duyệt hồ sơ.</div>
+        <section class="card">
+          <div class="tabs">
+            <button type="button" class="tab on" data-cfg="types">Loại hồ sơ</button>
+            <button type="button" class="tab" data-cfg="ou">Đơn vị / nhân sự</button>
+            <button type="button" class="tab" data-cfg="steps">Bước &amp; người nhận</button>
+            <button type="button" class="tab" data-cfg="checklist">Checklist templates</button>
+          </div>
+          <div class="card-b" id="cfgBody"></div>
+        </section>`;
+      const bodies = {
+        types: `<table class="table"><thead><tr><th>Mã</th><th>Tiêu đề</th><th>Checklist ver</th><th>Workflow</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="dim">SPV_PAYMENT</td><td>Hồ sơ thanh toán SPV</td><td>1</td><td>EMI_PAY_SPV</td><td><button class="btn btn-sm">Sửa</button></td></tr>
+            <tr><td class="dim">SPV_ADVANCE</td><td>Tạm ứng SPV</td><td>1</td><td>EMI_PAY_SPV</td><td><button class="btn btn-sm">Sửa</button></td></tr>
+          </tbody></table>
+          <div style="margin-top:10px"><button class="btn btn-primary btn-sm" id="btnCfgSave">Thêm loại hồ sơ</button></div>`,
+        ou: `<table class="table"><thead><tr><th>OU</th><th>Tên</th><th>Thành viên (mẫu)</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="dim">OU_BPCM1</td><td>Bộ phận chuyên môn 1</td><td>nguyenvana@…</td><td><button class="btn btn-sm">Sửa</button></td></tr>
+            <tr><td class="dim">OU_PBCM</td><td>Bộ phận chuyên môn</td><td>tranthib@…</td><td><button class="btn btn-sm">Sửa</button></td></tr>
+            <tr><td class="dim">OU_TCKT</td><td>Tài chính kế toán</td><td>phamthud@…, dominhf@…</td><td><button class="btn btn-sm">Sửa</button></td></tr>
+          </tbody></table>`,
+        steps: `<table class="table"><thead><tr><th>StepKey</th><th>Thứ tự</th><th>OU nhận mặc định</th><th></th></tr></thead>
+          <tbody>${STEPS.map((s,i)=>`<tr><td class="dim">${s.key}</td><td>${i+1}</td><td>${i===0?'OU_BPCM1':i===6?'—':'theo StepRecipients'}</td><td><button class="btn btn-sm">Sửa</button></td></tr>`).join('')}</tbody></table>`,
+        checklist: `<table class="table"><thead><tr><th>PaymentType</th><th>ItemCode</th><th>Nhãn</th><th>Bắt buộc</th><th>Min file</th></tr></thead>
+          <tbody>
+            <tr><td>SPV_PAYMENT</td><td class="dim">DOC_REQUEST</td><td>Đề nghị thanh toán</td><td>Có</td><td>1</td></tr>
+            <tr><td>SPV_PAYMENT</td><td class="dim">DOC_INVOICE</td><td>Hóa đơn / chứng từ</td><td>Có</td><td>1</td></tr>
+            <tr><td>SPV_PAYMENT</td><td class="dim">DOC_CONTRACT</td><td>Hợp đồng / phụ lục</td><td>Không</td><td>0</td></tr>
+          </tbody></table>`
+      };
+      const showCfg = (k) => {
+        document.getElementById('cfgBody').innerHTML = bodies[k] || '';
+        document.querySelectorAll('[data-cfg]').forEach(t => t.classList.toggle('on', t.getAttribute('data-cfg') === k));
+        const btn = document.getElementById('btnCfgSave');
+        if (btn) btn.onclick = () => openBusy('Đang lưu', 'Đang cập nhật PaymentTypes…', () => setNotice('ok', 'Đã lưu cấu hình (preview M01).'));
+      };
+      showCfg('types');
+      document.querySelectorAll('[data-cfg]').forEach(t => t.onclick = () => showCfg(t.getAttribute('data-cfg')));
+      bindCommon();
+    }
+
+    function renderAudit() {
+      document.getElementById('workspace').classList.add('no-rail');
+      document.getElementById('rail').style.display = 'none';
+      document.getElementById('main').innerHTML = `
+        ${renderNotice()}
+        <div class="page-head"><div><h2>Nhật ký nội bộ</h2></div></div>
+        <div class="panel-info"><b>R10 AUDIT</b> — Read trên ActivityInternal. Không sửa hồ sơ / duyệt / cấp quyền.</div>
+        <section class="card">
+          <div class="card-h"><h3>EMI_PAY_ActivityInternal</h3></div>
+          <div class="card-b" style="padding:0">
+            <table class="table">
+              <thead><tr><th>Thời gian</th><th>Actor</th><th>Sự kiện</th><th>Trường</th><th>Cũ → Mới</th><th>Lý do</th></tr></thead>
+              <tbody>
+                ${INTERNAL_LOG.map(r => `
+                  <tr>
+                    <td>${r.time}</td>
+                    <td class="dim">${r.actor}</td>
+                    <td>${r.event}</td>
+                    <td>${r.field}</td>
+                    <td>${r.old || '—'} → ${r.neu || '—'}</td>
+                    <td>${r.reason}</td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </section>`;
+      bindCommon();
+    }
+
+    function bindCommon() {
+      document.querySelectorAll('[data-view]').forEach(b => {
+        b.onclick = () => {
+          state.view = b.getAttribute('data-view');
+          state.filter = b.getAttribute('data-filter') || null;
+          render();
+        };
+      });
+      const dn = document.getElementById('dismissNotice');
+      if (dn) dn.onclick = clearNotice;
+    }
+
+    function render() {
+      const role = ROLES[state.role];
+      document.getElementById('roleName').textContent = role.name;
+      document.getElementById('roleMeta').textContent = role.meta;
+      document.getElementById('avatar').textContent = role.av;
+      document.getElementById('avatar2').textContent = role.av;
+
+      const isAdm = state.role === 'procadm';
+      const isAudit = state.role === 'audit';
+      document.getElementById('navCreate').style.display = state.role === 'creator' ? '' : 'none';
+      document.getElementById('navConfig').style.display = isAdm ? '' : 'none';
+      document.getElementById('navAudit').style.display = isAudit ? '' : 'none';
+      document.getElementById('navDetail').style.display = (isAdm || isAudit) ? 'none' : '';
+
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
+      if (state.view === 'inbox' && !state.filter) {
+        const el = document.querySelector('.nav-btn[data-view="inbox"]:not([data-filter])');
+        if (el) el.classList.add('on');
+      } else if (state.view === 'inbox' && state.filter) {
+        const el = document.querySelector(`.nav-btn[data-filter="${state.filter}"]`);
+        if (el) el.classList.add('on');
+      } else {
+        const el = document.querySelector(`.nav-btn[data-view="${state.view}"]:not([data-filter])`);
+        if (el) el.classList.add('on');
+      }
+
+      if (state.view === 'config') renderConfig();
+      else if (state.view === 'audit') renderAudit();
+      else if (state.view === 'inbox') renderInbox();
+      else if (state.view === 'create') renderCreate();
+      else renderDetail();
+    }
+
+    document.getElementById('roleSelect').onchange = (e) => {
+      state.role = e.target.value;
+      state.filter = null;
+      if (state.role === 'procadm') { state.view = 'config'; }
+      else if (state.role === 'audit') { state.view = 'audit'; }
+      else {
+        state.view = 'inbox';
+        if (state.role === 'bpcm2' || state.role === 'bpcm3' || state.role === 'tckt_check') state.scenario = 'review_tech';
+        if (state.role === 'chair') state.scenario = 'chair';
+        if (state.role === 'tckt_pay') state.scenario = 'pay';
+        if (state.role === 'creator') state.scenario = 'prepare_missing';
+      }
+      render();
+    };
+
+    render();
+  </script>
+</body>
+</html>
