@@ -1,0 +1,41 @@
+---
+description: EMI PAY — quy tắc làm việc (model/Flow trước, không tự ý tính năng)
+alwaysApply: true
+---
+
+# EMI PAY — Quy tắc làm việc
+
+## Nguồn sự thật (theo thứ tự)
+
+1. Schema CECM + seed (`EMI_PAY_*` lists, `seed-config.json`, list-guids)
+2. Main Flow Core đã chốt (`EMI_PAY_Core_Flow_Phase1`, Commands 1.0.0.9)
+3. Nghiệp vụ: `BA.md`, `EMI_Quy_tac_nghiep_vu_*.md`, `EMI_PAY_MaTran_VaiTro_*.md`
+4. Trạng thái làm: `plan.md`, `EMI_PAY_Doi_chieu_BA.md`
+5. SPFx chỉ là UI trên model/Flow — không thay thế orchestrator
+
+## Không tự ý
+
+- **Không** thêm tính năng / cột / lệnh / patch Flow khi chưa đề xuất và được duyệt.
+- **Không** hardcode danh mục nghiệp vụ trong SPFx (phòng ban, bước, checklist). Master data thuộc **seed/model** hoặc list CFG do PROCADM quản.
+- **Không** ghi thẳng Requests/WorkItems để «đi vòng» Flow. Chỉ enqueue 4 lệnh Core: `CREATE_REQUEST` | `SUBMIT` | `DECIDE` | `CONFIRM_PAYMENT`.
+- **Không** tin `ActorUPN` trong payload như bằng chứng quyền (xem ma trận / Phase2).
+
+## Model tổ chức (nhớ đúng)
+
+- **BPCM = bước** (`WorkflowSteps.StepKey`), không phải một phòng cố định.
+- **Phòng ban** = `OrgUnits`; **nhân sự** = `OrgMembers` (`MemberUPN`); **trưởng phòng** = `OrgUnits.ManagerUPN`.
+- **Phòng thuộc bước** = `StepRecipients` (một StepKey → nhiều OU; `IsDefault`).
+- Schema không có field thì **không bịa** field/UI giả; đề xuất mở rộng schema trước.
+
+## Khi cần tính năng mới
+
+1. Đối chiếu BA / quy tắc / schema / Flow.
+2. Viết đề xuất ngắn (gap → list/field/command bị ảnh hưởng → UI tối thiểu).
+3. Chỉ code sau khi được duyệt.
+4. Ưu tiên cấu hình PROCADM **đơn giản** (CRUD đúng 7 list CFG), không nút «magic seed» trong runtime.
+
+## SPFx / UI
+
+- Contoso teal, radius 4, tiếng Việt; Demo Off / full-width theo port plan.
+- Gate UI (checklist, UNC…) chỉ hỗ trợ UX — **Flow vẫn là cổng thật**.
+- Tách component/page theo rule `emi-pay-spfx-structure` — không phình `LivePayApp.tsx`.

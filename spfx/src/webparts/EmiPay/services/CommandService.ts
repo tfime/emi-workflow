@@ -70,11 +70,15 @@ export async function waitCommand(
   opts?: { timeoutMs?: number; pollMs?: number; accept?: CommandState[] }
 ): Promise<ICommandResult> {
   const timeoutMs = opts?.timeoutMs ?? 90000;
-  const pollMs = opts?.pollMs ?? 4000;
+  const pollMs = opts?.pollMs ?? 1200;
   const accept = opts?.accept ?? ['Succeeded'];
   const deadline = Date.now() + timeoutMs;
+  // Poll ngay lần đầu (không chờ pollMs) để phản hồi nhanh hơn.
+  let delay = 0;
   while (Date.now() < deadline) {
-    await new Promise<void>((resolve) => setTimeout(resolve, pollMs));
+    if (delay > 0) {
+      await new Promise<void>((resolve) => setTimeout(resolve, delay));
+    }
     const cur = await getCommand(ctx, id);
     if (['Succeeded', 'Rejected', 'Failed'].indexOf(cur.state) >= 0) {
       if (accept.indexOf(cur.state) < 0) {
@@ -82,6 +86,7 @@ export async function waitCommand(
       }
       return cur;
     }
+    delay = pollMs;
   }
   throw new Error(`Timeout waiting command ${id} (Flow ON?)`);
 }

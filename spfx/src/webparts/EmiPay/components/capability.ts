@@ -72,6 +72,46 @@ export function actionsFor(persona: PayPersona, state: PayStateKey): IPayAction[
       ],
       archivePending: []
     },
+    bpcm2: {
+      review: [
+        { id: 'forward', label: 'Chuyển bước tiếp theo', primary: true, command: 'DECIDE', dialog: 'forward' },
+        { id: 'return', label: 'Trả về người tạo', danger: true, command: 'DECIDE', dialog: 'return' }
+      ]
+    },
+    bpcm3: {
+      review: [
+        { id: 'forward', label: 'Chuyển bước tiếp theo', primary: true, command: 'DECIDE', dialog: 'forward' },
+        { id: 'return', label: 'Trả về người tạo', danger: true, command: 'DECIDE', dialog: 'return' }
+      ]
+    },
+    tckt_check: {
+      review: [
+        { id: 'forward', label: 'Chuyển bước tiếp theo', primary: true, command: 'DECIDE', dialog: 'forward' },
+        { id: 'return', label: 'Trả về người tạo', danger: true, command: 'DECIDE', dialog: 'return' }
+      ]
+    },
+    tckt_pay: {
+      unc: [
+        { id: 'unc', label: 'Tải UNC', primary: true, dialog: 'unc' },
+        {
+          id: 'confirm',
+          label: 'Xác nhận đã thanh toán',
+          ghost: true,
+          command: 'CONFIRM_PAYMENT',
+          dialog: 'confirmPay'
+        }
+      ],
+      payment: [
+        { id: 'unc', label: 'Tải / thay UNC', ghost: true, dialog: 'unc' },
+        {
+          id: 'confirm',
+          label: 'Xác nhận đã thanh toán',
+          primary: true,
+          command: 'CONFIRM_PAYMENT',
+          dialog: 'confirmPay'
+        }
+      ]
+    },
     procadm: {
       draft: [],
       completed: []
@@ -116,6 +156,7 @@ export function dialogTitle(kind: Exclude<DialogKind, undefined>): string {
     reject: 'CT.HĐQT — Không duyệt',
     unc: 'Tải UNC / chứng từ thanh toán',
     confirmPay: 'Xác nhận đã thanh toán',
+    review: 'Đánh giá mục checklist',
     extendDeadline: 'Gia hạn xử lý',
     delegate: 'Ủy quyền Trưởng phòng'
   };

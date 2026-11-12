@@ -4,16 +4,23 @@ export type PayView =
   | 'detail'
   | 'search'
   | 'config'
+  | 'audit'
   | 'features';
 
+/** UI persona xem theo ma trận (không thay ACL SharePoint). */
 export type PayPersona =
   | 'creator'
+  | 'bpcm2'
+  | 'bpcm3'
+  | 'tckt_check'
+  | 'chair'
+  | 'tckt_pay'
+  | 'procadm'
+  | 'audit'
+  /** Legacy mock personas (EmiPay.tsx demo) */
   | 'manager'
   | 'assignee'
-  | 'chair'
-  | 'tckt'
-  | 'procadm'
-  | 'audit';
+  | 'tckt';
 
 export type PayStateKey =
   | 'draft'
@@ -43,6 +50,7 @@ export type DialogKind =
   | 'reject'
   | 'unc'
   | 'confirmPay'
+  | 'review'
   | 'extendDeadline'
   | 'delegate'
   | undefined;

@@ -70,3 +70,11 @@ export function moneyVi(amount?: number): string {
     return String(amount) + ' ₫';
   }
 }
+
+/** Rút gọn tên tệp: giữ đầu + đuôi (phần mở rộng). */
+export function shortFileName(name: string, head: number = 16, tail: number = 10): string {
+  const raw = (name || '').trim();
+  if (!raw) return '—';
+  if (raw.length <= head + tail + 1) return raw;
+  return `${raw.slice(0, head)}…${raw.slice(raw.length - tail)}`;
+}

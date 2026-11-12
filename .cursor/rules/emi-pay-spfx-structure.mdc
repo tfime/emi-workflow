@@ -1,0 +1,50 @@
+---
+description: EMI PAY SPFx — tách component/page, không monolith LivePayApp
+globs: spfx/src/webparts/EmiPay/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# SPFx — tách chức năng thành component
+
+## Nguyên tắc
+
+- `LivePayApp.tsx` chỉ **điều phối**: route view, load master, enqueue command, notice/busy.
+- Mỗi chức năng / màn hình = **file component riêng** (hoặc folder), props rõ, service riêng khi có I/O.
+- Thêm UI mới → file mới. **Không** nhồi thêm block lớn vào `LivePayApp.tsx` / `EmiPay.tsx`.
+
+## Cấu trúc đề nghị
+
+```
+components/
+  LivePayApp.tsx          # shell / router mỏng
+  inbox/InboxPage.tsx
+  create/CreateRequestPage.tsx
+  detail/RequestDetailPage.tsx
+  detail/ChecklistPanel.tsx
+  detail/DocsPanel.tsx
+  detail/ActionBar.tsx
+  dialogs/PayDialogs.tsx  # submit/forward/return/review…
+  config/ConfigAdmin.tsx  # đã tách; giữ CRUD mỏng theo list CFG
+  preview/FilePreviewDrawer.tsx
+services/                 # SpRest, Commands, Config, Checklist, Upload…
+```
+
+## Ví dụ
+
+```tsx
+// ❌ BAD — mọi thứ trong LivePayApp
+// inbox table + create form + detail + dialogs + config inline
+
+// ✅ GOOD
+{view === 'inbox' && <InboxPage rows={inbox} onOpen={openLiveDetail} />}
+{view === 'create' && <CreateRequestPage sp={sp} onCreated={openLiveDetail} />}
+{view === 'detail' && master && (
+  <RequestDetailPage master={master} checklist={checklist} onAction={onAction} />
+)}
+```
+
+## Ranh giới
+
+- Logic SharePoint / Commands → `services/*`, không nhét fetch dài trong JSX.
+- Config PROCADM giữ tab theo list CFG; không trộn phê duyệt hồ sơ vào Config.
+- Khi một file > ~300–400 dòng hoặc >1 trách nhiệm rõ → tách trước khi thêm feature.

@@ -1,22 +1,54 @@
-import { IPayAction } from '../components/types';
-import { IChecklistItemRow, requiredChecklistReady } from './ChecklistService';
+import { IPayAction, PayPersona } from '../components/types';
+import {
+  IChecklistItemRow,
+  checklistAllPass,
+  requiredChecklistReady
+} from './ChecklistService';
 import { IRequestMaster } from './RequestService';
 
-/** Actions allowed by Core Flow 1.0.0.9 — derived from Master step/status */
+const STEP_PERSONAS: Record<string, PayPersona[]> = {
+  BPCM1_PREPARE: ['creator'],
+  BPCM2_TECH: ['bpcm2'],
+  BPCM3_PRICE: ['bpcm3'],
+  TCKT_CHECK: ['tckt_check'],
+  CHAIR_APPROVE: ['chair'],
+  TCKT_PAY: ['tckt_pay']
+};
+
+/** Actions allowed by Core Flow 1.0.0.9 — derived from Master step/status (+ UI persona). */
 export function liveActionsFor(
   master: IRequestMaster,
   checklist: IChecklistItemRow[],
-  hasUnc: boolean
+  hasUnc: boolean,
+  persona?: PayPersona
 ): IPayAction[] {
   const step = master.currentStepKey;
   const status = master.status;
 
+  if (persona === 'procadm' || persona === 'audit') {
+    return [];
+  }
+
+  // Map legacy mock personas onto matrix roles for action gating.
+  const normalized: PayPersona | undefined =
+    persona === 'manager' || persona === 'assignee'
+      ? 'bpcm2'
+      : persona === 'tckt'
+        ? 'tckt_check'
+        : persona;
+
+  if (
+    normalized &&
+    STEP_PERSONAS[step] &&
+    STEP_PERSONAS[step].indexOf(normalized) < 0
+  ) {
+    return [];
+  }
+
   if (step === 'BPCM1_PREPARE' && (status === 'Draft' || status === 'Returned')) {
-    const actions: IPayAction[] = [
-      { id: 'upload', label: 'Tải tài liệu checklist', ghost: true, dialog: 'attach' }
-    ];
+    const actions: IPayAction[] = [];
     if (requiredChecklistReady(checklist)) {
-      actions.unshift({
+      actions.push({
         id: 'submit',
         label: status === 'Returned' ? 'Gửi lại hồ sơ' : 'Gửi hồ sơ',
         primary: true,
@@ -28,16 +60,36 @@ export function liveActionsFor(
   }
 
   if (step === 'BPCM2_TECH' || step === 'BPCM3_PRICE' || step === 'TCKT_CHECK') {
-    return [
-      { id: 'forward', label: 'Chuyển bước tiếp theo', primary: true, command: 'DECIDE', dialog: 'forward' },
-      { id: 'return', label: 'Trả về người tạo', danger: true, command: 'DECIDE', dialog: 'return' }
-    ];
+    const actions: IPayAction[] = [];
+    if (checklistAllPass(checklist)) {
+      actions.push({
+        id: 'forward',
+        label: 'Chuyển bước tiếp theo',
+        primary: true,
+        command: 'DECIDE',
+        dialog: 'forward'
+      });
+    }
+    actions.push({
+      id: 'return',
+      label: 'Trả về người tạo',
+      danger: true,
+      command: 'DECIDE',
+      dialog: 'return'
+    });
+    return actions;
   }
 
   if (step === 'CHAIR_APPROVE') {
     return [
       { id: 'approve', label: 'Phê duyệt', primary: true, command: 'DECIDE', dialog: 'approve' },
-      { id: 'reject', label: 'Không phê duyệt', danger: true, command: 'DECIDE', dialog: 'reject' }
+      {
+        id: 'reject',
+        label: 'Không phê duyệt',
+        danger: true,
+        command: 'DECIDE',
+        dialog: 'reject'
+      }
     ];
   }
 

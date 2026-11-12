@@ -107,27 +107,62 @@ export async function uploadUncFile(
   return { documentKey, fileUrl: uploaded.AbsoluteUrl, fileName: safeName };
 }
 
+export interface IDocumentIndexRow {
+  id: number;
+  documentKey: string;
+  fileUrl: string;
+  fileName: string;
+  docClass: string;
+  visibility: string;
+  checklistItemKey: string;
+  uploadedByUPN: string;
+  uploadedAt: string;
+  libraryName: string;
+}
+
+function mapFileUrl(raw: unknown): string {
+  if (typeof raw === 'string') return raw;
+  if (raw && typeof raw === 'object') {
+    return String((raw as { Url?: string }).Url || '');
+  }
+  return '';
+}
+
+function mapDocRow(r: Record<string, unknown>): IDocumentIndexRow {
+  return {
+    id: Number(r.Id),
+    documentKey: String(r.DocumentKey || ''),
+    fileUrl: mapFileUrl(r.FileUrl),
+    fileName: String(r.FileName || ''),
+    docClass: String(r.DocClass || ''),
+    visibility: String(r.Visibility || ''),
+    checklistItemKey: String(r.ChecklistItemKey || ''),
+    uploadedByUPN: String(r.UploadedByUPN || ''),
+    uploadedAt: r.UploadedAt ? String(r.UploadedAt) : '',
+    libraryName: String(r.LibraryName || '')
+  };
+}
+
 export async function listUncDocuments(
   ctx: ISpRestContext,
   requestKey: string
-): Promise<{ id: number; documentKey: string; fileUrl: string; fileName: string }[]> {
+): Promise<IDocumentIndexRow[]> {
   const rows = await getItems<Record<string, unknown>>(
     ctx,
     PAY_LISTS.DocumentIndex,
     `$filter=RequestKey eq '${escapeOData(requestKey)}' and DocClass eq 'UNC' and IsCurrent eq 1&$top=20`
   );
-  return rows.map((r) => {
-    const fileUrlRaw = r.FileUrl;
-    let fileUrl = '';
-    if (typeof fileUrlRaw === 'string') fileUrl = fileUrlRaw;
-    else if (fileUrlRaw && typeof fileUrlRaw === 'object') {
-      fileUrl = String((fileUrlRaw as { Url?: string }).Url || '');
-    }
-    return {
-      id: Number(r.Id),
-      documentKey: String(r.DocumentKey || ''),
-      fileUrl,
-      fileName: String(r.FileName || '')
-    };
-  });
+  return rows.map(mapDocRow);
+}
+
+export async function listDocumentsForRequest(
+  ctx: ISpRestContext,
+  requestKey: string
+): Promise<IDocumentIndexRow[]> {
+  const rows = await getItems<Record<string, unknown>>(
+    ctx,
+    PAY_LISTS.DocumentIndex,
+    `$filter=RequestKey eq '${escapeOData(requestKey)}' and IsCurrent eq 1&$orderby=Id desc&$top=100`
+  );
+  return rows.map(mapDocRow);
 }

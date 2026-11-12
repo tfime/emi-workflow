@@ -1,5 +1,5 @@
 import { CORE_STEPS, PAY_LISTS, escapeOData } from './PayLists';
-import { ISpRestContext, getItems } from './SpRest';
+import { ISpRestContext, getItems, mergeItem } from './SpRest';
 import { PayStateKey } from '../components/types';
 
 export interface IRequestMaster {
@@ -71,6 +71,27 @@ export async function getRequestByKey(
   );
   if (!rows.length) return undefined;
   return mapMaster(rows[0]);
+}
+
+/**
+ * Flow CREATE (1.0.0.9) ghi Title=RequestKey, Explanation cứng, không ghi Amount.
+ * SPFx bổ sung các trường nghiệp vụ sau khi Command Succeeded — không đổi Core Flow.
+ */
+export async function patchRequestAfterCreate(
+  ctx: ISpRestContext,
+  requestKey: string,
+  fields: { title?: string; amount?: number; explanation?: string }
+): Promise<void> {
+  const master = await getRequestByKey(ctx, requestKey);
+  if (!master) {
+    throw new Error(`Không thấy hồ sơ ${requestKey} sau CREATE`);
+  }
+  const body: Record<string, unknown> = {};
+  if (fields.title) body.Title = fields.title;
+  if (fields.explanation !== undefined) body.Explanation = fields.explanation;
+  if (fields.amount !== undefined && !isNaN(fields.amount)) body.Amount = fields.amount;
+  if (!Object.keys(body).length) return;
+  await mergeItem(ctx, PAY_LISTS.Requests, master.id, body);
 }
 
 export async function listRecentRequests(

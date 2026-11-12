@@ -5,5 +5,6 @@ export * from './ConfigService';
 export * from './RequestService';
 export * from './ChecklistService';
 export * from './UploadService';
+export * from './DocPreview';
 export * from './liveActions';
 export * from './viLabels';

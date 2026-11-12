@@ -12,33 +12,50 @@ import {
   ISpRestContext,
   IPaymentType,
   IChecklistTemplate,
+  IOrgUnit,
   IRequestMaster,
   IChecklistItemRow,
   listPaymentTypes,
   listChecklistTemplates,
+  listOrgUnits,
   listRecentRequests,
   getRequestByKey,
+  patchRequestAfterCreate,
   stepIndex,
   listChecklistItems,
   reconcileChecklistFromTemplates,
   requiredChecklistReady,
+  checklistAllPass,
+  checklistReviewComplete,
+  checklistHasFail,
+  lockChecklistItems,
   enqueueCommand,
   waitCommand,
+  getCommand,
   uploadChecklistFile,
   uploadUncFile,
   listUncDocuments,
+  listDocumentsForRequest,
+  IDocumentIndexRow,
+  isSupportingDoc,
+  isChecklistDocClass,
+  setChecklistItemReview,
+  saveStepReview,
   liveActionsFor,
   CORE_STEPS,
   statusVi,
   stepVi,
   stepShortVi,
   checklistStatusVi,
-  moneyVi
+  moneyVi,
+  shortFileName
 } from '../services';
 import { payThemeStyle } from '../theme/payTokens';
-import { DialogKind, IPayAction, PayView } from './types';
+import { DialogKind, IPayAction, PayPersona, PayView } from './types';
 import BusyDialog from './BusyDialog';
 import PayNoticeBar, { IPayNotice } from './PayNotice';
+import ConfigAdmin from './ConfigAdmin';
+import FilePreviewDrawer from './FilePreviewDrawer';
 
 initializeIcons(undefined, { disableWarnings: true });
 
@@ -88,14 +105,24 @@ const dialogTitleVi = (kind: DialogKind): string => {
       return 'Tải ủy nhiệm chi (UNC)';
     case 'confirmPay':
       return 'Xác nhận đã thanh toán';
+    case 'review':
+      return 'Đánh giá mục checklist';
     default:
       return 'Xác nhận';
   }
 };
 
+const REVIEW_STEPS = ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK'];
+const REVIEW_PERSONAS: PayPersona[] = ['bpcm2', 'bpcm3', 'tckt_check', 'tckt', 'manager', 'assignee'];
+
 const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const actorUPN = upnFromLogin(props.userLoginName);
   const [view, setView] = React.useState<PayView>('inbox');
+  const [persona, setPersona] = React.useState<PayPersona>('creator');
+  const [inboxFilter, setInboxFilter] = React.useState<'all' | 'todo' | 'mine'>('all');
+  const [docsTab, setDocsTab] = React.useState<'checklist' | 'files'>('checklist');
+  const [activityTab, setActivityTab] = React.useState<'timeline' | 'comment'>('timeline');
+  const [commentDraft, setCommentDraft] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [busyMessage, setBusyMessage] = React.useState('Đang xử lý…');
   const [notice, setNotice] = React.useState<IPayNotice | undefined>(undefined);
@@ -108,17 +135,22 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const [createAmount, setCreateAmount] = React.useState('1000000');
   const [createExpl, setCreateExpl] = React.useState('');
   const [createOu, setCreateOu] = React.useState('OU_BPCM1');
+  const [orgUnits, setOrgUnits] = React.useState<IOrgUnit[]>([]);
 
   const [requestKey, setRequestKey] = React.useState('');
   const [master, setMaster] = React.useState<IRequestMaster | undefined>(undefined);
   const [checklist, setChecklist] = React.useState<IChecklistItemRow[]>([]);
-  const [uncDocs, setUncDocs] = React.useState<
-    { id: number; documentKey: string; fileUrl: string; fileName: string }[]
-  >([]);
+  const [uncDocs, setUncDocs] = React.useState<IDocumentIndexRow[]>([]);
+  const [docs, setDocs] = React.useState<IDocumentIndexRow[]>([]);
+  const [drawerDoc, setDrawerDoc] = React.useState<IDocumentIndexRow | undefined>(undefined);
+  const [docComment, setDocComment] = React.useState('');
   const [dialog, setDialog] = React.useState<DialogKind>(undefined);
   const [reason, setReason] = React.useState('');
   const [paymentDue, setPaymentDue] = React.useState('');
   const [uploadItemCode, setUploadItemCode] = React.useState('');
+  const [reviewItemCode, setReviewItemCode] = React.useState('');
+  const [reviewResult, setReviewResult] = React.useState<'Pass' | 'Fail'>('Pass');
+  const [reviewReason, setReviewReason] = React.useState('');
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   const showNotice = (kind: IPayNotice['kind'], text: string): void => {
@@ -155,10 +187,14 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     if (!m) throw new Error(`Không tìm thấy hồ sơ ${key}`);
     const items = await listChecklistItems(props.sp, key);
     const unc = await listUncDocuments(props.sp, key);
+    const allDocs = await listDocumentsForRequest(props.sp, key);
     setMaster(m);
     setChecklist(items);
     setUncDocs(unc);
+    setDocs(allDocs);
     setRequestKey(key);
+    setDocsTab('checklist');
+    setActivityTab('timeline');
   };
 
   React.useEffect(() => {
@@ -171,12 +207,16 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             code: 'SPV_PAYMENT',
             title: 'Hồ sơ thanh toán SPV',
             checklistVersion: 1,
-            workflowCode: 'EMI_PAY_SPV'
+            workflowCode: 'EMI_PAY_SPV',
+            isActive: true
           }
         ];
       }
       setPaymentTypes(types);
       setSelectedType(types[0].code);
+      const ous = await listOrgUnits(props.sp);
+      setOrgUnits(ous);
+      if (ous[0]) setCreateOu(ous[0].ouCode);
       await refreshInbox();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -247,17 +287,24 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     }
     void run(
       async () => {
+        const title = createTitle || 'Hồ sơ thanh toán';
+        const amount = Number(createAmount) || 0;
+        const explanation = createExpl || 'Tạo từ giao diện EMI PAY';
         const enq = await enqueueCommand(props.sp, 'CREATE_REQUEST', {
-          title: createTitle || 'Hồ sơ thanh toán',
+          title,
           createdOUCode: createOu || 'OU_BPCM1',
           creatorUPN: actorUPN,
           paymentTypeCode: selectedType,
-          amount: Number(createAmount) || 0,
-          explanation: createExpl || 'Tạo từ giao diện EMI PAY'
+          amount,
+          explanation
         });
         setBusyMessage('Đang tạo hồ sơ… Hệ thống đang xử lý, vui lòng chờ.');
-        await waitCommand(props.sp, enq.id);
-        const key = enq.requestKey;
+        await waitCommand(props.sp, enq.id, { pollMs: 1000 });
+        const cmdDone = await getCommand(props.sp, enq.id);
+        const key = cmdDone.requestKey || enq.requestKey;
+        // Bù Title/Amount/Explanation — Flow 1.0.0.9 CREATE chưa map đủ payload.
+        setBusyMessage('Đang cập nhật thông tin hồ sơ…');
+        await patchRequestAfterCreate(props.sp, key, { title, amount, explanation });
         const pt = paymentTypes.filter((t) => t.code === selectedType)[0];
         if (pt) {
           const tpls =
@@ -280,7 +327,36 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   const selectedTypeMeta = paymentTypes.filter((t) => t.code === selectedType)[0];
   const requiredTplCount = templates.filter((t) => t.isRequired).length;
-  const actions = master ? liveActionsFor(master, checklist, uncDocs.length > 0) : [];
+  const actions = master
+    ? liveActionsFor(master, checklist, uncDocs.length > 0, persona)
+    : [];
+
+  const canReviewDocs = !!(
+    master &&
+    REVIEW_STEPS.indexOf(master.currentStepKey) >= 0 &&
+    REVIEW_PERSONAS.indexOf(persona) >= 0
+  );
+
+  const openReview = (itemCode: string): void => {
+    setReviewItemCode(itemCode);
+    setReviewResult('Pass');
+    setReviewReason('');
+    setDialog('review');
+  };
+
+  const personaMeta: Record<PayPersona, { name: string; meta: string }> = {
+    creator: { name: props.userDisplayName || 'Người tạo', meta: 'R01 · BPCM1 Người tạo' },
+    bpcm2: { name: 'BPCM2', meta: 'R02 · BPCM2 KT kỹ thuật' },
+    bpcm3: { name: 'BPCM3', meta: 'R03 · BPCM3 KT giá' },
+    tckt_check: { name: 'TCKT Kiểm tra', meta: 'R04 · TCKT Kiểm tra' },
+    chair: { name: 'CT.HĐQT', meta: 'R05 · CT.HĐQT' },
+    tckt_pay: { name: 'TCKT Thanh toán', meta: 'R06 · TCKT Thanh toán' },
+    procadm: { name: 'Quản trị quy trình', meta: 'R08 · PROCADM' },
+    audit: { name: 'Kiểm toán', meta: 'R10 · AUDIT' },
+    manager: { name: 'Trưởng phòng', meta: 'Legacy · manager' },
+    assignee: { name: 'Nhân sự', meta: 'Legacy · assignee' },
+    tckt: { name: 'TCKT', meta: 'Legacy · tckt' }
+  };
 
   const onAction = (a: IPayAction): void => {
     setReason('');
@@ -340,6 +416,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     if (kind === 'forward' || kind === 'approve') {
       void run(
         async () => {
+          if (kind === 'forward' && !checklistAllPass(checklist)) {
+            throw new Error(
+              'Chưa thể chuyển bước: cần đánh giá Đạt hết các mục checklist có tệp/bắt buộc.'
+            );
+          }
           const payload: Record<string, unknown> = {
             actorUPN,
             decision: 'PASS',
@@ -361,7 +442,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               ? 'Đang ghi nhận phê duyệt của CT.HĐQT…'
               : 'Đang chuyển bước tiếp theo…'
           );
-          await waitCommand(props.sp, enq.id);
+          await waitCommand(props.sp, enq.id, { pollMs: 1000 });
+          // Khóa checklist ngay sau khi chuyển — không cho đánh giá lại.
+          await lockChecklistItems(props.sp, checklist);
           await loadDetail(master.requestKey);
           await refreshInbox();
         },
@@ -395,7 +478,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             }
           );
           setBusyMessage('Đang trả hồ sơ về người tạo…');
-          await waitCommand(props.sp, enq.id);
+          await waitCommand(props.sp, enq.id, { pollMs: 1000 });
+          await lockChecklistItems(props.sp, checklist);
           await loadDetail(master.requestKey);
           await refreshInbox();
         },
@@ -428,6 +512,38 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           await refreshInbox();
         },
         { waiting: 'Đang xác nhận thanh toán…', success: 'Đã xác nhận thanh toán.' }
+      );
+      return;
+    }
+
+    if (kind === 'review') {
+      void run(
+        async () => {
+          const item =
+            checklist.filter((c) => c.itemCode === reviewItemCode)[0] || checklist[0];
+          if (!item) throw new Error('Không tìm thấy mục checklist');
+          if (reviewResult === 'Fail' && !reviewReason.trim()) {
+            throw new Error('Vui lòng nhập lý do khi đánh giá Không đạt');
+          }
+          await saveStepReview(props.sp, {
+            requestKey: master.requestKey,
+            stepInstanceKey: master.currentStepInstanceKey,
+            reviewRound: master.reviewRound,
+            checklistItemKey: item.checklistItemKey || `${master.requestKey}|${item.itemCode}`,
+            result: reviewResult,
+            reason: reviewReason.trim(),
+            reviewedByUPN: actorUPN
+          });
+          await setChecklistItemReview(props.sp, item, reviewResult);
+          await loadDetail(master.requestKey);
+        },
+        {
+          waiting: 'Đang lưu đánh giá…',
+          success:
+            reviewResult === 'Pass'
+              ? `Đã đánh giá Đạt: ${reviewItemCode}`
+              : `Đã đánh giá Không đạt: ${reviewItemCode}`
+        }
       );
       return;
     }
@@ -475,6 +591,99 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     }
   };
 
+  const showRail = view === 'create' || view === 'detail';
+  const avatarLetters = (props.userDisplayName || actorUPN || 'U')
+    .split(/[\s@._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join('')
+    .toUpperCase() || 'U';
+
+  const goInbox = (filter: 'all' | 'todo' | 'mine' = 'all'): void => {
+    setInboxFilter(filter);
+    setView('inbox');
+  };
+
+  const isTodoItem = (item: IRequestMaster): boolean => {
+    const s = (item.status || '').toLowerCase();
+    return s === 'draft' || s === 'returned' || s === 'inprogress' || s === 'in progress';
+  };
+
+  const filteredInbox = inbox.filter((item) => {
+    if (inboxFilter === 'mine') {
+      return (item.creatorUPN || '').toLowerCase() === actorUPN.toLowerCase();
+    }
+    if (inboxFilter === 'todo') {
+      return isTodoItem(item);
+    }
+    return true;
+  });
+  const todoRows = filteredInbox.filter(isTodoItem);
+  const relatedRows = filteredInbox.filter((item) => !isTodoItem(item));
+  const checklistDocs = docs.filter((d) => isChecklistDocClass(d.docClass));
+  const supportingDocs = docs.filter((d) => isSupportingDoc(d));
+
+  const docsForChecklistItem = (itemCode: string): IDocumentIndexRow[] => {
+    const code = (itemCode || '').toLowerCase();
+    return checklistDocs.filter((d) => {
+      const key = (d.checklistItemKey || d.documentKey || '').toLowerCase();
+      return (
+        key.indexOf(`|${code}`) >= 0 ||
+        key.lastIndexOf(code) === key.length - code.length ||
+        key.indexOf(code) >= 0
+      );
+    });
+  };
+
+  const renderInboxTable = (rows: IRequestMaster[]): React.ReactNode => {
+    if (!rows.length) {
+      return <p className={styles.empty}>Không có hồ sơ.</p>;
+    }
+    return (
+      <table className={styles.dataTable}>
+        <thead>
+          <tr>
+            <th>Mã hồ sơ</th>
+            <th>Tiêu đề</th>
+            <th>Bước</th>
+            <th>Số tiền</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((item) => (
+            <tr
+              key={item.requestKey}
+              style={{ cursor: 'pointer' }}
+              onClick={() => openLiveDetail(item.requestKey)}
+            >
+              <td>
+                <strong>{item.requestKey}</strong>
+              </td>
+              <td>{item.title || '—'}</td>
+              <td>{stepShortVi(item.currentStepKey)}</td>
+              <td>{moneyVi(item.amount)}</td>
+              <td>
+                <span
+                  className={badgeClass(
+                    item.status === 'Returned'
+                      ? 'warn'
+                      : item.status === 'Paid' || item.status === 'Completed'
+                        ? 'ok'
+                        : 'info'
+                  )}
+                >
+                  {statusVi(item.status)}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
+
   return (
     <div className={styles.app} style={payThemeStyle}>
       <header className={styles.top}>
@@ -482,67 +691,148 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           <div className={styles.mark}>PAY</div>
           <div>
             <h1>{props.title || 'EMI PAY'}</h1>
-            <p>Hồ sơ thanh toán · {props.userDisplayName || actorUPN}</p>
+            <p>Hồ sơ thanh toán</p>
           </div>
         </div>
         <div className={styles.topActions}>
-          <span className={badgeClass('ok')}>Trực tiếp CECM</span>
-          <div className={styles.avatar}>
-            {(props.userDisplayName || 'U').slice(0, 2).toUpperCase()}
+          <label className={styles.meta} htmlFor="emiPayPersona">
+            Vai trò xem UI
+          </label>
+          <select
+            id="emiPayPersona"
+            className={styles.personaSelect}
+            value={persona}
+            onChange={(e) => {
+              const next = e.target.value as PayPersona;
+              setPersona(next);
+              if (next === 'procadm') setView('config');
+              else if (next === 'audit') setView('audit');
+              else if (view === 'config' || view === 'audit') setView('inbox');
+            }}
+          >
+            <option value="creator">R01 · BPCM1 Người tạo</option>
+            <option value="bpcm2">R02 · BPCM2 KT kỹ thuật</option>
+            <option value="bpcm3">R03 · BPCM3 KT giá</option>
+            <option value="tckt_check">R04 · TCKT Kiểm tra</option>
+            <option value="chair">R05 · CT.HĐQT</option>
+            <option value="tckt_pay">R06 · TCKT Thanh toán</option>
+            <option value="procadm">R08 · Quản trị quy trình</option>
+            <option value="audit">R10 · Kiểm toán</option>
+          </select>
+          <div className={styles.avatar} aria-hidden="true">
+            {avatarLetters}
           </div>
         </div>
       </header>
 
       <div className={styles.shell}>
         <nav className={styles.nav} aria-label="Điều hướng EMI PAY">
-          {(
-            [
-              { id: 'inbox' as PayView, label: 'Việc của tôi' },
-              { id: 'create' as PayView, label: 'Tạo hồ sơ' },
-              { id: 'detail' as PayView, label: 'Chi tiết hồ sơ' }
-            ] as { id: PayView; label: string }[]
-          ).map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              className={`${styles.navBtn} ${view === n.id ? styles.navBtnActive : ''}`}
-              onClick={() => setView(n.id)}
-              disabled={n.id === 'detail' && !master}
-            >
-              {n.label}
-            </button>
-          ))}
+          <div className={styles.navGroup}>Không gian làm việc</div>
+          <button
+            type="button"
+            className={`${styles.navBtn} ${
+              view === 'inbox' && inboxFilter === 'all' ? styles.navBtnActive : ''
+            }`}
+            onClick={() => goInbox('all')}
+          >
+            Việc của tôi
+          </button>
+          <button
+            type="button"
+            className={`${styles.navBtn} ${view === 'create' ? styles.navBtnActive : ''}`}
+            onClick={() => setView('create')}
+            disabled={persona !== 'creator'}
+          >
+            Tạo hồ sơ
+          </button>
+          <button
+            type="button"
+            className={`${styles.navBtn} ${view === 'detail' ? styles.navBtnActive : ''}`}
+            onClick={() => setView('detail')}
+            disabled={!master}
+          >
+            Hồ sơ đang mở
+          </button>
+
+          <div className={styles.navGroup}>Theo vai trò</div>
+          <button
+            type="button"
+            className={`${styles.navBtn} ${
+              view === 'inbox' && inboxFilter === 'todo' ? styles.navBtnActive : ''
+            }`}
+            onClick={() => goInbox('todo')}
+          >
+            Cần tôi xử lý
+          </button>
+          <button
+            type="button"
+            className={`${styles.navBtn} ${
+              view === 'inbox' && inboxFilter === 'mine' ? styles.navBtnActive : ''
+            }`}
+            onClick={() => goInbox('mine')}
+          >
+            Hồ sơ của tôi
+          </button>
+
+          <div className={styles.navGroup}>Quản trị / kiểm toán</div>
+          <button
+            type="button"
+            className={`${styles.navBtn} ${view === 'config' ? styles.navBtnActive : ''}`}
+            disabled={persona !== 'procadm'}
+            onClick={() => setView('config')}
+          >
+            Cấu hình quy trình
+          </button>
+          <button
+            type="button"
+            className={`${styles.navBtn} ${view === 'audit' ? styles.navBtnActive : ''}`}
+            disabled={persona !== 'audit'}
+            onClick={() => setView('audit')}
+          >
+            Nhật ký nội bộ
+          </button>
+
           <p className={styles.navNote}>
-            Việc của tôi theo bước bạn đang phụ trách. Tạo hồ sơ → checklist → tải tài liệu → gửi
-            duyệt.
+            UI theo ma trận vai trò — chỉ enqueue Commands Core, không viết lại Flow.
           </p>
+          <div className={styles.navProfile}>
+            <div className={styles.avatar} style={{ width: 32, height: 32, fontSize: 10 }}>
+              {avatarLetters}
+            </div>
+            <div>
+              <strong>{personaMeta[persona].name}</strong>
+              <span>{personaMeta[persona].meta}</span>
+            </div>
+          </div>
         </nav>
 
-        <main className={styles.main}>
-          <PayNoticeBar notice={notice} onDismiss={() => setNotice(undefined)} />
+        <div
+          className={`${styles.workspace} ${showRail ? '' : styles.workspaceNoRail}`.trim()}
+        >
+          <main className={styles.main}>
+            <PayNoticeBar notice={notice} onDismiss={() => setNotice(undefined)} />
 
           {view === 'inbox' && (
             <>
-              <section className={styles.hero}>
-                <div className={styles.heroRow}>
-                  <div>
-                    <p className={styles.eyebrow}>Danh sách hồ sơ</p>
-                    <h2>Việc của tôi</h2>
-                    <p className={styles.pageLead}>
-                      Các hồ sơ thanh toán gần đây trên CECM. Bấm vào một dòng để mở chi tiết.
-                    </p>
-                  </div>
-                  <div className={styles.actions}>
-                    <button
-                      type="button"
-                      className={`${styles.btn} ${styles.btnOutline}`}
-                      disabled={busy}
-                      onClick={() => {
-                        void run(refreshInbox);
-                      }}
-                    >
-                      Làm mới
-                    </button>
+              <div className={styles.pageHead}>
+                <div>
+                  <h2>Việc của tôi</h2>
+                </div>
+                <div className={styles.actions}>
+                  <button
+                    type="button"
+                    className={`${styles.btn} ${styles.btnOutline}`}
+                    disabled={busy}
+                    onClick={() => {
+                      void run(refreshInbox, {
+                        waiting: 'Đang làm mới danh sách hồ sơ…',
+                        success: 'Đã làm mới danh sách.'
+                      });
+                    }}
+                  >
+                    Làm mới
+                  </button>
+                  {persona === 'creator' && (
                     <button
                       type="button"
                       className={`${styles.btn} ${styles.btnPrimary}`}
@@ -550,377 +840,593 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                     >
                       Tạo hồ sơ mới
                     </button>
-                  </div>
-                </div>
-              </section>
-              <section className={styles.card}>
-                <div className={`${styles.cardB} ${styles.list}`}>
-                  {inbox.length === 0 && (
-                    <p className={styles.empty}>Chưa có hồ sơ. Hãy tạo hồ sơ mới để bắt đầu.</p>
                   )}
-                  {inbox.map((item) => (
-                    <button
-                      key={item.requestKey}
-                      type="button"
-                      className={styles.item}
-                      onClick={() => openLiveDetail(item.requestKey)}
-                    >
-                      <span className={styles.swatch}>{stepShortVi(item.currentStepKey).slice(0, 4)}</span>
-                      <span>
-                        <strong>{item.title || item.requestKey}</strong>
-                        <span className={styles.meta}>
-                          {item.requestKey} · {statusVi(item.status)} · {stepVi(item.currentStepKey)} ·
-                          Lượt {item.reviewRound}
-                        </span>
-                      </span>
-                      <span className={badgeClass('info')}>{statusVi(item.status)}</span>
-                    </button>
-                  ))}
                 </div>
-              </section>
+              </div>
+
+              {(inboxFilter === 'all' || inboxFilter === 'todo') && (
+                <section className={styles.card}>
+                  <div className={styles.cardH}>
+                    <h3>Cần tôi xử lý</h3>
+                    <span className={badgeClass('mute')}>{todoRows.length}</span>
+                  </div>
+                  <div className={styles.cardB} style={{ padding: 0 }}>
+                    {renderInboxTable(todoRows)}
+                  </div>
+                </section>
+              )}
+
+              {(inboxFilter === 'all' || inboxFilter === 'mine') && (
+                <section className={styles.card}>
+                  <div className={styles.cardH}>
+                    <h3>{inboxFilter === 'mine' ? 'Hồ sơ của tôi' : 'Hồ sơ liên quan'}</h3>
+                    <span className={badgeClass('mute')}>
+                      {inboxFilter === 'mine' ? filteredInbox.length : relatedRows.length}
+                    </span>
+                  </div>
+                  <div className={styles.cardB} style={{ padding: 0 }}>
+                    {renderInboxTable(
+                      inboxFilter === 'mine' ? filteredInbox : relatedRows
+                    )}
+                  </div>
+                </section>
+              )}
             </>
           )}
 
           {view === 'create' && (
             <>
-              <div className={styles.pageToolbar}>
+              <div className={styles.pageHead}>
                 <div>
                   <h2>Tạo hồ sơ thanh toán</h2>
-                  <p className={styles.pageLead}>
-                    Chọn loại hồ sơ bên trái để xem checklist bắt buộc. Phía phải là bản xem trước trước khi tạo.
-                  </p>
                 </div>
-                <button
-                  type="button"
-                  className={`${styles.btn} ${styles.btnOutline}`}
-                  onClick={() => setView('inbox')}
-                >
-                  Quay lại
-                </button>
+                <div className={styles.actions}>
+                  <button
+                    type="button"
+                    className={`${styles.btn} ${styles.btnOutline}`}
+                    onClick={() => goInbox('all')}
+                  >
+                    Quay lại
+                  </button>
+                </div>
               </div>
 
-              <div className={styles.splitCreate}>
-                <section className={styles.card}>
-                  <div className={styles.cardH}>
-                    <h3>1. Thông tin &amp; checklist</h3>
-                  </div>
-                  <div className={styles.cardB} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div className={styles.form}>
-                      <label className={`${styles.field} ${styles.fieldFull}`}>
-                        Loại hồ sơ
-                        <select
-                          value={selectedType}
-                          onChange={(e) => setSelectedType(e.target.value)}
-                        >
-                          {paymentTypes.length === 0 && (
-                            <option value="">(Chưa cấu hình loại hồ sơ)</option>
-                          )}
-                          {paymentTypes.map((t) => (
-                            <option key={t.code} value={t.code}>
-                              {t.title}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className={styles.field}>
-                        Đơn vị khởi tạo
-                        <select value={createOu} onChange={(e) => setCreateOu(e.target.value)}>
-                          <option value="OU_BPCM1">OU_BPCM1 · Bộ phận chuyên môn 1</option>
-                          <option value="OU_PBCM">OU_PBCM · Bộ phận chuyên môn</option>
-                        </select>
-                      </label>
-                      <label className={styles.field}>
-                        Số tiền đề nghị (VND)
-                        <input
-                          value={createAmount}
-                          onChange={(e) => setCreateAmount(e.target.value)}
-                          inputMode="numeric"
-                        />
-                      </label>
-                      <label className={`${styles.field} ${styles.fieldFull}`}>
-                        Tiêu đề hồ sơ
-                        <input
-                          value={createTitle}
-                          onChange={(e) => setCreateTitle(e.target.value)}
-                          placeholder="Ví dụ: Thanh toán đợt 2 theo HĐ…"
-                        />
-                      </label>
-                      <label className={`${styles.field} ${styles.fieldFull}`}>
-                        Diễn giải
-                        <textarea
-                          rows={3}
-                          value={createExpl}
-                          onChange={(e) => setCreateExpl(e.target.value)}
-                          placeholder="Mô tả ngắn nội dung đề nghị thanh toán"
-                        />
-                      </label>
-                    </div>
-
-                    <div>
-                      <h3 style={{ margin: '0 0 8px', fontSize: 14 }}>Checklist theo loại đã chọn</h3>
-                      {templates.length === 0 && (
-                        <p className={styles.empty}>Chưa có mẫu checklist cho loại này.</p>
-                      )}
-                      {templates.map((t) => (
-                        <div key={t.itemCode} className={styles.checkRow}>
-                          <div>
-                            <strong>{t.itemLabel}</strong>
-                            <span className={styles.meta}>
-                              Tối thiểu {t.minFileCount} tệp
-                              {t.isRequired ? ' · Bắt buộc trước khi gửi' : ' · Không bắt buộc'}
-                            </span>
-                          </div>
-                          <span className={badgeClass(t.isRequired ? 'warn' : 'mute')}>
-                            {t.isRequired ? 'Bắt buộc' : 'Tuỳ chọn'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className={styles.actions}>
-                      <button
-                        type="button"
-                        className={`${styles.btn} ${styles.btnOutline}`}
-                        onClick={() => setView('inbox')}
+              <section className={styles.card}>
+                <div className={styles.cardH}>
+                  <h3>Thông tin hồ sơ</h3>
+                </div>
+                <div className={styles.cardB}>
+                  <div className={styles.form}>
+                    <label className={`${styles.field} ${styles.fieldFull}`}>
+                      Loại hồ sơ
+                      <select
+                        value={selectedType}
+                        onChange={(e) => setSelectedType(e.target.value)}
                       >
-                        Hủy
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.btn} ${styles.btnSolid}`}
-                        disabled={busy || !selectedType}
-                        onClick={onCreate}
-                      >
-                        Tạo hồ sơ
-                      </button>
-                    </div>
+                        {paymentTypes.length === 0 && (
+                          <option value="">(Chưa cấu hình loại hồ sơ)</option>
+                        )}
+                        {paymentTypes.map((t) => (
+                          <option key={t.code} value={t.code}>
+                            {t.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className={styles.field}>
+                      Đơn vị khởi tạo
+                      <select value={createOu} onChange={(e) => setCreateOu(e.target.value)}>
+                        {orgUnits.length === 0 && (
+                          <>
+                            <option value="OU_BPCM1">OU_BPCM1</option>
+                            <option value="OU_PBCM">OU_PBCM</option>
+                          </>
+                        )}
+                        {orgUnits.map((o) => (
+                          <option key={o.id} value={o.ouCode}>
+                            {o.ouCode} · {o.ouName}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className={styles.field}>
+                      Số tiền đề nghị (VND)
+                      <input
+                        value={createAmount}
+                        onChange={(e) => setCreateAmount(e.target.value)}
+                        inputMode="numeric"
+                      />
+                    </label>
+                    <label className={`${styles.field} ${styles.fieldFull}`}>
+                      Tiêu đề hồ sơ
+                      <input
+                        value={createTitle}
+                        onChange={(e) => setCreateTitle(e.target.value)}
+                        placeholder="Ví dụ: Thanh toán đợt 2 theo HĐ…"
+                      />
+                    </label>
+                    <label className={`${styles.field} ${styles.fieldFull}`}>
+                      Diễn giải
+                      <textarea
+                        rows={3}
+                        value={createExpl}
+                        onChange={(e) => setCreateExpl(e.target.value)}
+                        placeholder="Mô tả ngắn nội dung đề nghị thanh toán"
+                      />
+                    </label>
                   </div>
-                </section>
+                </div>
+              </section>
 
-                <aside className={styles.previewPanel} aria-label="Xem trước hồ sơ">
-                  <div className={styles.previewHead}>
-                    <h3>Xem trước</h3>
-                    <p>Kiểm tra trước khi bấm «Tạo hồ sơ»</p>
-                  </div>
-                  <div className={styles.previewBody}>
-                    <div className={styles.previewRow}>
-                      <b>Loại hồ sơ</b>
-                      <span>{selectedTypeMeta ? selectedTypeMeta.title : '—'}</span>
-                    </div>
-                    <div className={styles.previewRow}>
-                      <b>Tiêu đề</b>
-                      <span>{createTitle || '—'}</span>
-                    </div>
-                    <div className={styles.previewRow}>
-                      <b>Số tiền</b>
-                      <span>{moneyVi(Number(createAmount) || 0)}</span>
-                    </div>
-                    <div className={styles.previewRow}>
-                      <b>Đơn vị tạo</b>
-                      <span>{createOu}</span>
-                    </div>
-                    <div className={styles.previewRow}>
-                      <b>Người tạo</b>
-                      <span>{actorUPN}</span>
-                    </div>
-                    <div className={styles.previewRow}>
-                      <b>Diễn giải</b>
-                      <span>{createExpl || '(Trống)'}</span>
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: 13 }}>Tài liệu sẽ yêu cầu</strong>
-                      <p className={styles.hint}>
-                        {requiredTplCount} mục bắt buộc · {templates.length} mục tổng cộng
-                      </p>
-                      {templates.map((t) => (
-                        <div key={`pv-${t.itemCode}`} className={styles.checkPreviewItem}>
-                          <div>
-                            <strong>{t.itemLabel}</strong>
-                            <span className={styles.meta}>
-                              {t.isRequired ? 'Bắt buộc' : 'Tuỳ chọn'} · ≥ {t.minFileCount} tệp
-                            </span>
-                          </div>
-                          <span className={badgeClass(t.isRequired ? 'warn' : 'mute')}>
-                            {t.isRequired ? 'Cần tải' : 'Tuỳ chọn'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    <p className={styles.hint}>
-                      Sau khi tạo: tải đủ tài liệu bắt buộc rồi mới «Gửi hồ sơ».
-                    </p>
-                  </div>
-                </aside>
+              <section className={styles.card}>
+                <div className={styles.cardH}>
+                  <h3>Checklist sẽ yêu cầu</h3>
+                  <span className={badgeClass('warn')}>{requiredTplCount} bắt buộc</span>
+                </div>
+                <div className={styles.cardB} style={{ padding: 0 }}>
+                  {templates.length === 0 ? (
+                    <p className={styles.empty}>Chưa có mẫu checklist cho loại này.</p>
+                  ) : (
+                    <table className={styles.dataTable}>
+                      <thead>
+                        <tr>
+                          <th>Mục tài liệu</th>
+                          <th>Bắt buộc</th>
+                          <th>Tối thiểu</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {templates.map((t) => (
+                          <tr key={t.itemCode}>
+                            <td>
+                              <strong>{t.itemLabel}</strong>
+                              <span className={styles.meta}>{t.itemCode}</span>
+                            </td>
+                            <td>
+                              <span className={badgeClass(t.isRequired ? 'warn' : 'mute')}>
+                                {t.isRequired ? 'Bắt buộc' : 'Tuỳ chọn'}
+                              </span>
+                            </td>
+                            <td>{t.isRequired || t.minFileCount > 0 ? `${t.minFileCount || 1} tệp` : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </section>
+
+              <div className={styles.actions}>
+                <button
+                  type="button"
+                  className={`${styles.btn} ${styles.btnPrimary}`}
+                  disabled={busy || !selectedType}
+                  onClick={onCreate}
+                >
+                  Tạo hồ sơ
+                </button>
               </div>
             </>
           )}
 
           {view === 'detail' && master && (
             <>
-              <section className={styles.hero}>
-                <div className={styles.heroRow}>
-                  <div>
-                    <p className={styles.eyebrow}>Chi tiết hồ sơ</p>
-                    <h2>{master.title || master.requestKey}</h2>
-                    <p className={styles.sub}>
-                      {master.requestKey} · {master.paymentTypeCode} · Lượt xử lý {master.reviewRound}
-                    </p>
-                  </div>
-                  <div className={styles.actions}>
-                    <button
-                      type="button"
-                      className={`${styles.btn} ${styles.btnOutline}`}
-                      disabled={busy}
-                      onClick={() => {
-                        void run(async () => loadDetail(master.requestKey));
-                      }}
+              <div className={styles.pageHead}>
+                <div>
+                  <h2>{master.title || master.requestKey}</h2>
+                  <div className={styles.tags}>
+                    <span
+                      className={badgeClass(
+                        master.status === 'Returned'
+                          ? 'warn'
+                          : master.status === 'Completed' || master.status === 'Paid'
+                            ? 'ok'
+                            : 'info'
+                      )}
                     >
-                      Làm mới
-                    </button>
-                    {actions.map((a) => (
-                      <button
-                        key={a.id}
-                        type="button"
-                        className={btnClass(a)}
-                        disabled={busy}
-                        onClick={() => onAction(a)}
-                      >
-                        {a.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className={styles.heroStats}>
-                  <div className={styles.stat}>
-                    <b>Trạng thái</b>
-                    <span>{statusVi(master.status)}</span>
-                  </div>
-                  <div className={styles.stat}>
-                    <b>Bước hiện tại</b>
-                    <span>{stepShortVi(master.currentStepKey)}</span>
-                  </div>
-                  <div className={styles.stat}>
-                    <b>Đơn vị phụ trách</b>
-                    <span>{master.currentOUCode || '—'}</span>
-                  </div>
-                  <div className={styles.stat}>
-                    <b>Hạn thanh toán</b>
-                    <span>
-                      {master.paymentDueAt
-                        ? new Date(master.paymentDueAt).toLocaleDateString('vi-VN')
-                        : '—'}
+                      {statusVi(master.status)}
                     </span>
+                    <span className={badgeClass('mute')}>
+                      {stepShortVi(master.currentStepKey)}
+                    </span>
+                    <span className={badgeClass('mute')}>Lượt {master.reviewRound}</span>
                   </div>
                 </div>
+                <div className={styles.actions}>
+                  <button
+                    type="button"
+                    className={`${styles.btn} ${styles.btnOutline}`}
+                    disabled={busy}
+                    onClick={() => {
+                      void run(async () => loadDetail(master.requestKey), {
+                        waiting: 'Đang làm mới hồ sơ…'
+                      });
+                    }}
+                  >
+                    Làm mới
+                  </button>
+                  {actions.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className={btnClass(a)}
+                      disabled={busy}
+                      onClick={() => onAction(a)}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                  {actions.length === 0 && (
+                    <span className={badgeClass('mute')}>Không có thao tác ở bước này</span>
+                  )}
+                </div>
+              </div>
+
+              {master.status === 'Returned' && (
+                <div className={styles.panelWarn}>
+                  <h4>Hồ sơ đã được trả về</h4>
+                  <div>
+                    Chỉnh sửa tài liệu / nội dung rồi gửi lại. Bước hiện tại:{' '}
+                    <b>{stepShortVi(master.currentStepKey)}</b>
+                  </div>
+                </div>
+              )}
+
+              {master.currentStepKey === 'BPCM1_PREPARE' &&
+                !requiredChecklistReady(checklist) && (
+                  <div className={styles.panelWarn}>
+                    <h4>Thiếu tài liệu bắt buộc (chặn gửi)</h4>
+                    <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                      {checklist
+                        .filter((c) => {
+                          if (!c.isRequired) return false;
+                          const min = c.minFileCount > 0 ? c.minFileCount : 1;
+                          return c.uploadedCount < min;
+                        })
+                        .map((c) => (
+                          <li key={c.id}>{c.itemLabel}</li>
+                        ))}
+                    </ul>
+                  </div>
+                )}
+
+              {canReviewDocs && !checklistAllPass(checklist) && (
+                <div className={styles.panelWarn}>
+                  <h4>Chưa đủ điều kiện chuyển bước</h4>
+                  <div>
+                    {!checklistReviewComplete(checklist)
+                      ? 'Cần đánh giá Đạt/Không đạt hết các mục checklist (bắt buộc hoặc đã có tệp) trước khi chuyển tiếp.'
+                      : checklistHasFail(checklist)
+                        ? 'Có mục Không đạt — chỉ có thể «Trả về người tạo», không chuyển bước.'
+                        : 'Checklist chưa Đạt đủ.'}
+                  </div>
+                </div>
+              )}
+
+              <section className={styles.card}>
+                <div className={styles.cardH}>
+                  <h3>Tài liệu</h3>
+                  <div className={styles.actions}>
+                    {master.currentStepKey === 'BPCM1_PREPARE' && docsTab === 'checklist' && (
+                      <button
+                        type="button"
+                        className={`${styles.btn} ${styles.btnOutline}`}
+                        disabled={busy}
+                        onClick={() => {
+                          setUploadItemCode(checklist[0] ? checklist[0].itemCode : '');
+                          setDialog('attach');
+                        }}
+                      >
+                        Tải tài liệu
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className={styles.tabs}>
+                  <button
+                    type="button"
+                    className={`${styles.tab} ${docsTab === 'checklist' ? styles.tabOn : ''}`}
+                    onClick={() => setDocsTab('checklist')}
+                  >
+                    Checklist
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.tab} ${docsTab === 'files' ? styles.tabOn : ''}`}
+                    onClick={() => setDocsTab('files')}
+                  >
+                    Tài liệu hỗ trợ
+                  </button>
+                </div>
+                {docsTab === 'checklist' && (
+                  <div style={{ padding: 0 }}>
+                    {checklist.length === 0 ? (
+                      <p className={styles.empty}>Chưa có mục checklist.</p>
+                    ) : (
+                      <table className={styles.dataTable}>
+                        <thead>
+                          <tr>
+                            <th>Mục tài liệu</th>
+                            <th>Tệp</th>
+                            <th>Người tải</th>
+                            <th>Trạng thái</th>
+                            <th />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {checklist.map((c) => {
+                            const min = c.minFileCount > 0 ? c.minFileCount : 1;
+                            const missing = c.isRequired && c.uploadedCount < min;
+                            const linked = docsForChecklistItem(c.itemCode);
+                            const uploaders = linked
+                              .map((d) => d.uploadedByUPN)
+                              .filter(Boolean)
+                              .filter((u, i, arr) => arr.indexOf(u) === i);
+                            return (
+                              <tr key={c.id}>
+                                <td>
+                                  <strong>{c.itemLabel}</strong>
+                                  <span className={styles.meta}>
+                                    {c.itemCode}
+                                    {c.isRequired ? ' · Bắt buộc' : ' · Tuỳ chọn'}
+                                    {` · ${c.uploadedCount}/${min} tệp`}
+                                  </span>
+                                </td>
+                                <td>
+                                  {linked.length === 0 ? (
+                                    '—'
+                                  ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                      {linked.map((d) => (
+                                        <button
+                                          key={d.id}
+                                          type="button"
+                                          className={styles.linkish}
+                                          title={d.fileName}
+                                          onClick={() => setDrawerDoc(d)}
+                                        >
+                                          {shortFileName(d.fileName || d.documentKey)}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+                                <td>
+                                  {uploaders.length
+                                    ? uploaders.map((u) => (
+                                        <span key={u} className={styles.meta} style={{ margin: 0, display: 'block' }}>
+                                          {u}
+                                        </span>
+                                      ))
+                                    : '—'}
+                                </td>
+                                <td>
+                                  <span
+                                    className={badgeClass(
+                                      c.itemStatus === 'Uploaded' || c.itemStatus === 'Pass'
+                                        ? 'ok'
+                                        : c.itemStatus === 'Fail'
+                                          ? 'danger'
+                                          : missing
+                                            ? 'warn'
+                                            : 'mute'
+                                    )}
+                                  >
+                                    {checklistStatusVi(c.itemStatus)}
+                                  </span>
+                                </td>
+                                <td>
+                                  <div className={styles.actions}>
+                                    {linked[0] && (
+                                      <button
+                                        type="button"
+                                        className={`${styles.btn} ${styles.btnOutline}`}
+                                        style={{ padding: '6px 10px', fontSize: 12 }}
+                                        onClick={() => setDrawerDoc(linked[0])}
+                                      >
+                                        Xem
+                                      </button>
+                                    )}
+                                    {canReviewDocs &&
+                                      linked.length > 0 &&
+                                      !c.isLocked && (
+                                      <button
+                                        type="button"
+                                        className={`${styles.btn} ${styles.btnOutline}`}
+                                        style={{ padding: '6px 10px', fontSize: 12 }}
+                                        disabled={busy}
+                                        onClick={() => openReview(c.itemCode)}
+                                      >
+                                        Đánh giá
+                                      </button>
+                                    )}
+                                    {c.isLocked && (
+                                      <span className={badgeClass('mute')}>Đã khóa</span>
+                                    )}
+                                    {master.currentStepKey === 'BPCM1_PREPARE' && (
+                                      <button
+                                        type="button"
+                                        className={`${styles.btn} ${styles.btnPrimary}`}
+                                        style={{ padding: '6px 10px', fontSize: 12 }}
+                                        disabled={busy}
+                                        onClick={() => {
+                                          setUploadItemCode(c.itemCode);
+                                          setDialog('attach');
+                                        }}
+                                      >
+                                        {c.uploadedCount > 0 ? 'Tải thêm' : 'Tải lên'}
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
+                {docsTab === 'files' && (
+                  <div style={{ padding: 0 }}>
+                    {supportingDocs.length === 0 ? (
+                      <p className={styles.empty}>
+                        Chưa có tài liệu hỗ trợ. 
+                      </p>
+                    ) : (
+                      <table className={styles.dataTable}>
+                        <thead>
+                          <tr>
+                            <th>Lớp</th>
+                            <th>Tệp</th>
+                            <th>Kho</th>
+                            <th>Người tải</th>
+                            <th>Thời gian</th>
+                            <th />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {supportingDocs.map((d) => (
+                            <tr key={d.id}>
+                              <td>
+                                <strong>{d.docClass || 'Hỗ trợ'}</strong>
+                                <span className={styles.meta}>{d.documentKey}</span>
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className={styles.linkish}
+                                  title={d.fileName}
+                                  onClick={() => setDrawerDoc(d)}
+                                >
+                                  {shortFileName(d.fileName || '—')}
+                                </button>
+                              </td>
+                              <td>
+                                <span
+                                  className={`${styles.visTag} ${
+                                    /internal/i.test(d.libraryName || d.visibility)
+                                      ? styles.visTagInternal
+                                      : ''
+                                  }`}
+                                >
+                                  {/internal/i.test(d.libraryName || '')
+                                    ? 'DocsInternal'
+                                    : 'DocsWorking'}
+                                </span>
+                              </td>
+                              <td>{d.uploadedByUPN || '—'}</td>
+                              <td>
+                                {d.uploadedAt
+                                  ? new Date(d.uploadedAt).toLocaleString('vi-VN')
+                                  : '—'}
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className={`${styles.btn} ${styles.btnOutline}`}
+                                  style={{ padding: '6px 10px', fontSize: 12 }}
+                                  onClick={() => setDrawerDoc(d)}
+                                >
+                                  Xem
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
               </section>
 
-              <div className={styles.steps} aria-label="Các bước quy trình">
-                {CORE_STEPS.map((s, idx) => (
-                  <div
-                    key={s}
-                    className={`${styles.step} ${
-                      idx === stepIndex(master.currentStepKey) ? styles.stepOn : ''
-                    } ${idx < stepIndex(master.currentStepKey) ? styles.stepDone : ''}`}
+              <section className={styles.card}>
+                <div className={styles.cardH}>
+                  <h3>Hoạt động</h3>
+                </div>
+                <div className={styles.tabs}>
+                  <button
+                    type="button"
+                    className={`${styles.tab} ${
+                      activityTab === 'timeline' ? styles.tabOn : ''
+                    }`}
+                    onClick={() => setActivityTab('timeline')}
                   >
-                    <span>{idx + 1}</span>
-                    <em>{stepShortVi(s)}</em>
-                  </div>
-                ))}
-              </div>
-
-              <div className={styles.splitCreate}>
-                <section className={styles.card}>
-                  <div className={styles.cardH}>
-                    <h3>Checklist tài liệu</h3>
-                    <button
-                      type="button"
-                      className={`${styles.btn} ${styles.btnGhost}`}
-                      disabled={busy || master.currentStepKey !== 'BPCM1_PREPARE'}
-                      onClick={() => {
-                        setUploadItemCode(checklist[0] ? checklist[0].itemCode : '');
-                        setDialog('attach');
-                      }}
-                    >
-                      Tải tài liệu
-                    </button>
-                  </div>
+                    Nhật ký
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.tab} ${
+                      activityTab === 'comment' ? styles.tabOn : ''
+                    }`}
+                    onClick={() => setActivityTab('comment')}
+                  >
+                    Ghi chú
+                  </button>
+                </div>
+                {activityTab === 'timeline' && (
                   <div className={styles.cardB}>
-                    {checklist.length === 0 && (
-                      <p className={styles.empty}>Chưa có mục checklist.</p>
-                    )}
-                    {checklist.map((c) => (
-                      <div key={c.id} className={styles.checkRow}>
-                        <div>
-                          <strong>{c.itemLabel}</strong>
-                          <span className={styles.meta}>
-                            Đã tải {c.uploadedCount}/{c.minFileCount > 0 ? c.minFileCount : 1} tệp
-                            {c.isRequired ? ' · Bắt buộc' : ' · Tuỳ chọn'}
-                          </span>
-                        </div>
-                        <span
-                          className={badgeClass(
-                            c.itemStatus === 'Uploaded' ? 'ok' : c.isRequired ? 'warn' : 'mute'
-                          )}
-                        >
-                          {checklistStatusVi(c.itemStatus)}
+                    <div className={styles.actRow}>
+                      <div>
+                        <strong>Hồ sơ được tạo</strong>
+                        <span className={styles.meta}>
+                          {master.creatorUPN || '—'} · {master.createdOUCode || '—'}
                         </span>
                       </div>
-                    ))}
-                    {!requiredChecklistReady(checklist) &&
-                      master.currentStepKey === 'BPCM1_PREPARE' && (
-                        <p className={styles.warnBox}>
-                          Chưa thể gửi: còn mục checklist bắt buộc chưa đủ tài liệu.
-                        </p>
-                      )}
-                  </div>
-                </section>
-
-                <aside className={styles.previewPanel}>
-                  <div className={styles.previewHead}>
-                    <h3>Tóm tắt hồ sơ</h3>
-                    <p>{stepVi(master.currentStepKey)}</p>
-                  </div>
-                  <div className={styles.previewBody}>
-                    <div className={styles.previewRow}>
-                      <b>Mã hồ sơ</b>
-                      <span>{master.requestKey}</span>
+                      <span className={badgeClass('mute')}>Hệ thống</span>
                     </div>
-                    <div className={styles.previewRow}>
-                      <b>Trạng thái</b>
-                      <span>{statusVi(master.status)}</span>
+                    <div className={styles.actRow}>
+                      <div>
+                        <strong>Trạng thái: {statusVi(master.status)}</strong>
+                        <span className={styles.meta}>{stepVi(master.currentStepKey)}</span>
+                      </div>
+                      <span className={badgeClass('mute')}>Bước</span>
                     </div>
-                    <div className={styles.previewRow}>
-                      <b>Bước</b>
-                      <span>{stepVi(master.currentStepKey)}</span>
-                    </div>
-                    <div className={styles.previewRow}>
-                      <b>Người tạo</b>
-                      <span>{master.creatorUPN || '—'}</span>
-                    </div>
-                    <div className={styles.previewRow}>
-                      <b>Diễn giải</b>
-                      <span>{master.explanation || '—'}</span>
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: 13 }}>Ủy nhiệm chi (UNC)</strong>
-                      {uncDocs.length === 0 && (
-                        <p className={styles.empty}>Chưa tải UNC.</p>
-                      )}
-                      {uncDocs.map((u) => (
-                        <div key={u.id} className={styles.checkPreviewItem}>
-                          <div>
-                            <strong>{u.fileName}</strong>
-                            <span className={styles.meta}>{u.documentKey}</span>
-                          </div>
-                          <a href={u.fileUrl} target="_blank" rel="noreferrer">
-                            Mở tệp
-                          </a>
+                    {uncDocs.length > 0 && (
+                      <div className={styles.actRow}>
+                        <div>
+                          <strong>Đã có ủy nhiệm chi</strong>
+                          <span className={styles.meta}>{uncDocs[0].fileName}</span>
                         </div>
-                      ))}
+                        <span className={badgeClass('ok')}>UNC</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {activityTab === 'comment' && (
+                  <div className={styles.cardB}>
+                    <label className={`${styles.field} ${styles.fieldFull}`}>
+                      Thêm ghi chú
+                      <textarea
+                        rows={3}
+                        value={commentDraft}
+                        onChange={(e) => setCommentDraft(e.target.value)}
+                        placeholder="Thêm ghi chú…"
+                      />
+                    </label>
+                    <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className={`${styles.btn} ${styles.btnPrimary}`}
+                        disabled={busy}
+                        onClick={() => {
+                          if (!commentDraft.trim()) {
+                            showNotice('warning', 'Nhập nội dung ghi chú');
+                            return;
+                          }
+                          showNotice(
+                            'info',
+                            'Ghi chú UI đã nhận — chờ nối list Activity/Comments trên CECM.'
+                          );
+                          setCommentDraft('');
+                        }}
+                      >
+                        Gửi ghi chú
+                      </button>
                     </div>
                   </div>
-                </aside>
-              </div>
+                )}
+              </section>
             </>
           )}
 
@@ -929,7 +1435,178 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               Chưa chọn hồ sơ. Vào «Việc của tôi» hoặc «Tạo hồ sơ». {requestKey}
             </p>
           )}
-        </main>
+
+          {view === 'config' && <ConfigAdmin sp={props.sp} />}
+
+          {view === 'audit' && (
+            <>
+              <div className={styles.pageHead}>
+                <div>
+                  <h2>Nhật ký nội bộ</h2>
+                </div>
+              </div>
+              <div className={styles.panelInfo}>
+                <h4>R10 · AUDIT</h4>
+                <p className={styles.hint} style={{ marginTop: 6 }}>
+                  Chỉ đọc ActivityInternal khi ACL cho phép. UI khung đã sẵn — nối list nhật ký
+                  ở UAT CECM.
+                </p>
+              </div>
+              <section className={styles.card}>
+                <div className={styles.cardH}>
+                  <h3>Hồ sơ gần đây (đối chiếu)</h3>
+                </div>
+                <div className={styles.cardB} style={{ padding: 0 }}>
+                  {renderInboxTable(inbox)}
+                </div>
+              </section>
+            </>
+          )}
+          </main>
+
+          {showRail && (
+            <aside className={styles.rail} aria-label="Thông tin phụ">
+              {view === 'create' && (
+                <>
+                  <div className={styles.railCard}>
+                    <h4>Xem trước</h4>
+                    <div className={styles.kv}>
+                      <b>Loại</b>
+                      <span>{selectedTypeMeta ? selectedTypeMeta.title : '—'}</span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Tiêu đề</b>
+                      <span>{createTitle || '—'}</span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Số tiền</b>
+                      <span>{moneyVi(Number(createAmount) || 0)}</span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Đơn vị</b>
+                      <span>{createOu}</span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Người tạo</b>
+                      <span>{actorUPN}</span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Checklist</b>
+                      <span>
+                        {requiredTplCount} bắt buộc · {templates.length} mục
+                      </span>
+                    </div>
+                  </div>
+                  <div className={styles.railCard}>
+                    <h4>Gợi ý</h4>
+                    <p className={styles.hint}>
+                      Sau khi tạo: tải đủ tài liệu bắt buộc rồi mới «Gửi hồ sơ».
+                    </p>
+                  </div>
+                </>
+              )}
+              {view === 'detail' && master && (
+                <>
+                  <div className={styles.railCard}>
+                    <div className={styles.reqKey}>
+                      <span>Mã hồ sơ</span>
+                      {master.requestKey}
+                    </div>
+                    <div className={styles.bigNum}>
+                      {moneyVi(master.amount)}
+                      <span>Số tiền đề nghị · {statusVi(master.status)}</span>
+                    </div>
+                  </div>
+                  <div className={styles.railCard}>
+                    <h4>Tóm tắt nhanh</h4>
+                    <div className={styles.kv}>
+                      <b>Loại</b>
+                      <span>{master.paymentTypeCode || '—'}</span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Đơn vị</b>
+                      <span>{master.currentOUCode || master.createdOUCode || '—'}</span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Người tạo</b>
+                      <span>{master.creatorUPN || '—'}</span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Trạng thái</b>
+                      <span>{statusVi(master.status)}</span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Bước</b>
+                      <span>{stepShortVi(master.currentStepKey)}</span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Lượt</b>
+                      <span>{master.reviewRound}</span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Checklist</b>
+                      <span>
+                        {requiredChecklistReady(checklist) ? 'Đã đủ' : 'Còn thiếu'}
+                      </span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>Thời hạn TT</b>
+                      <span>
+                        {master.paymentDueAt
+                          ? new Date(master.paymentDueAt).toLocaleDateString('vi-VN')
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className={styles.kv}>
+                      <b>UNC</b>
+                      <span>{uncDocs[0] ? uncDocs[0].fileName : 'Chưa có'}</span>
+                    </div>
+                    {!!master.explanation && (
+                      <div
+                        className={styles.kv}
+                        style={{
+                          flexDirection: 'column',
+                          alignItems: 'flex-start',
+                          gap: 4
+                        }}
+                      >
+                        <b>Diễn giải</b>
+                        <span style={{ textAlign: 'left' }}>{master.explanation}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.railCard}>
+                    <h4>Luồng duyệt</h4>
+                    <div className={styles.flowV}>
+                      {CORE_STEPS.map((s, idx) => {
+                        const cur = stepIndex(master.currentStepKey);
+                        const done = idx < cur;
+                        const now = idx === cur;
+                        return (
+                          <div
+                            key={s}
+                            className={`${styles.flowStep} ${done ? styles.flowDone : ''} ${
+                              now ? styles.flowNow : ''
+                            }`.trim()}
+                          >
+                            <span className={styles.flowDot}>{done ? '✓' : idx + 1}</span>
+                            <strong>{stepShortVi(s)}</strong>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+              {view === 'detail' && !master && (
+                <div className={styles.railCard}>
+                  <h4>Hồ sơ</h4>
+                  <p className={styles.hint}>Chưa mở hồ sơ nào.</p>
+                </div>
+              )}
+            </aside>
+          )}
+        </div>
       </div>
 
       <Dialog
@@ -986,18 +1663,89 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               Hệ thống sẽ kiểm tra checklist bắt buộc trước khi chuyển sang bước tiếp theo.
             </p>
           )}
+          {dialog === 'forward' && (
+            <p className={styles.hint}>
+              Xác nhận chuyển bước. Checklist đã đánh giá Đạt hết các mục cần kiểm tra. Sau khi
+              chuyển, không được đánh giá lại.
+            </p>
+          )}
           {dialog === 'confirmPay' && (
             <p className={styles.hint}>
               Xác nhận dựa trên ủy nhiệm chi:{' '}
               {uncDocs[0] ? uncDocs[0].fileName : '(chưa có tệp)'}
             </p>
           )}
+          {dialog === 'review' && (
+            <>
+              <p className={styles.hint}>
+                Mục:{' '}
+                <b>
+                  {(checklist.filter((c) => c.itemCode === reviewItemCode)[0] || {}).itemLabel ||
+                    reviewItemCode}
+                </b>
+              </p>
+              <label className={styles.field}>
+                Kết quả
+                <select
+                  value={reviewResult}
+                  onChange={(e) => setReviewResult(e.target.value as 'Pass' | 'Fail')}
+                >
+                  <option value="Pass">Đạt</option>
+                  <option value="Fail">Không đạt</option>
+                </select>
+              </label>
+              <label className={styles.field}>
+                Lý do {reviewResult === 'Fail' ? '(bắt buộc)' : '(tuỳ chọn)'}
+                <textarea
+                  rows={3}
+                  value={reviewReason}
+                  onChange={(e) => setReviewReason(e.target.value)}
+                />
+              </label>
+            </>
+          )}
         </div>
         <DialogFooter>
           <DefaultButton text="Hủy" onClick={() => setDialog(undefined)} disabled={busy} />
-          <PrimaryButton text="Xác nhận" onClick={confirmDialog} disabled={busy} />
+          <PrimaryButton
+            text="Xác nhận"
+            onClick={confirmDialog}
+            disabled={busy}
+            styles={
+              dialog === 'review' && reviewResult === 'Fail'
+                ? {
+                    root: { background: '#b91c1c', borderColor: '#b91c1c' },
+                    rootHovered: { background: '#991b1b', borderColor: '#991b1b' }
+                  }
+                : undefined
+            }
+          />
         </DialogFooter>
       </Dialog>
+
+      {drawerDoc && (
+        <FilePreviewDrawer
+          sp={props.sp}
+          doc={drawerDoc}
+          comment={docComment}
+          onCommentChange={setDocComment}
+          onClose={() => {
+            setDrawerDoc(undefined);
+            setDocComment('');
+          }}
+          onSendComment={() => {
+            if (!docComment.trim()) {
+              showNotice('warning', 'Nhập nội dung ghi chú');
+              return;
+            }
+            showNotice(
+              'info',
+              'Đã nhận ghi chú tài liệu (chờ nối list Comments trên CECM).'
+            );
+            setDocComment('');
+          }}
+        />
+      )}
 
       <BusyDialog open={busy} message={busyMessage} />
     </div>

@@ -88,6 +88,29 @@ export function requiredChecklistReady(items: IChecklistItemRow[]): boolean {
   });
 }
 
+/** Mục cần đánh giá ở bước KT: bắt buộc hoặc đã có tệp. */
+export function reviewableChecklistItems(items: IChecklistItemRow[]): IChecklistItemRow[] {
+  return items.filter((i) => i.isRequired || i.uploadedCount > 0);
+}
+
+/** Đã Pass/Fail hết các mục cần đánh giá. */
+export function checklistReviewComplete(items: IChecklistItemRow[]): boolean {
+  const rows = reviewableChecklistItems(items);
+  if (!rows.length) return false;
+  return rows.every((i) => i.itemStatus === 'Pass' || i.itemStatus === 'Fail');
+}
+
+/** Đủ điều kiện chuyển bước (PASS): mọi mục cần đánh giá đều Đạt. */
+export function checklistAllPass(items: IChecklistItemRow[]): boolean {
+  const rows = reviewableChecklistItems(items);
+  if (!rows.length) return false;
+  return rows.every((i) => i.itemStatus === 'Pass');
+}
+
+export function checklistHasFail(items: IChecklistItemRow[]): boolean {
+  return reviewableChecklistItems(items).some((i) => i.itemStatus === 'Fail');
+}
+
 export async function bumpChecklistUpload(
   ctx: ISpRestContext,
   item: IChecklistItemRow,
@@ -101,4 +124,54 @@ export async function bumpChecklistUpload(
     ItemStatus: status
   });
   return { ...item, uploadedCount: next, itemStatus: status };
+}
+
+export async function setChecklistItemReview(
+  ctx: ISpRestContext,
+  item: IChecklistItemRow,
+  result: 'Pass' | 'Fail'
+): Promise<IChecklistItemRow> {
+  if (item.isLocked) {
+    throw new Error('Mục checklist đã khóa — không được đánh giá lại sau khi chuyển bước.');
+  }
+  await mergeItem(ctx, PAY_LISTS.ChecklistItems, item.id, {
+    ItemStatus: result
+  });
+  return { ...item, itemStatus: result };
+}
+
+export async function lockChecklistItems(
+  ctx: ISpRestContext,
+  items: IChecklistItemRow[]
+): Promise<void> {
+  for (let i = 0; i < items.length; i++) {
+    const row = items[i];
+    if (row.isLocked) continue;
+    await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, { IsLocked: true });
+  }
+}
+
+export async function saveStepReview(
+  ctx: ISpRestContext,
+  opts: {
+    requestKey: string;
+    stepInstanceKey: string;
+    reviewRound: number;
+    checklistItemKey: string;
+    result: 'Pass' | 'Fail';
+    reason: string;
+    reviewedByUPN: string;
+  }
+): Promise<void> {
+  await createItem(ctx, PAY_LISTS.StepReviews, {
+    Title: `${opts.requestKey}|${opts.checklistItemKey}|${opts.result}`,
+    RequestKey: opts.requestKey,
+    StepInstanceKey: opts.stepInstanceKey || '',
+    ReviewRound: Number(opts.reviewRound) || 1,
+    ChecklistItemKey: opts.checklistItemKey,
+    Result: opts.result,
+    Reason: opts.reason || '',
+    ReviewedByUPN: opts.reviewedByUPN,
+    ReviewedAt: new Date().toISOString()
+  });
 }
