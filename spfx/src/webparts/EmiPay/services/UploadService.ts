@@ -47,6 +47,46 @@ export async function uploadChecklistFile(
   return { documentKey, fileUrl: uploaded.AbsoluteUrl, fileName: safeName };
 }
 
+/** Tài liệu hỗ trợ theo bước — DocClass=StepAttachment (schema CECM). */
+export async function uploadStepAttachment(
+  ctx: ISpRestContext,
+  opts: {
+    requestKey: string;
+    stepKey?: string;
+    fileName: string;
+    content: ArrayBuffer;
+    uploadedByUPN: string;
+  }
+): Promise<IUploadResult> {
+  const safeName = opts.fileName.replace(/[\\/:*?"<>|]/g, '_');
+  const folder = opts.stepKey
+    ? `${opts.requestKey}/Support/${opts.stepKey}`
+    : `${opts.requestKey}/Support`;
+  const uploaded = await uploadFileToLibrary(
+    ctx,
+    DOCS_WORKING_TITLE,
+    folder,
+    safeName,
+    opts.content
+  );
+  const documentKey = `${opts.requestKey}|StepAttachment|${newKey('SA')}`;
+  await createItem(ctx, PAY_LISTS.DocumentIndex, {
+    Title: `${opts.requestKey}-Support-${safeName}`.slice(0, 255),
+    RequestKey: opts.requestKey,
+    DocumentKey: documentKey,
+    DocClass: 'StepAttachment',
+    Visibility: 'Published',
+    FileName: safeName,
+    LibraryName: DOCS_WORKING_TITLE,
+    FileUrl: { Url: uploaded.AbsoluteUrl, Description: safeName },
+    UploadedByUPN: opts.uploadedByUPN,
+    UploadedAt: new Date().toISOString(),
+    IsCurrent: true,
+    IsArchived: false
+  });
+  return { documentKey, fileUrl: uploaded.AbsoluteUrl, fileName: safeName };
+}
+
 export async function uploadUncFile(
   ctx: ISpRestContext,
   opts: {

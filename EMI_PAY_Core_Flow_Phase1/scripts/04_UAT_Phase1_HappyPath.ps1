@@ -17,7 +17,10 @@ param(
     [string]$ActorUPN = 'admin@local',
     [int]$WaitSeconds = 90,
     [int]$PollSeconds = 5,
-    [string]$GuidPath = ''
+    [string]$GuidPath = '',
+    [string]$OrchestratorUrl = '',
+    [string]$FlowAccessToken = '',
+    [string]$ClientId = '5c1a7c4d-3b40-4938-821d-12f44ee316e5'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,6 +44,181 @@ $reqList = [Guid]$guids.EMI_PAY_Requests
 $wiList  = [Guid]$guids.EMI_PAY_WorkItems
 $chkList = [Guid]$guids.EMI_PAY_ChecklistItems
 $docList = [Guid]$guids.EMI_PAY_DocumentIndex
+$actList = [Guid]$guids.EMI_PAY_ActivityPublic
+
+# Flow HTTP auth — dùng chung logic thử nhiều audience (xem script 09).
+$OrchestratorUrl = ($OrchestratorUrl -as [string]).Trim()
+$script:FlowBearer = $null
+$script:MsalApp = $null
+
+function Get-PropValue($Obj, [string]$Name) {
+    if ($null -eq $Obj) { return $null }
+    $prop = $Obj.PSObject.Properties[$Name]
+    if ($null -eq $prop) { return $null }
+    return $prop.Value
+}
+
+function Test-OrchestratorFailed($Resp) {
+    $v = Get-PropValue -Obj $Resp -Name '__error'
+    return ($null -ne $v -and [bool]$v)
+}
+
+function ConvertFrom-JwtPayload([string]$Jwt) {
+    $jwt = ($Jwt -as [string]).Trim().Trim('"')
+    $parts = $jwt -split '\.'
+    if ($parts.Count -lt 2) { throw "JWT không đủ phần (len=$($jwt.Length))" }
+    $part = $parts[1].Replace('-', '+').Replace('_', '/')
+    switch ($part.Length % 4) {
+        1 { $part += '===' }
+        2 { $part += '==' }
+        3 { $part += '=' }
+    }
+    return ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($part)) | ConvertFrom-Json)
+}
+
+function Write-JwtClaims([string]$Jwt, [string]$Label) {
+    try {
+        $p = ConvertFrom-JwtPayload -Jwt $Jwt
+        Write-Host ("  JWT[{0}] aud={1} scp={2} tid={3}" -f $Label,
+            (Get-PropValue -Obj $p -Name 'aud'),
+            (Get-PropValue -Obj $p -Name 'scp'),
+            (Get-PropValue -Obj $p -Name 'tid')) -ForegroundColor DarkGray
+    }
+    catch {
+        Write-Host ("  JWT[{0}] decode failed: {1}" -f $Label, $_.Exception.Message) -ForegroundColor DarkYellow
+    }
+}
+
+function Get-TenantIdForFlow {
+    try {
+        $sp = Get-PnPAccessToken -Connection $connection -ErrorAction Stop
+        if ($sp -isnot [string] -and $sp.PSObject.Properties['RawData']) { $sp = [string]$sp.RawData }
+        $p = ConvertFrom-JwtPayload -Jwt ([string]$sp)
+        if ($p.tid) { return [string]$p.tid }
+    }
+    catch { }
+    return 'organizations'
+}
+
+function Ensure-MsalApp {
+    if ($null -ne $script:MsalApp) { return $script:MsalApp }
+    $msalDll = Join-Path (Get-Module PnP.PowerShell).ModuleBase 'Common/Microsoft.Identity.Client.dll'
+    if (-not (Test-Path -LiteralPath $msalDll)) { throw "Không thấy MSAL tại $msalDll" }
+    Add-Type -Path $msalDll | Out-Null
+    $tid = Get-TenantIdForFlow
+    $script:MsalApp = [Microsoft.Identity.Client.PublicClientApplicationBuilder]::Create($ClientId).
+        WithAuthority([Microsoft.Identity.Client.AzureCloudInstance]::AzurePublic, $tid).
+        WithRedirectUri('http://localhost').
+        Build()
+    return $script:MsalApp
+}
+
+function Get-TokenForScopes([string[]]$Scopes, [string]$Label) {
+    if ($Label -eq 'PnP-PowerAutomate') {
+        try {
+            $tokenObj = Get-PnPAccessToken -ResourceTypeName PowerAutomate -Connection $connection -ErrorAction Stop
+            if ($tokenObj -is [string]) { return $tokenObj }
+            if ($null -ne $tokenObj -and $tokenObj.PSObject.Properties['RawData']) { return [string]$tokenObj.RawData }
+            return [string]$tokenObj
+        }
+        catch {
+            Write-Host ("  skip {0}: {1}" -f $Label, $_.Exception.Message) -ForegroundColor DarkYellow
+            return $null
+        }
+    }
+    $app = Ensure-MsalApp
+    try {
+        $accounts = $app.GetAccountsAsync().GetAwaiter().GetResult()
+        $acct = $null
+        foreach ($a in $accounts) { $acct = $a; break }
+        if ($null -ne $acct) {
+            $silent = $app.AcquireTokenSilent($Scopes, $acct).ExecuteAsync().GetAwaiter().GetResult()
+            if ($silent -and $silent.AccessToken) {
+                Write-Host ("  MSAL silent OK ({0})" -f $Label) -ForegroundColor DarkGray
+                return [string]$silent.AccessToken
+            }
+        }
+    }
+    catch { }
+
+    Write-Host ("  MSAL interactive scopes=[{0}] ({1})" -f ($Scopes -join ' '), $Label) -ForegroundColor Yellow
+    try {
+        $result = $app.AcquireTokenInteractive($Scopes).ExecuteAsync().GetAwaiter().GetResult()
+        return [string]$result.AccessToken
+    }
+    catch {
+        Write-Host ("  skip {0}: {1}" -f $Label, $_.Exception.Message) -ForegroundColor DarkYellow
+        return $null
+    }
+}
+
+function Test-OrchestratorToken([string]$Bearer, [int]$CommandId) {
+    $headers = @{ Authorization = "Bearer $Bearer"; Accept = 'application/json' }
+    $body = (@{ commandId = $CommandId } | ConvertTo-Json -Compress)
+    try {
+        return Invoke-RestMethod -Method Post -Uri $OrchestratorUrl -Headers $headers -ContentType 'application/json' -Body $body
+    }
+    catch {
+        $respBody = $null
+        try { $respBody = $_.ErrorDetails.Message } catch { }
+        return [pscustomobject]@{ __error = $true; Message = $_.Exception.Message; Body = $respBody }
+    }
+}
+
+function Invoke-Orchestrator([int]$CommandId) {
+    if ([string]::IsNullOrWhiteSpace($OrchestratorUrl)) { return }
+
+    if (-not [string]::IsNullOrWhiteSpace($FlowAccessToken)) {
+        $script:FlowBearer = $FlowAccessToken.Trim()
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($script:FlowBearer)) {
+        $resp = Test-OrchestratorToken -Bearer $script:FlowBearer -CommandId $CommandId
+        if (-not (Test-OrchestratorFailed -Resp $resp)) {
+            Write-Host ("  POST orchestrator commandId={0} state={1}" -f $CommandId, (Get-PropValue -Obj $resp -Name 'state')) -ForegroundColor DarkGray
+            return $resp
+        }
+        $script:FlowBearer = $null
+    }
+
+    # aud phải đúng https://service.flow.microsoft.com/ (trailing slash). Scope //.default.
+    $requiredAud = 'https://service.flow.microsoft.com/'
+    $candidates = @(
+        [pscustomobject]@{ Label = 'PnP-PowerAutomate'; Scopes = @() }
+        [pscustomobject]@{ Label = 'Flow-slash-default'; Scopes = @('https://service.flow.microsoft.com//.default') }
+        [pscustomobject]@{ Label = 'Flow-User'; Scopes = @('https://service.flow.microsoft.com/User') }
+        [pscustomobject]@{ Label = 'Flow-user_impersonation'; Scopes = @('https://service.flow.microsoft.com/user_impersonation') }
+    )
+
+    $lastErr = ''
+    foreach ($c in $candidates) {
+        $token = Get-TokenForScopes -Scopes ([string[]]$c.Scopes) -Label $c.Label
+        if ([string]::IsNullOrWhiteSpace($token)) { continue }
+        Write-JwtClaims -Jwt $token -Label $c.Label
+        try {
+            $claims = ConvertFrom-JwtPayload -Jwt $token
+            $aud = [string](Get-PropValue -Obj $claims -Name 'aud')
+            if ($aud -ne $requiredAud -and $aud -notlike 'https://service.flow.microsoft.com*') {
+                Write-Host ("  skip {0}: aud='{1}'" -f $c.Label, $aud) -ForegroundColor DarkYellow
+                continue
+            }
+        }
+        catch { }
+
+        $resp = Test-OrchestratorToken -Bearer $token -CommandId $CommandId
+        if (-not (Test-OrchestratorFailed -Resp $resp)) {
+            $script:FlowBearer = $token
+            Write-Host ("  POST orchestrator OK via {0} state={1}" -f $c.Label, (Get-PropValue -Obj $resp -Name 'state')) -ForegroundColor Green
+            return $resp
+        }
+        $body = Get-PropValue -Obj $resp -Name 'Body'
+        $msg = Get-PropValue -Obj $resp -Name 'Message'
+        $lastErr = if ($body) { $body } else { $msg }
+        Write-Host ("  POST fail via {0}: {1}" -f $c.Label, $lastErr) -ForegroundColor DarkYellow
+    }
+
+    throw "Orchestrator auth thất bại (aud phải https://service.flow.microsoft.com/). Xem script 09. Last=$lastErr"
+}
 
 $passNext = [ordered]@{
     BPCM2_TECH    = 'BPCM3_PRICE'
@@ -136,6 +314,7 @@ function Add-Command {
     }
     $item = Add-PnPListItem -List $cmdList -Values $values -Connection $connection
     Write-Host ("Enqueued {0} id={1} CommandKey={2}" -f $Type, $item.Id, $ck) -ForegroundColor Cyan
+    Invoke-Orchestrator -CommandId ([int]$item.Id) | Out-Null
     return [pscustomobject]@{ Id = [int]$item.Id; CommandKey = $ck; RequestKey = $RequestKeyValue; CommandType = $Type }
 }
 
@@ -159,7 +338,31 @@ function Wait-Command {
             return $state
         }
     } while ((Get-Date) -lt $deadline)
-    throw ("Timeout waiting CMD id={0} after {1}s (Flow ON? trigger bat item moi?)" -f $Id, $Seconds)
+    throw ("Timeout waiting CMD id={0} after {1}s (Flow ON? -OrchestratorUrl?)" -f $Id, $Seconds)
+}
+
+function Invoke-Accept([string]$Key) {
+    $m = Get-Master $Key
+    if (-not $m) { throw "Master missing: $Key" }
+    $sik = [string]$m.FieldValues['CurrentStepInstanceKey']
+    $step = [string]$m.FieldValues['CurrentStepKey']
+    $round = [int]$m.FieldValues['ReviewRound']
+    $due = (Get-Date).ToUniversalTime().AddDays(3).ToString('yyyy-MM-ddTHH:mm:ssZ')
+    Write-Step ("ACCEPT {0} dueAt={1}" -f $step, $due)
+    $cmd = Add-Command -Type 'ACCEPT' -RequestKeyValue $Key -StepInstanceKey $sik -Payload @{
+        actorUPN                = $ActorUPN
+        dueAt                   = $due
+        expectedStepKey         = $step
+        expectedStepInstanceKey = $sik
+        expectedReviewRound     = $round
+    }
+    Wait-Command -Id $cmd.Id | Out-Null
+    $wis = Get-WorkItems $Key
+    $wi = @($wis | Where-Object { [string]$_.FieldValues['StepInstanceKey'] -eq $sik })
+    if ($wi.Count -lt 1 -or [string]$wi[0].FieldValues['AcceptedAt'] -eq '') {
+        throw "ACCEPT did not set AcceptedAt on WI SIK=$sik"
+    }
+    Write-Host ("ASSERT OK AcceptedAt={0} DueAt={1}" -f $wi[0].FieldValues['AcceptedAt'], $wi[0].FieldValues['DueAt']) -ForegroundColor Green
 }
 
 function Assert-Master {
@@ -263,12 +466,81 @@ function Invoke-DecidePass([string]$Key) {
     $m = Get-Master $Key
     if (-not $m) { throw "Master missing: $Key" }
     $cur = [string]$m.FieldValues['CurrentStepKey']
-    if (-not $passNext.Contains($cur)) {
-        throw "DecidePass not valid at Step=$cur"
-    }
-    $expectedNext = [string]$passNext[$cur]
+    $status = [string]$m.FieldValues['Status']
     $sik = [string]$m.FieldValues['CurrentStepInstanceKey']
     $round = [int]$m.FieldValues['ReviewRound']
+
+    if ($cur -eq 'BPCM1_PREPARE' -and $status -eq 'AwaitingManager') {
+        Write-Step 'DECIDE PASS (TP) AwaitingManager -> BPCM2_TECH'
+        $payload = @{
+            actorUPN                = $ActorUPN
+            decision                = 'PASS'
+            note                    = 'UAT manager approve'
+            expectedStepKey         = $cur
+            expectedStepInstanceKey = $sik
+            expectedReviewRound     = $round
+        }
+        $cmd = Add-Command -Type 'DECIDE' -RequestKeyValue $Key -StepInstanceKey $sik -Payload $payload
+        Wait-Command -Id $cmd.Id | Out-Null
+        Assert-Master -Key $Key -ExpectStep 'BPCM2_TECH' -ExpectStatus 'InReview' | Out-Null
+        return
+    }
+
+    if (-not $passNext.Contains($cur)) {
+        throw "DecidePass not valid at Step=$cur Status=$status"
+    }
+
+    if ($cur -in @('BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK', 'TCKT_PAY')) {
+        Invoke-Accept -Key $Key
+        $m = Get-Master $Key
+        $sik = [string]$m.FieldValues['CurrentStepInstanceKey']
+        $round = [int]$m.FieldValues['ReviewRound']
+    }
+
+    if ($cur -eq 'CHAIR_APPROVE') {
+        Ensure-PaymentDueAtField
+        # Lần 1: phê duyệt hồ sơ (không paymentDueAt) — giữ CHAIR
+        Write-Step 'DECIDE PASS CHAIR dossier (no paymentDueAt) -> stay CHAIR_APPROVE'
+        $dossier = Add-Command -Type 'DECIDE' -RequestKeyValue $Key -StepInstanceKey $sik -Payload @{
+            actorUPN                = $ActorUPN
+            decision                = 'PASS'
+            note                    = 'UAT CHAIR dossier'
+            expectedStepKey         = 'CHAIR_APPROVE'
+            expectedStepInstanceKey = $sik
+            expectedReviewRound     = $round
+        }
+        Wait-Command -Id $dossier.Id | Out-Null
+        Assert-Master -Key $Key -ExpectStep 'CHAIR_APPROVE' -ExpectStatus 'AwaitManager' | Out-Null
+        $mid = Get-Master $Key
+        $dueEmpty = $mid.FieldValues['PaymentDueAt']
+        if ($null -ne $dueEmpty -and [string]$dueEmpty -ne '') {
+            throw 'PaymentDueAt must stay empty after CHAIR dossier approve'
+        }
+        Write-Host 'ASSERT OK CHAIR dossier approved, PaymentDueAt empty' -ForegroundColor Green
+
+        $sik = [string]$mid.FieldValues['CurrentStepInstanceKey']
+        $round = [int]$mid.FieldValues['ReviewRound']
+        $due = (Get-Date).ToUniversalTime().AddDays(7).ToString('yyyy-MM-ddTHH:mm:ssZ')
+        Write-Step 'DECIDE PASS CHAIR payment (+paymentDueAt) -> TCKT_PAY'
+        $pay = Add-Command -Type 'DECIDE' -RequestKeyValue $Key -StepInstanceKey $sik -Payload @{
+            actorUPN                = $ActorUPN
+            decision                = 'PASS'
+            note                    = 'UAT CHAIR payment'
+            paymentDueAt            = $due
+            expectedStepKey         = 'CHAIR_APPROVE'
+            expectedStepInstanceKey = $sik
+            expectedReviewRound     = $round
+        }
+        Wait-Command -Id $pay.Id | Out-Null
+        Assert-Master -Key $Key -ExpectStep 'TCKT_PAY' -ExpectStatus 'PendingPayment' | Out-Null
+        $after = Get-Master $Key
+        $gotDue = $after.FieldValues['PaymentDueAt']
+        if ($null -eq $gotDue -or [string]$gotDue -eq '') { throw 'PaymentDueAt empty after CHAIR payment approve' }
+        Write-Host ("ASSERT OK PaymentDueAt={0}" -f $gotDue) -ForegroundColor Green
+        return
+    }
+
+    $expectedNext = [string]$passNext[$cur]
     Write-Step ("DECIDE PASS {0} -> {1}" -f $cur, $expectedNext)
     $payload = @{
         actorUPN                = $ActorUPN
@@ -278,20 +550,10 @@ function Invoke-DecidePass([string]$Key) {
         expectedStepInstanceKey = $sik
         expectedReviewRound     = $round
     }
-    if ($cur -eq 'CHAIR_APPROVE') {
-        Ensure-PaymentDueAtField
-        $payload.paymentDueAt = (Get-Date).ToUniversalTime().AddDays(7).ToString('yyyy-MM-ddTHH:mm:ssZ')
-    }
     $cmd = Add-Command -Type 'DECIDE' -RequestKeyValue $Key -StepInstanceKey $sik -Payload $payload
     Wait-Command -Id $cmd.Id | Out-Null
     $expectSt = if ($expectStatus.Contains($expectedNext)) { [string]$expectStatus[$expectedNext] } else { '' }
     Assert-Master -Key $Key -ExpectStep $expectedNext -ExpectStatus $expectSt | Out-Null
-    if ($cur -eq 'CHAIR_APPROVE') {
-        $after = Get-Master $Key
-        $due = $after.FieldValues['PaymentDueAt']
-        if ($null -eq $due -or [string]$due -eq '') { throw 'PaymentDueAt empty after CHAIR PASS' }
-        Write-Host ("ASSERT OK PaymentDueAt={0}" -f $due) -ForegroundColor Green
-    }
 }
 
 # ---------------- main ----------------
@@ -323,7 +585,7 @@ if ($Mode -eq 'Full') {
         expectedReviewRound = 1
     }
     Wait-Command -Id $sub.Id | Out-Null
-    Assert-Master -Key $RequestKey -ExpectStep 'BPCM2_TECH' -ExpectStatus 'InReview' | Out-Null
+    Assert-Master -Key $RequestKey -ExpectStep 'BPCM1_PREPARE' -ExpectStatus 'AwaitingManager' | Out-Null
 }
 else {
     if ([string]::IsNullOrWhiteSpace($RequestKey)) {
@@ -349,16 +611,21 @@ if ($step -eq 'BPCM1_PREPARE' -and $status -in @('Draft', 'Returned')) {
         expectedReviewRound = [int]$m.FieldValues['ReviewRound']
     }
     Wait-Command -Id $sub.Id | Out-Null
-    Assert-Master -Key $RequestKey -ExpectStep 'BPCM2_TECH' -ExpectStatus 'InReview' | Out-Null
+    Assert-Master -Key $RequestKey -ExpectStep 'BPCM1_PREPARE' -ExpectStatus 'AwaitingManager' | Out-Null
 }
 
-# DECIDE until TCKT_PAY
+# TP duyệt + DECIDE(+ACCEPT) until TCKT_PAY
 while ($true) {
     $m = Get-Master $RequestKey
     $step = [string]$m.FieldValues['CurrentStepKey']
+    $status = [string]$m.FieldValues['Status']
     if ($step -eq 'TCKT_PAY' -or $step -eq 'SYSTEM_ARCHIVE') { break }
+    if ($step -eq 'BPCM1_PREPARE' -and $status -eq 'AwaitingManager') {
+        Invoke-DecidePass -Key $RequestKey
+        continue
+    }
     if (-not $passNext.Contains($step)) {
-        throw "Cannot continue from Step=$step"
+        throw "Cannot continue from Step=$step Status=$status"
     }
     Invoke-DecidePass -Key $RequestKey
 }
@@ -366,9 +633,11 @@ while ($true) {
 $m = Get-Master $RequestKey
 $step = [string]$m.FieldValues['CurrentStepKey']
 if ($step -eq 'TCKT_PAY') {
+    Invoke-Accept -Key $RequestKey
     Write-Step 'Seed UNC DocumentIndex (TCKT evidence)'
     $uncKey = Add-UncEvidence -Key $RequestKey
     Write-Step 'CONFIRM_PAYMENT'
+    $m = Get-Master $RequestKey
     $sik = [string]$m.FieldValues['CurrentStepInstanceKey']
     $conf = Add-Command -Type 'CONFIRM_PAYMENT' -RequestKeyValue $RequestKey -StepInstanceKey $sik -Payload @{
         actorUPN                = $ActorUPN
@@ -391,7 +660,27 @@ if ($null -eq $fv['PaidAt'] -or [string]$fv['PaidAt'] -eq '') {
     throw 'UAT FAILED: PaidAt empty'
 }
 
+# ActivityPublic sanity
+$escaped = [System.Security.SecurityElement]::Escape($RequestKey)
+$queryAct = @"
+<View>
+  <Query>
+    <Where>
+      <Eq><FieldRef Name='RequestKey' /><Value Type='Text'>$escaped</Value></Eq>
+    </Where>
+  </Query>
+  <RowLimit>100</RowLimit>
+</View>
+"@
+$acts = @(Get-PnPListItem -List $actList -Query $queryAct -Connection $connection)
+$types = @($acts | ForEach-Object { [string]$_.FieldValues['EventType'] })
+Write-Host ("ActivityPublic count={0} types=[{1}]" -f $acts.Count, ($types -join ',')) -ForegroundColor Cyan
+foreach ($need in @('REQUEST_CREATED', 'SUBMITTED_TO_MANAGER', 'MANAGER_APPROVED', 'STEP_ACCEPTED', 'PAYMENT_CONFIRMED')) {
+    if ($types -notcontains $need) { throw "Missing Activity EventType=$need" }
+}
+Write-Host 'ASSERT OK ActivityPublic core events present' -ForegroundColor Green
+
 Write-Host ""
-Write-Host "UAT PHASE1 HAPPY PATH PASS" -ForegroundColor Green
+Write-Host "UAT PHASE1 HAPPY PATH PASS (1.0.0.12 CHAIR two-step + Activity/ACCEPT)" -ForegroundColor Green
 Write-Host "RequestKey=$RequestKey"
 Write-Host "PaidAt=$($fv['PaidAt']) ArchiveStatus=$($fv['ArchiveStatus'])"

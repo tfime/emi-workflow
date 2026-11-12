@@ -16,6 +16,7 @@ export const PAY_LISTS = {
   ChecklistItems: 'd02c6a03-9561-4d90-b5d5-ad30a2fef88b',
   StepReviews: '02a39987-5801-401e-8f3f-ba8caf1c1f4a',
   Requests: '12b3051d-7642-4f90-a39d-5364df561fbf',
+  ActivityPublic: '84b57c9e-6b90-4a6b-a200-b3afb4499895',
   ActivityInternal: 'b8ceb7ed-3925-4292-af35-4027f41c9d6a',
   DocsWorking: 'c2b4ef47-2c55-41e4-8b3c-c6480a27bbb2'
 } as const;

@@ -33,7 +33,9 @@ Không làm trong Phase 1. Làm lần lượt khi Flow CREATE→CONFIRM đã ổ
 6. **Dedupe chặt** — GET Commands theo `DedupeKey`; nếu bản khác đã `Succeeded` → no-op
 7. **ETag Master** — không dùng `IF-MATCH: *` cho MERGE Requests; xử lý 412
 8. **Catch / Failed** — Scope runAfter failed → Commands `Failed` + ErrorMessage an toàn (Choice `NEEDS_RECONCILIATION` chỉ sau khi ApproveChoice)
-9. **ActivityPublic / ActivityInternal** — `ActivityKey={CommandKey}|{EventType}` idempotent
+9. **ActivityPublic / ActivityInternal** — **DONE trong 1.0.0.11** (`ActivityKey={CommandKey}|{EventType}`)
+9b. **`ACCEPT` + DueAt** — **DONE trong 1.0.0.11** (gate DECIDE/CONFIRM khi chưa `AcceptedAt`)
+9c. **CHAIR hai bước** — **DONE trong 1.0.0.12** (duyệt hồ sơ giữ CHAIR → duyệt TT + `paymentDueAt` → TCKT_PAY)
 10. **Trusted caller** — pilot allowlist theo Author email; không tin `ActorUPN` payload
 11. **Concurrency = 1** trên trigger; xác nhận trên designer sau Import
 12. ~~**Đọc StepRecipients / WorkflowSteps**~~ — DONE trong Build Phase1 (SUBMIT/DECIDE đọc list; CREATE dùng `createdOUCode`)

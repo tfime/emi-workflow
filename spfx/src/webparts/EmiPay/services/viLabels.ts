@@ -16,6 +16,23 @@ export function statusVi(status: string): string {
   return map[status] || status || '—';
 }
 
+/** Nhãn chi tiết khi CHAIR đã duyệt hồ sơ nhưng chưa duyệt thanh toán. */
+export function chairStatusDetailVi(
+  stepKey: string,
+  status: string,
+  paymentDueAt: string | undefined,
+  dossierApproved: boolean
+): string {
+  if (
+    stepKey === 'CHAIR_APPROVE' &&
+    dossierApproved &&
+    !paymentDueAt
+  ) {
+    return 'Đã phê duyệt hồ sơ — chưa duyệt thanh toán';
+  }
+  return statusVi(status);
+}
+
 export function stepVi(stepKey: string): string {
   const map: Record<string, string> = {
     BPCM1_PREPARE: 'BPCM 1 · Khởi tạo / điều chỉnh',

@@ -8,7 +8,7 @@ alwaysApply: true
 ## Nguồn sự thật (theo thứ tự)
 
 1. Schema CECM + seed (`EMI_PAY_*` lists, `seed-config.json`, list-guids)
-2. Main Flow Core đã chốt (`EMI_PAY_Core_Flow_Phase1`, Commands 1.0.0.9)
+2. Main Flow Core đã chốt (`EMI_PAY_Core_Flow_Phase1`, Commands 1.0.0.11)
 3. Nghiệp vụ: `BA.md`, `EMI_Quy_tac_nghiep_vu_*.md`, `EMI_PAY_MaTran_VaiTro_*.md`
 4. Trạng thái làm: `plan.md`, `EMI_PAY_Doi_chieu_BA.md`
 5. SPFx chỉ là UI trên model/Flow — không thay thế orchestrator
@@ -17,7 +17,7 @@ alwaysApply: true
 
 - **Không** thêm tính năng / cột / lệnh / patch Flow khi chưa đề xuất và được duyệt.
 - **Không** hardcode danh mục nghiệp vụ trong SPFx (phòng ban, bước, checklist). Master data thuộc **seed/model** hoặc list CFG do PROCADM quản.
-- **Không** ghi thẳng Requests/WorkItems để «đi vòng» Flow. Chỉ enqueue 4 lệnh Core: `CREATE_REQUEST` | `SUBMIT` | `DECIDE` | `CONFIRM_PAYMENT`.
+- **Không** ghi thẳng Requests/WorkItems để «đi vòng» Flow. Chỉ enqueue 5 lệnh Core: `CREATE_REQUEST` | `SUBMIT` | `ACCEPT` | `DECIDE` | `CONFIRM_PAYMENT`.
 - **Không** tin `ActorUPN` trong payload như bằng chứng quyền (xem ma trận / Phase2).
 
 ## Model tổ chức (nhớ đúng)

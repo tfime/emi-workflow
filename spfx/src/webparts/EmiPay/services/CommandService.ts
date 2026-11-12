@@ -1,7 +1,12 @@
 import { PAY_LISTS, escapeOData, newKey } from './PayLists';
 import { ISpRestContext, createItem, getItemById } from './SpRest';
 
-export type CommandType = 'CREATE_REQUEST' | 'SUBMIT' | 'DECIDE' | 'CONFIRM_PAYMENT';
+export type CommandType =
+  | 'CREATE_REQUEST'
+  | 'SUBMIT'
+  | 'ACCEPT'
+  | 'DECIDE'
+  | 'CONFIRM_PAYMENT';
 export type CommandState = 'Pending' | 'Processing' | 'Succeeded' | 'Rejected' | 'Failed';
 
 export interface IEnqueueResult {

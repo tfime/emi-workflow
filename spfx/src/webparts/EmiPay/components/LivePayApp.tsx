@@ -15,6 +15,8 @@ import {
   IOrgUnit,
   IRequestMaster,
   IChecklistItemRow,
+  IWorkItemRow,
+  ITimelineItem,
   listPaymentTypes,
   listChecklistTemplates,
   listOrgUnits,
@@ -33,18 +35,27 @@ import {
   lockChecklistItems,
   enqueueAndRun,
   uploadChecklistFile,
+  uploadStepAttachment,
   uploadUncFile,
   listUncDocuments,
   listDocumentsForRequest,
   IDocumentIndexRow,
   isSupportingDoc,
   isChecklistDocClass,
+  docClassVi,
   setChecklistItemReview,
   saveStepReview,
   liveActionsFor,
+  isChairDossierApproved,
+  listWorkItems,
+  currentWorkItem,
+  isWorkItemAccepted,
+  listActivityPublic,
+  listStepReviews,
+  buildTimeline,
   CORE_STEPS,
   statusVi,
-  stepVi,
+  chairStatusDetailVi,
   stepShortVi,
   checklistStatusVi,
   moneyVi,
@@ -92,22 +103,28 @@ const dialogTitleVi = (kind: DialogKind): string => {
   switch (kind) {
     case 'submit':
       return 'Trình trưởng phòng';
+    case 'mgrApprove':
+      return 'Duyệt gửi sang BPCM2';
     case 'forward':
-      return 'Duyệt / chuyển bước';
+      return 'Chuyển bước tiếp theo';
     case 'return':
       return 'Từ chối / trả hồ sơ';
     case 'approve':
-      return 'Phê duyệt của CT.HĐQT';
+      return 'Phê duyệt hồ sơ (CT.HĐQT)';
+    case 'approvePay':
+      return 'Duyệt thanh toán';
     case 'reject':
       return 'Không phê duyệt';
     case 'attach':
-      return 'Tải tài liệu checklist';
+      return 'Tải tài liệu';
     case 'unc':
       return 'Tải ủy nhiệm chi (UNC)';
     case 'confirmPay':
       return 'Xác nhận đã thanh toán';
     case 'review':
       return 'Đánh giá mục checklist';
+    case 'accept':
+      return 'Tiếp nhận và đặt hạn xử lý';
     default:
       return 'Xác nhận';
   }
@@ -150,6 +167,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const [requestKey, setRequestKey] = React.useState('');
   const [master, setMaster] = React.useState<IRequestMaster | undefined>(undefined);
   const [checklist, setChecklist] = React.useState<IChecklistItemRow[]>([]);
+  const [workItems, setWorkItems] = React.useState<IWorkItemRow[]>([]);
+  const [timeline, setTimeline] = React.useState<ITimelineItem[]>([]);
   const [uncDocs, setUncDocs] = React.useState<IDocumentIndexRow[]>([]);
   const [docs, setDocs] = React.useState<IDocumentIndexRow[]>([]);
   const [drawerDoc, setDrawerDoc] = React.useState<IDocumentIndexRow | undefined>(undefined);
@@ -157,7 +176,10 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const [dialog, setDialog] = React.useState<DialogKind>(undefined);
   const [reason, setReason] = React.useState('');
   const [paymentDue, setPaymentDue] = React.useState('');
+  const [acceptDue, setAcceptDue] = React.useState('');
   const [uploadItemCode, setUploadItemCode] = React.useState('');
+  /** checklist = mục checklist BPCM1; step = tài liệu hỗ trợ (DocClass StepAttachment). */
+  const [uploadMode, setUploadMode] = React.useState<'checklist' | 'step'>('checklist');
   const [reviewItemCode, setReviewItemCode] = React.useState('');
   const [reviewResult, setReviewResult] = React.useState<'Pass' | 'Fail'>('Pass');
   const [reviewReason, setReviewReason] = React.useState('');
@@ -196,10 +218,15 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     const m = await getRequestByKey(props.sp, key);
     if (!m) throw new Error(`Không tìm thấy hồ sơ ${key}`);
     const items = await listChecklistItems(props.sp, key);
+    const wis = await listWorkItems(props.sp, key);
+    const acts = await listActivityPublic(props.sp, key);
+    const reviews = await listStepReviews(props.sp, key);
     const unc = await listUncDocuments(props.sp, key);
     const allDocs = await listDocumentsForRequest(props.sp, key);
     setMaster(m);
     setChecklist(items);
+    setWorkItems(wis);
+    setTimeline(buildTimeline(acts, reviews));
     setUncDocs(unc);
     setDocs(allDocs);
     setRequestKey(key);
@@ -368,14 +395,18 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   const selectedTypeMeta = paymentTypes.filter((t) => t.code === selectedType)[0];
   const requiredTplCount = templates.filter((t) => t.isRequired).length;
+  const activeWi = master
+    ? currentWorkItem(workItems, master.currentStepInstanceKey)
+    : undefined;
   const actions = master
-    ? liveActionsFor(master, checklist, uncDocs.length > 0, persona)
+    ? liveActionsFor(master, checklist, uncDocs.length > 0, persona, activeWi, workItems)
     : [];
 
   const canReviewDocs = !!(
     master &&
     REVIEW_STEPS.indexOf(master.currentStepKey) >= 0 &&
-    REVIEW_PERSONAS.indexOf(persona) >= 0
+    REVIEW_PERSONAS.indexOf(persona) >= 0 &&
+    isWorkItemAccepted(activeWi)
   );
 
   const openReview = (itemCode: string): void => {
@@ -401,8 +432,18 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   const onAction = (a: IPayAction): void => {
     setReason('');
+    if (a.dialog === 'accept') {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() + 3);
+      const iso = d.toISOString().slice(0, 10);
+      setAcceptDue(iso);
+      setDialog('accept');
+      return;
+    }
     if (a.dialog === 'attach') {
-      setUploadItemCode(checklist[0] ? checklist[0].itemCode : '');
+      // Nút thao tác bước = tài liệu hỗ trợ; checklist chỉ tải ở BPCM1 qua bảng Checklist.
+      setUploadMode('step');
+      setDocsTab('files');
       setDialog('attach');
       return;
     }
@@ -411,10 +452,14 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       return;
     }
     if (a.dialog === 'approve') {
+      setDialog('approve');
+      return;
+    }
+    if (a.dialog === 'approvePay') {
       const d = new Date();
       d.setUTCDate(d.getUTCDate() + 7);
       setPaymentDue(d.toISOString().slice(0, 10));
-      setDialog('approve');
+      setDialog('approvePay');
       return;
     }
     if (a.dialog) {
@@ -456,9 +501,39 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       return;
     }
 
-    if (kind === 'forward' || kind === 'approve') {
+    if (kind === 'accept') {
       void run(
         async () => {
+          if (!acceptDue.trim()) throw new Error('Vui lòng chọn hạn xử lý');
+          setBusyMessage('Đang tiếp nhận hồ sơ…');
+          await enqueueAndRun(
+            props.sp,
+            'ACCEPT',
+            {
+              actorUPN,
+              dueAt: `${acceptDue.trim()}T23:59:59Z`,
+              expectedStepKey: master.currentStepKey,
+              expectedStepInstanceKey: master.currentStepInstanceKey,
+              expectedReviewRound: master.reviewRound
+            },
+            {
+              requestKey: master.requestKey,
+              stepInstanceKey: master.currentStepInstanceKey,
+              orchestratorUrl: props.orchestratorUrl
+            }
+          );
+          await loadDetail(master.requestKey);
+          await refreshInbox();
+        },
+        { waiting: 'Đang tiếp nhận…', success: 'Đã tiếp nhận và đặt hạn xử lý.' }
+      );
+      return;
+    }
+
+    if (kind === 'mgrApprove' || kind === 'forward' || kind === 'approve' || kind === 'approvePay') {
+      void run(
+        async () => {
+          // Chỉ BPCM2/BPCM3/TCKT KT mới bắt Đạt hết; TP duyệt trình gửi thì không.
           if (kind === 'forward' && !checklistAllPass(checklist)) {
             throw new Error(
               'Chưa thể chuyển bước: cần đánh giá Đạt hết các mục checklist có tệp/bắt buộc.'
@@ -467,33 +542,60 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           const payload: Record<string, unknown> = {
             actorUPN,
             decision: 'PASS',
-            note: 'Phê duyệt từ giao diện',
+            note:
+              kind === 'mgrApprove'
+                ? 'Trưởng phòng duyệt gửi sang BPCM2'
+                : kind === 'approvePay'
+                  ? 'CT.HĐQT duyệt thanh toán'
+                  : kind === 'approve'
+                    ? 'CT.HĐQT phê duyệt hồ sơ'
+                    : 'Phê duyệt từ giao diện',
             expectedStepKey: master.currentStepKey,
             expectedStepInstanceKey: master.currentStepInstanceKey,
             expectedReviewRound: master.reviewRound
           };
-          if (kind === 'approve') {
+          if (kind === 'approvePay') {
             if (!paymentDue) throw new Error('Vui lòng nhập thời hạn thanh toán');
             payload.paymentDueAt = `${paymentDue}T00:00:00Z`;
           }
           setBusyMessage(
-            kind === 'approve'
-              ? 'Đang ghi nhận phê duyệt của CT.HĐQT…'
-              : 'Đang chuyển bước tiếp theo…'
+            kind === 'approvePay'
+              ? 'Đang duyệt thanh toán…'
+              : kind === 'approve'
+                ? 'Đang phê duyệt hồ sơ…'
+                : kind === 'mgrApprove'
+                  ? 'Đang duyệt gửi sang BPCM2…'
+                  : 'Đang chuyển bước tiếp theo…'
           );
           await enqueueAndRun(props.sp, 'DECIDE', payload, {
             requestKey: master.requestKey,
             stepInstanceKey: master.currentStepInstanceKey,
             orchestratorUrl: props.orchestratorUrl
           });
-          // Khóa checklist ngay sau khi chuyển — không cho đánh giá lại.
-          await lockChecklistItems(props.sp, checklist);
+          // Khóa sau bước KT chuyển tiếp / duyệt TT — không khóa khi chỉ duyệt hồ sơ CHAIR
+          if (kind === 'forward' || kind === 'approvePay') {
+            await lockChecklistItems(props.sp, checklist);
+          }
           await loadDetail(master.requestKey);
           await refreshInbox();
         },
         {
-          waiting: kind === 'approve' ? 'Đang phê duyệt…' : 'Đang chuyển bước…',
-          success: kind === 'approve' ? 'Đã phê duyệt hồ sơ.' : 'Đã chuyển bước tiếp theo.'
+          waiting:
+            kind === 'approvePay'
+              ? 'Đang duyệt thanh toán…'
+              : kind === 'approve'
+                ? 'Đang phê duyệt hồ sơ…'
+                : kind === 'mgrApprove'
+                  ? 'Đang duyệt gửi…'
+                  : 'Đang chuyển bước…',
+          success:
+            kind === 'approvePay'
+              ? 'Đã duyệt thanh toán — chuyển TCKT.'
+              : kind === 'approve'
+                ? 'Đã phê duyệt hồ sơ (chưa duyệt thanh toán).'
+                : kind === 'mgrApprove'
+                  ? 'Đã duyệt gửi sang BPCM2.'
+                  : 'Đã chuyển bước tiếp theo.'
         }
       );
       return;
@@ -610,6 +712,15 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               uploadedByUPN: actorUPN
             });
             showNotice('success', `Đã tải ủy nhiệm chi: ${up.fileName}`);
+          } else if (uploadMode === 'step') {
+            const up = await uploadStepAttachment(props.sp, {
+              requestKey: master.requestKey,
+              stepKey: master.currentStepKey,
+              fileName: file.name,
+              content: buf,
+              uploadedByUPN: actorUPN
+            });
+            showNotice('success', `Đã tải tài liệu hỗ trợ: ${up.fileName}`);
           } else {
             const item = checklist.filter((c) => c.itemCode === uploadItemCode)[0] || checklist[0];
             if (!item) throw new Error('Không có mục checklist');
@@ -1082,10 +1193,17 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                           ? 'warn'
                           : master.status === 'Completed' || master.status === 'Paid'
                             ? 'ok'
-                            : 'info'
+                            : isChairDossierApproved(master, workItems)
+                              ? 'ok'
+                              : 'info'
                       )}
                     >
-                      {statusVi(master.status)}
+                      {chairStatusDetailVi(
+                        master.currentStepKey,
+                        master.status,
+                        master.paymentDueAt,
+                        isChairDossierApproved(master, workItems)
+                      )}
                     </span>
                     <span className={badgeClass('mute')}>
                       {stepShortVi(master.currentStepKey)}
@@ -1151,6 +1269,20 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                   </div>
                 )}
 
+              {master &&
+                ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK', 'TCKT_PAY'].indexOf(
+                  master.currentStepKey
+                ) >= 0 &&
+                !isWorkItemAccepted(activeWi) && (
+                  <div className={styles.panelWarn}>
+                    <h4>Chưa tiếp nhận bước</h4>
+                    <div>
+                      Cần «Tiếp nhận và đặt hạn» trước khi đánh giá checklist / chuyển bước /
+                      xác nhận thanh toán.
+                    </div>
+                  </div>
+                )}
+
               {canReviewDocs && !checklistAllPass(checklist) && (
                 <div className={styles.panelWarn}>
                   <h4>Chưa đủ điều kiện chuyển bước</h4>
@@ -1168,17 +1300,36 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                 <div className={styles.cardH}>
                   <h3>Tài liệu</h3>
                   <div className={styles.actions}>
-                    {master.currentStepKey === 'BPCM1_PREPARE' && docsTab === 'checklist' && (
+                    {master.currentStepKey === 'BPCM1_PREPARE' &&
+                      docsTab === 'checklist' &&
+                      (master.status === 'Draft' || master.status === 'Returned') && (
                       <button
                         type="button"
                         className={`${styles.btn} ${styles.btnOutline}`}
                         disabled={busy}
                         onClick={() => {
+                          setUploadMode('checklist');
                           setUploadItemCode(checklist[0] ? checklist[0].itemCode : '');
                           setDialog('attach');
                         }}
                       >
-                        Tải tài liệu
+                        Tải checklist
+                      </button>
+                    )}
+                    {docsTab === 'files' &&
+                      master.currentStepKey !== 'SYSTEM_ARCHIVE' &&
+                      master.status !== 'Cancelled' &&
+                      master.status !== 'Completed' && (
+                      <button
+                        type="button"
+                        className={`${styles.btn} ${styles.btnPrimary}`}
+                        disabled={busy}
+                        onClick={() => {
+                          setUploadMode('step');
+                          setDialog('attach');
+                        }}
+                      >
+                        Tải đính kèm hỗ trợ
                       </button>
                     )}
                   </div>
@@ -1304,13 +1455,15 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                                     {c.isLocked && (
                                       <span className={badgeClass('mute')}>Đã khóa</span>
                                     )}
-                                    {master.currentStepKey === 'BPCM1_PREPARE' && (
+                                    {master.currentStepKey === 'BPCM1_PREPARE' &&
+                                      (master.status === 'Draft' || master.status === 'Returned') && (
                                       <button
                                         type="button"
                                         className={`${styles.btn} ${styles.btnPrimary}`}
                                         style={{ padding: '6px 10px', fontSize: 12 }}
                                         disabled={busy}
                                         onClick={() => {
+                                          setUploadMode('checklist');
                                           setUploadItemCode(c.itemCode);
                                           setDialog('attach');
                                         }}
@@ -1332,13 +1485,14 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                   <div style={{ padding: 0 }}>
                     {supportingDocs.length === 0 ? (
                       <p className={styles.empty}>
-                        Chưa có tài liệu hỗ trợ. 
+                        Chưa có tài liệu hỗ trợ. Dùng «Tải đính kèm hỗ trợ» để bổ sung chứng từ
+                        theo bước (không thay checklist).
                       </p>
                     ) : (
                       <table className={styles.dataTable}>
                         <thead>
                           <tr>
-                            <th>Lớp</th>
+                            <th>Loại</th>
                             <th>Tệp</th>
                             <th>Kho</th>
                             <th>Người tải</th>
@@ -1350,7 +1504,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                           {supportingDocs.map((d) => (
                             <tr key={d.id}>
                               <td>
-                                <strong>{d.docClass || 'Hỗ trợ'}</strong>
+                                <strong>{docClassVi(d.docClass)}</strong>
                                 <span className={styles.meta}>{d.documentKey}</span>
                               </td>
                               <td>
@@ -1427,31 +1581,38 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                 </div>
                 {activityTab === 'timeline' && (
                   <div className={styles.cardB}>
-                    <div className={styles.actRow}>
-                      <div>
-                        <strong>Hồ sơ được tạo</strong>
-                        <span className={styles.meta}>
-                          {master.creatorUPN || '—'} · {master.createdOUCode || '—'}
-                        </span>
-                      </div>
-                      <span className={badgeClass('mute')}>Hệ thống</span>
-                    </div>
-                    <div className={styles.actRow}>
-                      <div>
-                        <strong>Trạng thái: {statusVi(master.status)}</strong>
-                        <span className={styles.meta}>{stepVi(master.currentStepKey)}</span>
-                      </div>
-                      <span className={badgeClass('mute')}>Bước</span>
-                    </div>
-                    {uncDocs.length > 0 && (
+                    {activeWi && isWorkItemAccepted(activeWi) && (
                       <div className={styles.actRow}>
                         <div>
-                          <strong>Đã có ủy nhiệm chi</strong>
-                          <span className={styles.meta}>{uncDocs[0].fileName}</span>
+                          <strong>Hạn xử lý bước hiện tại</strong>
+                          <span className={styles.meta}>
+                            {activeWi.dueAt
+                              ? new Date(activeWi.dueAt).toLocaleString('vi-VN')
+                              : '—'}
+                            {activeWi.acceptedByUPN ? ` · ${activeWi.acceptedByUPN}` : ''}
+                          </span>
                         </div>
-                        <span className={badgeClass('ok')}>UNC</span>
+                        <span className={badgeClass('info')}>Hạn xử lý</span>
                       </div>
                     )}
+                    {timeline.length === 0 && (
+                      <p className={styles.empty}>
+                        Chưa có nhật ký Activity. Import Flow 1.0.0.11 rồi thao tác lại hồ sơ.
+                      </p>
+                    )}
+                    {timeline.map((row) => (
+                      <div className={styles.actRow} key={row.id}>
+                        <div>
+                          <strong>{row.title}</strong>
+                          <span className={styles.meta}>
+                            {[row.at ? new Date(row.at).toLocaleString('vi-VN') : '', row.meta]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </span>
+                        </div>
+                        <span className={badgeClass(row.kind)}>{row.badge}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
                 {activityTab === 'comment' && (
@@ -1573,7 +1734,15 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                     </div>
                     <div className={styles.bigNum}>
                       {moneyVi(master.amount)}
-                      <span>Số tiền đề nghị · {statusVi(master.status)}</span>
+                      <span>
+                        Số tiền đề nghị ·{' '}
+                        {chairStatusDetailVi(
+                          master.currentStepKey,
+                          master.status,
+                          master.paymentDueAt,
+                          isChairDossierApproved(master, workItems)
+                        )}
+                      </span>
                     </div>
                   </div>
                   <div className={styles.railCard}>
@@ -1592,7 +1761,14 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                     </div>
                     <div className={styles.kv}>
                       <b>Trạng thái</b>
-                      <span>{statusVi(master.status)}</span>
+                      <span>
+                        {chairStatusDetailVi(
+                          master.currentStepKey,
+                          master.status,
+                          master.paymentDueAt,
+                          isChairDossierApproved(master, workItems)
+                        )}
+                      </span>
                     </div>
                     <div className={styles.kv}>
                       <b>Bước</b>
@@ -1673,7 +1849,13 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         onDismiss={busy ? undefined : () => setDialog(undefined)}
         dialogContentProps={{
           type: DialogType.normal,
-          title: dialog ? dialogTitleVi(dialog) : ''
+          title: dialog
+            ? dialog === 'attach'
+              ? uploadMode === 'step'
+                ? 'Tải tài liệu hỗ trợ'
+                : 'Tải tài liệu checklist'
+              : dialogTitleVi(dialog)
+            : ''
         }}
         modalProps={{ isBlocking: true, styles: { main: { maxWidth: 520 } } }}
       >
@@ -1684,7 +1866,29 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               <textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
             </label>
           )}
+          {dialog === 'accept' && (
+            <>
+              <p className={styles.hint}>
+                Trưởng phòng / người được giao tiếp nhận bước hiện tại và bắt buộc đặt hạn xử
+                lý. Chưa tiếp nhận thì không được chuyển bước / xác nhận thanh toán.
+              </p>
+              <label className={styles.field}>
+                Hạn xử lý (bắt buộc)
+                <input
+                  type="date"
+                  value={acceptDue}
+                  onChange={(e) => setAcceptDue(e.target.value)}
+                />
+              </label>
+            </>
+          )}
           {dialog === 'approve' && (
+            <p className={styles.hint}>
+              Phê duyệt hồ sơ tại CT.HĐQT. Sau bước này hồ sơ vẫn ở CT.HĐQT — chưa chuyển TCKT
+              thanh toán. Dùng «Duyệt thanh toán» để đặt hạn và chuyển bước.
+            </p>
+          )}
+          {dialog === 'approvePay' && (
             <label className={styles.field}>
               Thời hạn thanh toán
               <input
@@ -1696,7 +1900,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           )}
           {(dialog === 'attach' || dialog === 'unc') && (
             <>
-              {dialog === 'attach' && (
+              {dialog === 'attach' && uploadMode === 'checklist' && (
                 <label className={styles.field}>
                   Mục checklist
                   <select
@@ -1711,6 +1915,13 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                   </select>
                 </label>
               )}
+              {dialog === 'attach' && uploadMode === 'step' && (
+                <p className={styles.hint}>
+                  Tải tài liệu hỗ trợ cho bước{' '}
+                  <b>{stepShortVi(master ? master.currentStepKey : '')}</b> (nhóm StepAttachment —
+                  không thay thế checklist bắt buộc).
+                </p>
+              )}
               <label className={styles.field}>
                 Chọn tệp
                 <input ref={fileRef} type="file" />
@@ -1719,7 +1930,14 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           )}
           {dialog === 'submit' && (
             <p className={styles.hint}>
-              Hệ thống sẽ kiểm tra checklist bắt buộc trước khi chuyển sang bước tiếp theo.
+              Hệ thống kiểm tra đủ tài liệu checklist bắt buộc rồi trình trưởng phòng (chưa sang
+              BPCM2). Không cần đánh giá Đạt/Không đạt ở bước này.
+            </p>
+          )}
+          {dialog === 'mgrApprove' && (
+            <p className={styles.hint}>
+              Xác nhận duyệt gửi hồ sơ sang BPCM2. Không yêu cầu đánh giá Đạt hết checklist — việc
+              đó thuộc các bước kiểm tra sau.
             </p>
           )}
           {dialog === 'forward' && (

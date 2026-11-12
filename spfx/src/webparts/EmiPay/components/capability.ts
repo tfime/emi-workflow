@@ -140,6 +140,7 @@ export function canViewInternal(persona: PayPersona): boolean {
 export function dialogTitle(kind: Exclude<DialogKind, undefined>): string {
   const titles: Record<Exclude<DialogKind, undefined>, string> = {
     submit: 'Gửi / gửi lại hồ sơ',
+    mgrApprove: 'Trưởng phòng — Duyệt gửi sang BPCM2',
     accept: 'Tiếp nhận xử lý',
     assign: 'Phân công nhân sự',
     checklist: 'Đánh giá checklist',
@@ -148,7 +149,8 @@ export function dialogTitle(kind: Exclude<DialogKind, undefined>): string {
     return: 'Trả hồ sơ về BPCM 1',
     withdraw: 'Rút hồ sơ',
     cancel: 'Hủy hồ sơ',
-    approve: 'CT.HĐQT — Duyệt',
+    approve: 'CT.HĐQT — Phê duyệt hồ sơ',
+    approvePay: 'CT.HĐQT — Duyệt thanh toán',
     reject: 'CT.HĐQT — Không duyệt',
     unc: 'Tải UNC / chứng từ thanh toán',
     confirmPay: 'Xác nhận đã thanh toán',

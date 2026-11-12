@@ -42,11 +42,23 @@
     "TCKT_CHECK": "CHAIR_APPROVE",
     "CHAIR_APPROVE": "TCKT_PAY"
   },
-  "commands": ["CREATE_REQUEST", "SUBMIT", "DECIDE", "CONFIRM_PAYMENT"],
+  "commands": ["CREATE_REQUEST", "SUBMIT", "ACCEPT", "DECIDE", "CONFIRM_PAYMENT"],
+  "acceptSteps": ["BPCM2_TECH", "BPCM3_PRICE", "TCKT_CHECK", "TCKT_PAY"],
+  "activityEventTypes": [
+    "REQUEST_CREATED",
+    "SUBMITTED_TO_MANAGER",
+    "STEP_ACCEPTED",
+    "MANAGER_APPROVED",
+    "MANAGER_REJECTED",
+    "STEP_PASSED",
+    "STEP_REJECTED",
+    "PAYMENT_CONFIRMED",
+    "COMMAND_REJECTED",
+    "COMMAND_FAILED"
+  ],
   "phase1OutOfScope": [
     "Trusted caller allowlist",
     "NEEDS_RECONCILIATION",
-    "ActivityPublic/Internal audit",
     "StepRecipients OU lookup",
     "ETag conflict handling"
   ]

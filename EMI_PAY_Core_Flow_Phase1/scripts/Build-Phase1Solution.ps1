@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) {
 $phaseRoot = Split-Path $PSScriptRoot -Parent
 $repoRoot = Split-Path $phaseRoot -Parent
 if ([string]::IsNullOrWhiteSpace($OutZip)) {
-    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_10.zip'
+    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_12.zip'
 }
 $staging = Join-Path $phaseRoot '_staging_solution'
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
@@ -24,7 +24,9 @@ $guidWorkItems = 'e21ef6e7-ee31-466a-be3b-65ae30ca7722'
 $guidChecklist = 'd02c6a03-9561-4d90-b5d5-ad30a2fef88b'
 $guidDocIndex = 'a45c74cd-1f21-454c-9fcc-6812692b801b'
 $guidStepRecipients = '7ebac733-193d-4216-bf63-785c6a5f06a2'
-$guidWorkflowSteps = '0135b54a-f4a3-4edc-a738-a64e12feb9ad'
+$guidWorkflowSteps    = '0135b54a-f4a3-4edc-a738-a64e12feb9ad'
+$guidActivityPublic   = '84b57c9e-6b90-4a6b-a200-b3afb4499895'
+$guidActivityInternal = 'b8ceb7ed-3925-4292-af35-4027f41c9d6a'
 $workflowId = '1703d2f2-46de-f111-84ea-000d3aa191f1'
 $workflowFile = "EMI_PAY_CORE_Orchestrator_V1-$($workflowId.ToUpper()).json" -replace '[{}]', ''
 
@@ -412,6 +414,29 @@ $definition = [ordered]@{
                                             authentication = "@parameters('`$authentication')"
                                         }
                                     }
+                                    # Activity: REQUEST_CREATED (idempotent via ActivityKey)
+                                    HTTP_WriteActivity_Create = [ordered]@{
+                                        type     = 'OpenApiConnection'
+                                        runAfter = @{ HTTP_MarkSucceeded_Create = @('Succeeded') }
+                                        inputs   = [ordered]@{
+                                            host           = [ordered]@{
+                                                connectionName = 'shared_sharepointonline'
+                                                operationId    = 'HttpRequest'
+                                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                            }
+                                            parameters     = [ordered]@{
+                                                dataset             = $site
+                                                'parameters/method'  = 'POST'
+                                                'parameters/uri'     = "_api/web/lists(guid'$guidActivityPublic')/items"
+                                                'parameters/headers' = [ordered]@{
+                                                    Accept         = 'application/json;odata=nometadata'
+                                                    'Content-Type' = 'application/json;odata=nometadata'
+                                                }
+                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('CommandKey'), '|REQUEST_CREATED"",""ActivityKey"":""', variables('CommandKey'), '|REQUEST_CREATED"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":1,""EventType"":""REQUEST_CREATED"",""EventTime"":""', utcNow(), '"",""ActorUPN"":""', coalesce(variables('Payload')?['creatorUPN'],''), '"",""ToState"":""Draft"",""Note"":""Ho so duoc tao""}'))"
+                                            }
+                                            authentication = "@parameters('`$authentication')"
+                                        }
+                                    }
                                 }
                             }
                             Case_SUBMIT = [ordered]@{
@@ -642,6 +667,29 @@ $definition = [ordered]@{
                                                             authentication = "@parameters('`$authentication')"
                                                         }
                                                     }
+                                                    # Activity: SUBMITTED_TO_MANAGER
+                                                    HTTP_WriteActivity_Submit = [ordered]@{
+                                                        type     = 'OpenApiConnection'
+                                                        runAfter = @{ HTTP_MarkSucceeded_Submit = @('Succeeded') }
+                                                        inputs   = [ordered]@{
+                                                            host           = [ordered]@{
+                                                                connectionName = 'shared_sharepointonline'
+                                                                operationId    = 'HttpRequest'
+                                                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                            }
+                                                            parameters     = [ordered]@{
+                                                                dataset             = $site
+                                                                'parameters/method'  = 'POST'
+                                                                'parameters/uri'     = "_api/web/lists(guid'$guidActivityPublic')/items"
+                                                                'parameters/headers' = [ordered]@{
+                                                                    Accept         = 'application/json;odata=nometadata'
+                                                                    'Content-Type' = 'application/json;odata=nometadata'
+                                                                }
+                                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('CommandKey'), '|SUBMITTED_TO_MANAGER"",""ActivityKey"":""', variables('CommandKey'), '|SUBMITTED_TO_MANAGER"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":', string(variables('ReviewRound')), ',""EventType"":""SUBMITTED_TO_MANAGER"",""EventTime"":""', utcNow(), '"",""ActorUPN"":""', coalesce(variables('Payload')?['actorUPN'],''), '"",""FromState"":""', coalesce(first(body('HTTP_FindMaster_Submit')?['value'])?['Status'],'Draft'), '"",""ToState"":""AwaitingManager"",""Note"":""Trinh truong phong""}'))"
+                                                            }
+                                                            authentication = "@parameters('`$authentication')"
+                                                        }
+                                                    }
                                                 }
                                                 else       = [ordered]@{
                                                     actions = [ordered]@{
@@ -738,7 +786,8 @@ $definition = [ordered]@{
                                                 runAfter = @{ COMPOSE_Next_Decide = @('Succeeded') }
                                                 inputs   = [ordered]@{
                                                     name  = 'NextStepKey'
-                                                    value = "@if(and(equals(first(body('HTTP_FindMaster_Decide')?['value'])?['Status'],'AwaitingManager'),equals(outputs('COMPOSE_Next_Decide'),'BPCM1_PREPARE')),'BPCM2_TECH',if(equals(outputs('COMPOSE_Next_Decide'),'BPCM2_TECH'),'BPCM3_PRICE',if(equals(outputs('COMPOSE_Next_Decide'),'BPCM3_PRICE'),'TCKT_CHECK',if(equals(outputs('COMPOSE_Next_Decide'),'TCKT_CHECK'),'CHAIR_APPROVE',if(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),'TCKT_PAY','INVALID')))))"
+                                                    # CHAIR: không paymentDueAt → giữ CHAIR (duyệt hồ sơ); có due → TCKT_PAY (duyệt TT)
+                                                    value = "@if(and(equals(first(body('HTTP_FindMaster_Decide')?['value'])?['Status'],'AwaitingManager'),equals(outputs('COMPOSE_Next_Decide'),'BPCM1_PREPARE')),'BPCM2_TECH',if(equals(outputs('COMPOSE_Next_Decide'),'BPCM2_TECH'),'BPCM3_PRICE',if(equals(outputs('COMPOSE_Next_Decide'),'BPCM3_PRICE'),'TCKT_CHECK',if(equals(outputs('COMPOSE_Next_Decide'),'TCKT_CHECK'),'CHAIR_APPROVE',if(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),if(empty(coalesce(variables('Payload')?['paymentDueAt'],'')),'CHAIR_APPROVE','TCKT_PAY'),'INVALID')))))"
                                                 }
                                             }
                                             HTTP_GetWS_Decide = [ordered]@{
@@ -822,14 +871,67 @@ $definition = [ordered]@{
                                                             value = "@coalesce(first(body('HTTP_FindMaster_Decide')?['value'])?['CurrentStepInstanceKey'],'')"
                                                         }
                                                     }
+                                                    # ACCEPT gate: lấy WI hiện tại để kiểm tra AcceptedAt
+                                                    HTTP_GetWI_AcceptCheck = [ordered]@{
+                                                        type     = 'OpenApiConnection'
+                                                        runAfter = @{ SET_OldSIK_Decide = @('Succeeded') }
+                                                        inputs   = [ordered]@{
+                                                            host           = [ordered]@{
+                                                                connectionName = 'shared_sharepointonline'
+                                                                operationId    = 'HttpRequest'
+                                                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                            }
+                                                            parameters     = [ordered]@{
+                                                                dataset             = $site
+                                                                'parameters/method'  = 'GET'
+                                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidWorkItems'')/items?`$filter=StepInstanceKey eq ''', replace(variables('StepInstanceKey'),'''',''''''), '''&`$select=Id,AcceptedAt,State&`$top=2')"
+                                                                'parameters/headers' = [ordered]@{ Accept = 'application/json;odata=nometadata' }
+                                                            }
+                                                            authentication = "@parameters('`$authentication')"
+                                                        }
+                                                    }
+                                                    # WI CHAIR đã Approved (lần 1 duyệt hồ sơ) — bắt buộc trước khi PASS + paymentDueAt
+                                                    HTTP_GetChairDossierApproved = [ordered]@{
+                                                        type     = 'OpenApiConnection'
+                                                        runAfter = @{ HTTP_GetWI_AcceptCheck = @('Succeeded') }
+                                                        inputs   = [ordered]@{
+                                                            host           = [ordered]@{
+                                                                connectionName = 'shared_sharepointonline'
+                                                                operationId    = 'HttpRequest'
+                                                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                            }
+                                                            parameters     = [ordered]@{
+                                                                dataset             = $site
+                                                                'parameters/method'  = 'GET'
+                                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidWorkItems'')/items?`$filter=RequestKey eq ''', replace(variables('RequestKey'),'''',''''''), ''' and StepKey eq ''CHAIR_APPROVE'' and Decision eq ''Approved''&`$select=Id,Decision,State&`$top=5')"
+                                                                'parameters/headers' = [ordered]@{ Accept = 'application/json;odata=nometadata' }
+                                                            }
+                                                            authentication = "@parameters('`$authentication')"
+                                                        }
+                                                    }
+                                                    # IF_ChairDueReady: ACCEPT gate + CHAIR hai bước (hồ sơ / thanh toán)
                                                     IF_ChairDueReady = [ordered]@{
                                                         type       = 'If'
-                                                        runAfter   = @{ SET_OldSIK_Decide = @('Succeeded') }
+                                                        runAfter   = @{ HTTP_GetChairDossierApproved = @('Succeeded') }
                                                         expression = [ordered]@{
-                                                            or = @(
-                                                                [ordered]@{ not = [ordered]@{ equals = @("@outputs('COMPOSE_Next_Decide')", 'CHAIR_APPROVE') } }
-                                                                [ordered]@{ equals = @("@variables('Payload')?['skipPaymentDueAtForPilot']", $true) }
-                                                                [ordered]@{ not = [ordered]@{ empty = @("@coalesce(variables('Payload')?['paymentDueAt'],'')") } }
+                                                            and = @(
+                                                                # Gate 1: ACCEPT — bỏ qua nếu TP duyệt gửi (AwaitingManager) hoặc bước CHAIR
+                                                                [ordered]@{
+                                                                    or = @(
+                                                                        [ordered]@{ and = @([ordered]@{ equals = @("@first(body('HTTP_FindMaster_Decide')?['value'])?['Status']", 'AwaitingManager') }, [ordered]@{ equals = @("@outputs('COMPOSE_Next_Decide')", 'BPCM1_PREPARE') }) }
+                                                                        [ordered]@{ equals = @("@outputs('COMPOSE_Next_Decide')", 'CHAIR_APPROVE') }
+                                                                        [ordered]@{ not = [ordered]@{ empty = @("@coalesce(first(body('HTTP_GetWI_AcceptCheck')?['value'])?['AcceptedAt'],'')") } }
+                                                                    )
+                                                                }
+                                                                # Gate 2: CHAIR + paymentDueAt chỉ khi đã duyệt hồ sơ (WI Approved); không due = duyệt hồ sơ OK
+                                                                [ordered]@{
+                                                                    or = @(
+                                                                        [ordered]@{ not = [ordered]@{ equals = @("@outputs('COMPOSE_Next_Decide')", 'CHAIR_APPROVE') } }
+                                                                        [ordered]@{ empty = @("@coalesce(variables('Payload')?['paymentDueAt'],'')") }
+                                                                        [ordered]@{ equals = @("@variables('Payload')?['skipPaymentDueAtForPilot']", $true) }
+                                                                        [ordered]@{ greater = @("@length(body('HTTP_GetChairDossierApproved')?['value'])", 0) }
+                                                                    )
+                                                                }
                                                             )
                                                         }
                                                         actions    = [ordered]@{
@@ -923,7 +1025,7 @@ $definition = [ordered]@{
                                                                             'IF-MATCH'      = '*'
                                                                             'X-HTTP-Method' = 'MERGE'
                                                                         }
-                                                                        'parameters/body'    = "@json(concat('{""Status"":""', outputs('SET_Meta_Decide')?['status'], '"",""CurrentStepKey"":""', variables('NextStepKey'), '"",""CurrentStepInstanceKey"":""', variables('StepInstanceKey'), '"",""CurrentOUCode"":""', outputs('SET_Meta_Decide')?['ou'], '""', if(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'), concat(',""PaymentDueAt"":""', string(variables('Payload')?['paymentDueAt']), '""'), ''), '}'))"
+                                                                        'parameters/body'    = "@json(concat('{""Status"":""', outputs('SET_Meta_Decide')?['status'], '"",""CurrentStepKey"":""', variables('NextStepKey'), '"",""CurrentStepInstanceKey"":""', variables('StepInstanceKey'), '"",""CurrentOUCode"":""', outputs('SET_Meta_Decide')?['ou'], '""', if(equals(variables('NextStepKey'),'TCKT_PAY'), concat(',""PaymentDueAt"":""', string(variables('Payload')?['paymentDueAt']), '""'), ''), '}'))"
                                                                     }
                                                                     authentication = "@parameters('`$authentication')"
                                                                 }
@@ -952,6 +1054,29 @@ $definition = [ordered]@{
                                                                     authentication = "@parameters('`$authentication')"
                                                                 }
                                                             }
+                                                            # Activity: DECIDE PASS (EventType động theo FromState)
+                                                            HTTP_WriteActivity_DecidePass = [ordered]@{
+                                                                type     = 'OpenApiConnection'
+                                                                runAfter = @{ HTTP_MarkSucceeded_Decide = @('Succeeded') }
+                                                                inputs   = [ordered]@{
+                                                                    host           = [ordered]@{
+                                                                        connectionName = 'shared_sharepointonline'
+                                                                        operationId    = 'HttpRequest'
+                                                                        apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                                    }
+                                                                    parameters     = [ordered]@{
+                                                                        dataset             = $site
+                                                                        'parameters/method'  = 'POST'
+                                                                        'parameters/uri'     = "_api/web/lists(guid'$guidActivityPublic')/items"
+                                                                        'parameters/headers' = [ordered]@{
+                                                                            Accept         = 'application/json;odata=nometadata'
+                                                                            'Content-Type' = 'application/json;odata=nometadata'
+                                                                        }
+                                                                        'parameters/body'    = "@json(concat('{""Title"":""', variables('CommandKey'), '|', if(and(equals(first(body('HTTP_FindMaster_Decide')?['value'])?['Status'],'AwaitingManager'),equals(outputs('COMPOSE_Next_Decide'),'BPCM1_PREPARE')),'MANAGER_APPROVED',if(and(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),equals(variables('NextStepKey'),'CHAIR_APPROVE')),'CHAIR_APPROVED',if(and(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),equals(variables('NextStepKey'),'TCKT_PAY')),'STEP_PASSED','STEP_PASSED'))), '"",""ActivityKey"":""', variables('CommandKey'), '|', if(and(equals(first(body('HTTP_FindMaster_Decide')?['value'])?['Status'],'AwaitingManager'),equals(outputs('COMPOSE_Next_Decide'),'BPCM1_PREPARE')),'MANAGER_APPROVED',if(and(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),equals(variables('NextStepKey'),'CHAIR_APPROVE')),'CHAIR_APPROVED','STEP_PASSED')), '"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":', string(variables('ReviewRound')), ',""EventType"":""', if(and(equals(first(body('HTTP_FindMaster_Decide')?['value'])?['Status'],'AwaitingManager'),equals(outputs('COMPOSE_Next_Decide'),'BPCM1_PREPARE')),'MANAGER_APPROVED',if(and(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),equals(variables('NextStepKey'),'CHAIR_APPROVE')),'CHAIR_APPROVED','STEP_PASSED')), '"",""EventTime"":""', utcNow(), '"",""ActorUPN"":""', coalesce(variables('Payload')?['actorUPN'],''), '"",""FromState"":""', outputs('COMPOSE_Next_Decide'), '"",""ToState"":""', variables('NextStepKey'), '"",""Note"":""', if(and(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),equals(variables('NextStepKey'),'CHAIR_APPROVE')),'CHAIR dossier approved',if(and(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),equals(variables('NextStepKey'),'TCKT_PAY')),'CHAIR payment approved','DECIDE PASS')), '""}'))"
+                                                                    }
+                                                                    authentication = "@parameters('`$authentication')"
+                                                                }
+                                                            }
                                                         }
                                                         else       = [ordered]@{
                                                             actions = [ordered]@{
@@ -973,7 +1098,8 @@ $definition = [ordered]@{
                                                                                 'IF-MATCH'      = '*'
                                                                                 'X-HTTP-Method' = 'MERGE'
                                                                             }
-                                                                            'parameters/body'    = "@json(concat('{""State"":""Rejected"",""ErrorMessage"":""CHAIR PASS requires paymentDueAt"",""ProcessedAt"":""', utcNow(), '""}'))"
+                                                                            # Phân biệt lỗi: thiếu ACCEPT hoặc CHAIR chưa duyệt hồ sơ mà đã gửi paymentDueAt
+                                                                            'parameters/body'    = "@json(concat('{""State"":""Rejected"",""ErrorMessage"":""', if(and(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),not(empty(coalesce(variables('Payload')?['paymentDueAt'],''))),equals(length(body('HTTP_GetChairDossierApproved')?['value']),0)),'CHAIR dossier approve required before paymentDueAt',if(or(and(equals(first(body('HTTP_FindMaster_Decide')?['value'])?['Status'],'AwaitingManager'),equals(outputs('COMPOSE_Next_Decide'),'BPCM1_PREPARE')),equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),not(empty(coalesce(first(body('HTTP_GetWI_AcceptCheck')?['value'])?['AcceptedAt'],'')))),'DECIDE gate failed','ACCEPT required before DECIDE')), '"",""ProcessedAt"":""', utcNow(), '""}'))"
                                                                         }
                                                                         authentication = "@parameters('`$authentication')"
                                                                     }
@@ -1213,6 +1339,31 @@ $definition = [ordered]@{
                                                                 authentication = "@parameters('`$authentication')"
                                                             }
                                                         }
+                                                        # Activity: DECIDE REJECT (ghi ActivityPublic vì là hành động chủ ý)
+                                                        HTTP_WriteActivity_Reject = [ordered]@{
+                                                            type     = 'OpenApiConnection'
+                                                            runAfter = @{ HTTP_MarkSucceeded_Reject = @('Succeeded') }
+                                                            inputs   = [ordered]@{
+                                                                host           = [ordered]@{
+                                                                    connectionName = 'shared_sharepointonline'
+                                                                    operationId    = 'HttpRequest'
+                                                                    apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                                }
+                                                                parameters     = [ordered]@{
+                                                                    dataset             = $site
+                                                                    'parameters/method'  = 'POST'
+                                                                    'parameters/uri'     = "_api/web/lists(guid'$guidActivityPublic')/items"
+                                                                    'parameters/headers' = [ordered]@{
+                                                                        Accept         = 'application/json;odata=nometadata'
+                                                                        'Content-Type' = 'application/json;odata=nometadata'
+                                                                    }
+                                                                    # EventType: MANAGER_REJECTED nếu đang ở AwaitingManager, STEP_REJECTED nếu bước KT
+                                                                    # Phải dùng HTTP_FindMaster_Reject (cùng nhánh) — không tham chiếu HTTP_FindMaster_Decide (nhánh PASS).
+                                                                    'parameters/body'    = "@json(concat('{""Title"":""', variables('CommandKey'), '|', if(equals(first(body('HTTP_FindMaster_Reject')?['value'])?['Status'],'AwaitingManager'),'MANAGER_REJECTED','STEP_REJECTED'), '"",""ActivityKey"":""', variables('CommandKey'), '|', if(equals(first(body('HTTP_FindMaster_Reject')?['value'])?['Status'],'AwaitingManager'),'MANAGER_REJECTED','STEP_REJECTED'), '"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":', string(variables('ReviewRound')), ',""EventType"":""', if(equals(first(body('HTTP_FindMaster_Reject')?['value'])?['Status'],'AwaitingManager'),'MANAGER_REJECTED','STEP_REJECTED'), '"",""EventTime"":""', utcNow(), '"",""ActorUPN"":""', coalesce(variables('Payload')?['actorUPN'],''), '"",""FromState"":""', coalesce(first(body('HTTP_FindMaster_Reject')?['value'])?['Status'], outputs('COMPOSE_RejectStep'),''), '"",""ToState"":""', if(equals(first(body('HTTP_FindMaster_Reject')?['value'])?['Status'],'AwaitingManager'),'Draft','Returned'), '"",""Note"":""', replace(coalesce(outputs('COMPOSE_RejectReason'), variables('Payload')?['note'],''), '""', ''), '""}'))"
+                                                                }
+                                                                authentication = "@parameters('`$authentication')"
+                                                            }
+                                                        }
                                                     }
                                                     else       = [ordered]@{
                                                         actions = [ordered]@{
@@ -1240,6 +1391,216 @@ $definition = [ordered]@{
                                                                 }
                                                             }
                                                         }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Case_ACCEPT = [ordered]@{
+                                case    = 'ACCEPT'
+                                actions = [ordered]@{
+                                    HTTP_FindMaster_Accept = [ordered]@{
+                                        type   = 'OpenApiConnection'
+                                        inputs = [ordered]@{
+                                            host           = [ordered]@{
+                                                connectionName = 'shared_sharepointonline'
+                                                operationId    = 'HttpRequest'
+                                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                            }
+                                            parameters     = [ordered]@{
+                                                dataset             = $site
+                                                'parameters/method'  = 'GET'
+                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidRequests'')/items?`$filter=RequestKey eq ''', replace(variables('RequestKey'),'''',''''''), '''&`$top=2')"
+                                                'parameters/headers' = [ordered]@{ Accept = 'application/json;odata=nometadata' }
+                                            }
+                                            authentication = "@parameters('`$authentication')"
+                                        }
+                                    }
+                                    IF_AcceptValid = [ordered]@{
+                                        type       = 'If'
+                                        runAfter   = @{ HTTP_FindMaster_Accept = @('Succeeded') }
+                                        expression = [ordered]@{
+                                            and = @(
+                                                [ordered]@{ equals = @("@length(body('HTTP_FindMaster_Accept')?['value'])", 1) }
+                                                [ordered]@{
+                                                    or = @(
+                                                        [ordered]@{ equals = @("@first(body('HTTP_FindMaster_Accept')?['value'])?['CurrentStepKey']", 'BPCM2_TECH') }
+                                                        [ordered]@{ equals = @("@first(body('HTTP_FindMaster_Accept')?['value'])?['CurrentStepKey']", 'BPCM3_PRICE') }
+                                                        [ordered]@{ equals = @("@first(body('HTTP_FindMaster_Accept')?['value'])?['CurrentStepKey']", 'TCKT_CHECK') }
+                                                        [ordered]@{ equals = @("@first(body('HTTP_FindMaster_Accept')?['value'])?['CurrentStepKey']", 'TCKT_PAY') }
+                                                    )
+                                                }
+                                                [ordered]@{ not = [ordered]@{ empty = @("@coalesce(variables('Payload')?['dueAt'],'')") } }
+                                            )
+                                        }
+                                        actions    = [ordered]@{
+                                            SET_OldSIK_Accept = [ordered]@{
+                                                type   = 'SetVariable'
+                                                inputs = [ordered]@{
+                                                    name  = 'StepInstanceKey'
+                                                    value = "@coalesce(first(body('HTTP_FindMaster_Accept')?['value'])?['CurrentStepInstanceKey'],'')"
+                                                }
+                                            }
+                                            SET_Round_Accept = [ordered]@{
+                                                type     = 'SetVariable'
+                                                runAfter = @{ SET_OldSIK_Accept = @('Succeeded') }
+                                                inputs   = [ordered]@{
+                                                    name  = 'ReviewRound'
+                                                    value = "@int(coalesce(first(body('HTTP_FindMaster_Accept')?['value'])?['ReviewRound'],1))"
+                                                }
+                                            }
+                                            HTTP_FindWI_Accept = [ordered]@{
+                                                type     = 'OpenApiConnection'
+                                                runAfter = @{ SET_Round_Accept = @('Succeeded') }
+                                                inputs   = [ordered]@{
+                                                    host           = [ordered]@{
+                                                        connectionName = 'shared_sharepointonline'
+                                                        operationId    = 'HttpRequest'
+                                                        apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                    }
+                                                    parameters     = [ordered]@{
+                                                        dataset             = $site
+                                                        'parameters/method'  = 'GET'
+                                                        'parameters/uri'     = "@concat('_api/web/lists(guid''$guidWorkItems'')/items?`$filter=StepInstanceKey eq ''', replace(variables('StepInstanceKey'),'''',''''''), '''&`$select=Id,AcceptedAt,State&`$top=2')"
+                                                        'parameters/headers' = [ordered]@{ Accept = 'application/json;odata=nometadata' }
+                                                    }
+                                                    authentication = "@parameters('`$authentication')"
+                                                }
+                                            }
+                                            IF_AcceptWiReady = [ordered]@{
+                                                type       = 'If'
+                                                runAfter   = @{ HTTP_FindWI_Accept = @('Succeeded') }
+                                                expression = [ordered]@{
+                                                    and = @(
+                                                        [ordered]@{ equals = @("@length(body('HTTP_FindWI_Accept')?['value'])", 1) }
+                                                        [ordered]@{ empty = @("@coalesce(first(body('HTTP_FindWI_Accept')?['value'])?['AcceptedAt'],'')") }
+                                                    )
+                                                }
+                                                actions    = [ordered]@{
+                                                    HTTP_MergeWI_Accept = [ordered]@{
+                                                        type   = 'OpenApiConnection'
+                                                        inputs = [ordered]@{
+                                                            host           = [ordered]@{
+                                                                connectionName = 'shared_sharepointonline'
+                                                                operationId    = 'HttpRequest'
+                                                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                            }
+                                                            parameters     = [ordered]@{
+                                                                dataset             = $site
+                                                                'parameters/method'  = 'POST'
+                                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidWorkItems'')/items(', string(first(body('HTTP_FindWI_Accept')?['value'])?['Id']), ')')"
+                                                                'parameters/headers' = [ordered]@{
+                                                                    Accept          = 'application/json;odata=nometadata'
+                                                                    'Content-Type'  = 'application/json;odata=nometadata'
+                                                                    'IF-MATCH'      = '*'
+                                                                    'X-HTTP-Method' = 'MERGE'
+                                                                }
+                                                                'parameters/body'    = "@json(concat('{""AcceptedByUPN"":""', coalesce(variables('Payload')?['actorUPN'],''), '"",""AcceptedAt"":""', utcNow(), '"",""DueAt"":""', string(variables('Payload')?['dueAt']), '""}'))"
+                                                            }
+                                                            authentication = "@parameters('`$authentication')"
+                                                        }
+                                                    }
+                                                    HTTP_MarkSucceeded_Accept = [ordered]@{
+                                                        type     = 'OpenApiConnection'
+                                                        runAfter = @{ HTTP_MergeWI_Accept = @('Succeeded') }
+                                                        inputs   = [ordered]@{
+                                                            host           = [ordered]@{
+                                                                connectionName = 'shared_sharepointonline'
+                                                                operationId    = 'HttpRequest'
+                                                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                            }
+                                                            parameters     = [ordered]@{
+                                                                dataset             = $site
+                                                                'parameters/method'  = 'POST'
+                                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
+                                                                'parameters/headers' = [ordered]@{
+                                                                    Accept          = 'application/json;odata=nometadata'
+                                                                    'Content-Type'  = 'application/json;odata=nometadata'
+                                                                    'IF-MATCH'      = '*'
+                                                                    'X-HTTP-Method' = 'MERGE'
+                                                                }
+                                                                'parameters/body'    = "@json(concat('{""State"":""Succeeded"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ProcessedAt"":""', utcNow(), '"",""ErrorMessage"":""""}'))"
+                                                            }
+                                                            authentication = "@parameters('`$authentication')"
+                                                        }
+                                                    }
+                                                    HTTP_WriteActivity_Accept = [ordered]@{
+                                                        type     = 'OpenApiConnection'
+                                                        runAfter = @{ HTTP_MarkSucceeded_Accept = @('Succeeded') }
+                                                        inputs   = [ordered]@{
+                                                            host           = [ordered]@{
+                                                                connectionName = 'shared_sharepointonline'
+                                                                operationId    = 'HttpRequest'
+                                                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                            }
+                                                            parameters     = [ordered]@{
+                                                                dataset             = $site
+                                                                'parameters/method'  = 'POST'
+                                                                'parameters/uri'     = "_api/web/lists(guid'$guidActivityPublic')/items"
+                                                                'parameters/headers' = [ordered]@{
+                                                                    Accept         = 'application/json;odata=nometadata'
+                                                                    'Content-Type' = 'application/json;odata=nometadata'
+                                                                }
+                                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('CommandKey'), '|STEP_ACCEPTED"",""ActivityKey"":""', variables('CommandKey'), '|STEP_ACCEPTED"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":', string(variables('ReviewRound')), ',""EventType"":""STEP_ACCEPTED"",""EventTime"":""', utcNow(), '"",""ActorUPN"":""', coalesce(variables('Payload')?['actorUPN'],''), '"",""FromState"":""', coalesce(first(body('HTTP_FindMaster_Accept')?['value'])?['CurrentStepKey'],''), '"",""ToState"":""', coalesce(first(body('HTTP_FindMaster_Accept')?['value'])?['CurrentStepKey'],''), '"",""Note"":""Tiep nhan DueAt=', string(variables('Payload')?['dueAt']), '""}'))"
+                                                            }
+                                                            authentication = "@parameters('`$authentication')"
+                                                        }
+                                                    }
+                                                }
+                                                else       = [ordered]@{
+                                                    actions = [ordered]@{
+                                                        HTTP_Reject_AcceptWi = [ordered]@{
+                                                            type   = 'OpenApiConnection'
+                                                            inputs = [ordered]@{
+                                                                host           = [ordered]@{
+                                                                    connectionName = 'shared_sharepointonline'
+                                                                    operationId    = 'HttpRequest'
+                                                                    apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                                }
+                                                                parameters     = [ordered]@{
+                                                                    dataset             = $site
+                                                                    'parameters/method'  = 'POST'
+                                                                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
+                                                                    'parameters/headers' = [ordered]@{
+                                                                        Accept          = 'application/json;odata=nometadata'
+                                                                        'Content-Type'  = 'application/json;odata=nometadata'
+                                                                        'IF-MATCH'      = '*'
+                                                                        'X-HTTP-Method' = 'MERGE'
+                                                                    }
+                                                                    'parameters/body'    = "@json(concat('{""State"":""Rejected"",""ErrorMessage"":""ACCEPT requires open WorkItem without AcceptedAt"",""ProcessedAt"":""', utcNow(), '""}'))"
+                                                                }
+                                                                authentication = "@parameters('`$authentication')"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else       = [ordered]@{
+                                            actions = [ordered]@{
+                                                HTTP_Reject_Accept = [ordered]@{
+                                                    type   = 'OpenApiConnection'
+                                                    inputs = [ordered]@{
+                                                        host           = [ordered]@{
+                                                            connectionName = 'shared_sharepointonline'
+                                                            operationId    = 'HttpRequest'
+                                                            apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                        }
+                                                        parameters     = [ordered]@{
+                                                            dataset             = $site
+                                                            'parameters/method'  = 'POST'
+                                                            'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
+                                                            'parameters/headers' = [ordered]@{
+                                                                Accept          = 'application/json;odata=nometadata'
+                                                                'Content-Type'  = 'application/json;odata=nometadata'
+                                                                'IF-MATCH'      = '*'
+                                                                'X-HTTP-Method' = 'MERGE'
+                                                            }
+                                                            'parameters/body'    = "@json(concat('{""State"":""Rejected"",""ErrorMessage"":""ACCEPT requires dueAt and step BPCM2|BPCM3|TCKT_CHECK|TCKT_PAY"",""ProcessedAt"":""', utcNow(), '""}'))"
+                                                        }
+                                                        authentication = "@parameters('`$authentication')"
                                                     }
                                                 }
                                             }
@@ -1298,9 +1659,34 @@ $definition = [ordered]@{
                                                     value = "@coalesce(first(body('HTTP_FindMaster_Confirm')?['value'])?['CurrentStepInstanceKey'],'')"
                                                 }
                                             }
-                                            HTTP_GetUnc_Confirm = [ordered]@{
+                                            HTTP_GetWI_ConfirmAccept = [ordered]@{
                                                 type     = 'OpenApiConnection'
                                                 runAfter = @{ SET_OldSIK_Confirm = @('Succeeded') }
+                                                inputs   = [ordered]@{
+                                                    host           = [ordered]@{
+                                                        connectionName = 'shared_sharepointonline'
+                                                        operationId    = 'HttpRequest'
+                                                        apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                    }
+                                                    parameters     = [ordered]@{
+                                                        dataset             = $site
+                                                        'parameters/method'  = 'GET'
+                                                        'parameters/uri'     = "@concat('_api/web/lists(guid''$guidWorkItems'')/items?`$filter=StepInstanceKey eq ''', replace(variables('StepInstanceKey'),'''',''''''), '''&`$select=Id,AcceptedAt&`$top=2')"
+                                                        'parameters/headers' = [ordered]@{ Accept = 'application/json;odata=nometadata' }
+                                                    }
+                                                    authentication = "@parameters('`$authentication')"
+                                                }
+                                            }
+                                            IF_ConfirmAccepted = [ordered]@{
+                                                type       = 'If'
+                                                runAfter   = @{ HTTP_GetWI_ConfirmAccept = @('Succeeded') }
+                                                expression = [ordered]@{
+                                                    not = [ordered]@{ empty = @("@coalesce(first(body('HTTP_GetWI_ConfirmAccept')?['value'])?['AcceptedAt'],'')") }
+                                                }
+                                                actions    = [ordered]@{
+                                            HTTP_GetUnc_Confirm = [ordered]@{
+                                                type     = 'OpenApiConnection'
+                                                runAfter = @{}
                                                 inputs   = [ordered]@{
                                                     host           = [ordered]@{
                                                         connectionName = 'shared_sharepointonline'
@@ -1436,6 +1822,28 @@ $definition = [ordered]@{
                                                             authentication = "@parameters('`$authentication')"
                                                         }
                                                     }
+                                                    HTTP_WriteActivity_Confirm = [ordered]@{
+                                                        type     = 'OpenApiConnection'
+                                                        runAfter = @{ HTTP_MarkSucceeded_Confirm = @('Succeeded') }
+                                                        inputs   = [ordered]@{
+                                                            host           = [ordered]@{
+                                                                connectionName = 'shared_sharepointonline'
+                                                                operationId    = 'HttpRequest'
+                                                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                            }
+                                                            parameters     = [ordered]@{
+                                                                dataset             = $site
+                                                                'parameters/method'  = 'POST'
+                                                                'parameters/uri'     = "_api/web/lists(guid'$guidActivityPublic')/items"
+                                                                'parameters/headers' = [ordered]@{
+                                                                    Accept         = 'application/json;odata=nometadata'
+                                                                    'Content-Type' = 'application/json;odata=nometadata'
+                                                                }
+                                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('CommandKey'), '|PAYMENT_CONFIRMED"",""ActivityKey"":""', variables('CommandKey'), '|PAYMENT_CONFIRMED"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ReviewRound"":', string(int(coalesce(first(body('HTTP_FindMaster_Confirm')?['value'])?['ReviewRound'],1))), ',""EventType"":""PAYMENT_CONFIRMED"",""EventTime"":""', utcNow(), '"",""ActorUPN"":""', coalesce(variables('Payload')?['actorUPN'],''), '"",""FromState"":""TCKT_PAY"",""ToState"":""SYSTEM_ARCHIVE"",""Note"":""Xac nhan thanh toan""}'))"
+                                                            }
+                                                            authentication = "@parameters('`$authentication')"
+                                                        }
+                                                    }
                                                 }
                                                 else       = [ordered]@{
                                                     actions = [ordered]@{
@@ -1458,6 +1866,35 @@ $definition = [ordered]@{
                                                                         'X-HTTP-Method' = 'MERGE'
                                                                     }
                                                                     'parameters/body'    = "@json(concat('{""State"":""Rejected"",""ErrorMessage"":""CONFIRM blocked: UNC missing in DocumentIndex (DocClass=UNC, IsCurrent, FileUrl)"",""ProcessedAt"":""', utcNow(), '""}'))"
+                                                                }
+                                                                authentication = "@parameters('`$authentication')"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                                }
+                                                else       = [ordered]@{
+                                                    actions = [ordered]@{
+                                                        HTTP_Reject_ConfirmAccept = [ordered]@{
+                                                            type   = 'OpenApiConnection'
+                                                            inputs = [ordered]@{
+                                                                host           = [ordered]@{
+                                                                    connectionName = 'shared_sharepointonline'
+                                                                    operationId    = 'HttpRequest'
+                                                                    apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                                }
+                                                                parameters     = [ordered]@{
+                                                                    dataset             = $site
+                                                                    'parameters/method'  = 'POST'
+                                                                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')"
+                                                                    'parameters/headers' = [ordered]@{
+                                                                        Accept          = 'application/json;odata=nometadata'
+                                                                        'Content-Type'  = 'application/json;odata=nometadata'
+                                                                        'IF-MATCH'      = '*'
+                                                                        'X-HTTP-Method' = 'MERGE'
+                                                                    }
+                                                                    'parameters/body'    = "@json(concat('{""State"":""Rejected"",""ErrorMessage"":""ACCEPT required before CONFIRM_PAYMENT"",""ProcessedAt"":""', utcNow(), '""}'))"
                                                                 }
                                                                 authentication = "@parameters('`$authentication')"
                                                             }
@@ -1537,7 +1974,7 @@ $definition = [ordered]@{
                             parameters     = [ordered]@{
                                 dataset             = $site
                                 'parameters/method'  = 'GET'
-                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')?`$select=Id,State,RequestKey,StepInstanceKey,ErrorMessage,CommandType')"
+                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')?`$select=Id,State,RequestKey,StepInstanceKey,ErrorMessage,CommandType,CommandKey')"
                                 'parameters/headers' = [ordered]@{
                                     Accept = 'application/json;odata=nometadata'
                                 }
@@ -1545,10 +1982,44 @@ $definition = [ordered]@{
                             authentication = "@parameters('`$authentication')"
                         }
                     }
+                    IF_WriteActivityInternal = [ordered]@{
+                        type       = 'If'
+                        runAfter   = @{ HTTP_GetFinal = @('Succeeded') }
+                        expression = [ordered]@{
+                            or = @(
+                                [ordered]@{ equals = @("@coalesce(body('HTTP_GetFinal')?['State'], body('HTTP_GetFinal')?['State/Value'], '')", 'Rejected') }
+                                [ordered]@{ equals = @("@coalesce(body('HTTP_GetFinal')?['State'], body('HTTP_GetFinal')?['State/Value'], '')", 'Failed') }
+                            )
+                        }
+                        actions    = [ordered]@{
+                            HTTP_WriteActivityInternal = [ordered]@{
+                                type   = 'OpenApiConnection'
+                                inputs = [ordered]@{
+                                    host           = [ordered]@{
+                                        connectionName = 'shared_sharepointonline'
+                                        operationId    = 'HttpRequest'
+                                        apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                    }
+                                    parameters     = [ordered]@{
+                                        dataset             = $site
+                                        'parameters/method'  = 'POST'
+                                        'parameters/uri'     = "_api/web/lists(guid'$guidActivityInternal')/items"
+                                        'parameters/headers' = [ordered]@{
+                                            Accept         = 'application/json;odata=nometadata'
+                                            'Content-Type' = 'application/json;odata=nometadata'
+                                        }
+                                        'parameters/body'    = "@json(concat('{""Title"":""', coalesce(body('HTTP_GetFinal')?['CommandKey'], variables('CommandKey')), '|', if(equals(coalesce(body('HTTP_GetFinal')?['State'], body('HTTP_GetFinal')?['State/Value'], ''),'Failed'),'COMMAND_FAILED','COMMAND_REJECTED'), '"",""ActivityKey"":""', coalesce(body('HTTP_GetFinal')?['CommandKey'], variables('CommandKey')), '|', if(equals(coalesce(body('HTTP_GetFinal')?['State'], body('HTTP_GetFinal')?['State/Value'], ''),'Failed'),'COMMAND_FAILED','COMMAND_REJECTED'), '"",""RequestKey"":""', coalesce(body('HTTP_GetFinal')?['RequestKey'], variables('RequestKey')), '"",""StepInstanceKey"":""', coalesce(body('HTTP_GetFinal')?['StepInstanceKey'], variables('StepInstanceKey')), '"",""EventType"":""', if(equals(coalesce(body('HTTP_GetFinal')?['State'], body('HTTP_GetFinal')?['State/Value'], ''),'Failed'),'COMMAND_FAILED','COMMAND_REJECTED'), '"",""EventTime"":""', utcNow(), '"",""ActorUPN"":""', coalesce(variables('Payload')?['actorUPN'], variables('Payload')?['creatorUPN'],''), '"",""Reason"":""', replace(coalesce(body('HTTP_GetFinal')?['ErrorMessage'],''), '""', ''''), '"",""NewValue"":""', coalesce(body('HTTP_GetFinal')?['State'], body('HTTP_GetFinal')?['State/Value'], ''), '""}'))"
+                                    }
+                                    authentication = "@parameters('`$authentication')"
+                                }
+                            }
+                        }
+                        else       = [ordered]@{ actions = [ordered]@{} }
+                    }
                     RESP_Api = [ordered]@{
                         type     = 'Response'
                         kind     = 'Http'
-                        runAfter = @{ HTTP_GetFinal = @('Succeeded') }
+                        runAfter = @{ IF_WriteActivityInternal = @('Succeeded', 'Failed', 'TimedOut', 'Skipped') }
                         inputs   = [ordered]@{
                             statusCode = 200
                             headers    = [ordered]@{
@@ -1664,9 +2135,9 @@ $solution = @"
       <LocalizedName description="EMI_PAY_CORE_V1" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
-      <Description description="Core Orchestrator HTTP API: POST commandId, sync Response; checklist+UNC+CHAIR" languagecode="1033" />
+      <Description description="Core Orchestrator HTTP API 1.0.0.12: CHAIR dossier then paymentDueAt" languagecode="1033" />
     </Descriptions>
-    <Version>1.0.0.10</Version>
+    <Version>1.0.0.12</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>tfime</UniqueName>

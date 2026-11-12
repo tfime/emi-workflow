@@ -4,23 +4,42 @@ import {
   checklistAllPass,
   requiredChecklistReady
 } from './ChecklistService';
-import { IRequestMaster } from './RequestService';
+import { IRequestMaster, IWorkItemRow, isWorkItemAccepted } from './RequestService';
 
 const STEP_PERSONAS: Record<string, PayPersona[]> = {
   BPCM1_PREPARE: ['creator', 'manager'],
-  BPCM2_TECH: ['bpcm2'],
-  BPCM3_PRICE: ['bpcm3'],
-  TCKT_CHECK: ['tckt_check'],
+  BPCM2_TECH: ['bpcm2', 'manager'],
+  BPCM3_PRICE: ['bpcm3', 'manager'],
+  TCKT_CHECK: ['tckt_check', 'manager'],
   CHAIR_APPROVE: ['chair'],
-  TCKT_PAY: ['tckt_pay']
+  TCKT_PAY: ['tckt_pay', 'manager']
 };
 
-/** Actions allowed by Core Flow — BA: AwaitingManager + RoutePlan. */
+const ACCEPT_STEPS = ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK', 'TCKT_PAY'];
+
+/** CHAIR đã duyệt hồ sơ (chưa PaymentDueAt) — WI CHAIR Decision=Approved đã đóng. */
+export function isChairDossierApproved(
+  master: IRequestMaster,
+  workItems: IWorkItemRow[]
+): boolean {
+  if (master.currentStepKey !== 'CHAIR_APPROVE') return false;
+  if (master.paymentDueAt) return false;
+  return workItems.some(
+    (w) =>
+      w.stepKey === 'CHAIR_APPROVE' &&
+      String(w.decision || '').toLowerCase() === 'approved' &&
+      String(w.state || '').toLowerCase() === 'completed'
+  );
+}
+
+/** Actions allowed by Core Flow — BA: AwaitingManager + RoutePlan + ACCEPT/DueAt. */
 export function liveActionsFor(
   master: IRequestMaster,
   checklist: IChecklistItemRow[],
   hasUnc: boolean,
-  persona?: PayPersona
+  persona?: PayPersona,
+  currentWi?: IWorkItemRow,
+  workItems?: IWorkItemRow[]
 ): IPayAction[] {
   const step = master.currentStepKey;
   const status = master.status;
@@ -48,7 +67,7 @@ export function liveActionsFor(
         label: 'Duyệt gửi sang BPCM2',
         primary: true,
         command: 'DECIDE',
-        dialog: 'forward'
+        dialog: 'mgrApprove'
       },
       {
         id: 'mgrReject',
@@ -82,6 +101,21 @@ export function liveActionsFor(
     return actions;
   }
 
+  // BPCM2/3/TCKT: phải ACCEPT (+DueAt) trước DECIDE / CONFIRM
+  if (ACCEPT_STEPS.indexOf(step) >= 0) {
+    if (!isWorkItemAccepted(currentWi)) {
+      return [
+        {
+          id: 'accept',
+          label: 'Tiếp nhận và đặt hạn',
+          primary: true,
+          command: 'ACCEPT',
+          dialog: 'accept'
+        }
+      ];
+    }
+  }
+
   if (step === 'BPCM2_TECH' || step === 'BPCM3_PRICE' || step === 'TCKT_CHECK') {
     const actions: IPayAction[] = [];
     if (checklistAllPass(checklist)) {
@@ -104,8 +138,33 @@ export function liveActionsFor(
   }
 
   if (step === 'CHAIR_APPROVE') {
+    const dossierDone = isChairDossierApproved(master, workItems || []);
+    if (dossierDone) {
+      return [
+        {
+          id: 'approvePay',
+          label: 'Duyệt thanh toán',
+          primary: true,
+          command: 'DECIDE',
+          dialog: 'approvePay'
+        },
+        {
+          id: 'reject',
+          label: 'Không phê duyệt',
+          danger: true,
+          command: 'DECIDE',
+          dialog: 'reject'
+        }
+      ];
+    }
     return [
-      { id: 'approve', label: 'Phê duyệt', primary: true, command: 'DECIDE', dialog: 'approve' },
+      {
+        id: 'approve',
+        label: 'Phê duyệt hồ sơ',
+        primary: true,
+        command: 'DECIDE',
+        dialog: 'approve'
+      },
       {
         id: 'reject',
         label: 'Không phê duyệt',

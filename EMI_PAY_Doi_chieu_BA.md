@@ -1,25 +1,23 @@
 # EMI PAY — Đối chiếu BA với phần đã làm
 
-> Rà soát 12/11/2026 (cập nhật BA: duyệt nội bộ BPCM1 + RoutePlan). Nguồn: `BA.md`, quy tắc V1.0, Core Flow, `LivePayApp`.
+> Rà soát 12/11/2026 (cập nhật: Core **1.0.0.12** CHAIR duyệt hồ sơ rồi duyệt TT). Nguồn: `BA.md`, quy tắc V1.0, Core Flow, `LivePayApp`.
 >
 > **Đủ trên live** nghĩa là lệnh hoặc màn hình đã nối dữ liệu thật. Dialog demo không tính là đã làm.
 >
-> **BA mới (đã chốt):** `SUBMIT` = trình TP (`AwaitingManager`); TP `DECIDE` PASS mới → BPCM2; OU các bước từ `RoutePlanJson`.
+> **BA mới (đã chốt):** `SUBMIT` = trình TP (`AwaitingManager`); TP `DECIDE` PASS → BPCM2; `ACCEPT`+`DueAt` trước DECIDE ở bước phòng; OU từ `RoutePlanJson`.
 
 ## Kết quả
 
 | Trạng thái | Số đầu mục | Ý nghĩa |
 |---|---:|---|
-| Đủ trên live | 13 | Lệnh hoặc màn hình đã chạy với list thật |
-| Một phần | 15 | Có dữ liệu hoặc form, chưa đủ quy tắc BA |
-| Chưa có | 27 | Chưa có lệnh Core, chưa có màn hình live |
+| Đủ trên live | 16 | Lệnh hoặc màn hình đã chạy với list thật |
+| Một phần | 14 | Có dữ liệu hoặc form, chưa đủ quy tắc BA |
+| Chưa có | 25 | Chưa có lệnh Core, chưa có màn hình live |
 | **Tổng** | **55** | |
 
-Core chỉ nhận bốn lệnh: `CREATE_REQUEST`, `SUBMIT`, `DECIDE`, `CONFIRM_PAYMENT`. Lệnh khác bị từ chối là `Unknown CommandType`.
+Core nhận năm lệnh: `CREATE_REQUEST`, `SUBMIT`, `ACCEPT`, `DECIDE`, `CONFIRM_PAYMENT`.
 
-Luồng một hồ sơ từ tạo đến chờ lưu trữ đã có trên tenant (`plan.md`, UAT Core tới 1.0.0.9). BA mục 8 ghi SPFx và Power Automate chưa nghiệm thu; bản đó cũ hơn `plan.md`. UAT giao diện trên trang EMI-Pay vẫn đang chờ (bước 8 trong kế hoạch port).
-
-Khoảng trống chặn nhiều người dùng là quyền và vai trò. Nhân sự đúng bước hiện vẫn bấm được chuyển bước. Chưa có tiếp nhận, hạn xử lý, phân công nhiều người, hay quyền đọc theo từng hồ sơ.
+Luồng tạo → Archiving: Core **1.0.0.12** (Activity + ACCEPT + CHAIR hai bước). UAT UI trên EMI-Pay vẫn chờ (port bước 8). Còn thiếu phân công nhiều người, ủy quyền, quyền động theo hồ sơ.
 
 ## Theo nhóm
 
@@ -27,11 +25,11 @@ Khoảng trống chặn nhiều người dùng là quyền và vai trò. Nhân s
 |---|---:|---:|---:|
 | Khởi tạo | 4 | 4 | 0 |
 | Quyết định bước | 5 | 1 | 0 |
-| Phân công và ủy quyền | 0 | 0 | 7 |
+| Phân công và ủy quyền | 1 | 0 | 6 |
 | Checklist và tài liệu | 1 | 4 | 2 |
-| Hạn và thông báo | 1 | 0 | 5 |
+| Hạn và thông báo | 2 | 0 | 4 |
 | Hủy và lưu trữ | 0 | 1 | 4 |
-| Quyền và nhật ký | 1 | 2 | 3 |
+| Quyền và nhật ký | 1 | 3 | 2 |
 | Màn hình | 1 | 3 | 6 |
 
 ## Việc cần có trước khi nhiều người cùng chạy
@@ -40,7 +38,7 @@ Khoảng trống chặn nhiều người dùng là quyền và vai trò. Nhân s
 |---:|---|---|
 | 1 | Quyền động và cổng lệnh tin cậy | Không tin `ActorUPN`; cấp đọc/ghi theo hồ sơ trước go-live |
 | 2 | Tách người xử lý và người chốt | Chỉ trưởng phòng hoặc người được ủy quyền được `DECIDE` |
-| 3 | Tiếp nhận, hạn, phân công | WorkItem mở thẳng `InReview`, không có Assignments |
+| 3 | Phân công nhiều người / Assignments | ACCEPT+DueAt đã có; chưa giao nhiều nhân sự |
 | 4 | Checklist theo bộ phận và lượt | Kết quả Đạt của BPCM2 không được ghi đè cho BPCM3 |
 | 5 | Hủy, lưu trữ, thông báo | `Archiving` dừng ở trạng thái; chưa `COMPLETED`, chưa email |
 
@@ -69,15 +67,15 @@ Khoảng trống chặn nhiều người dùng là quyền và vai trò. Nhân s
 | Chuyển BPCM2, BPCM3, TCKT kiểm tra, CT.HĐQT, TCKT thanh toán | Đủ | `DECIDE` PASS, Core 1.0.0.9 |
 | Không đạt hoặc không duyệt thì trả về BPCM1 | Đủ | REJECT từ mọi bước kiểm tra và CT.HĐQT |
 | Gửi lại cùng hồ sơ, tăng ReviewRound, vào lại BPCM2 | Đủ | `SUBMIT` từ Returned |
-| CT.HĐQT cập nhật hạn thanh toán khi duyệt | Đủ | `paymentDueAt` bắt buộc lúc PASS |
+| CT.HĐQT cập nhật hạn thanh toán khi duyệt | Đủ | Core 1.0.0.12: duyệt hồ sơ (giữ CHAIR) rồi «Duyệt thanh toán» + `paymentDueAt` → TCKT_PAY |
 | Tải UNC và xác nhận đã thanh toán | Đủ | `CONFIRM_PAYMENT` chỉ khi DocumentIndex có UNC |
-| Lý do trả hồ sơ tra cứu được trên nhật ký | Một phần | UI bắt buộc lý do; ActivityPublic và ActivityInternal chưa ghi |
+| Lý do trả hồ sơ tra cứu được trên nhật ký | Một phần | ActivityPublic có `STEP_REJECTED`/`MANAGER_REJECTED` + Note; lý do checklist vẫn ở StepReviews |
 
 ### Phân công và ủy quyền
 
 | Chức năng | Trạng thái | Hiện trạng |
 |---|---|---|
-| Trưởng phòng tiếp nhận và bắt buộc đặt hạn | Chưa có | Dialog chỉ có trên UI demo; không có lệnh ACCEPT |
+| Trưởng phòng tiếp nhận và bắt buộc đặt hạn | Đủ | `ACCEPT` + `DueAt` (Core 1.0.0.11); UI dialog tiếp nhận |
 | Giao một hoặc nhiều nhân sự | Chưa có | Không có Assignments trong luồng live |
 | Thêm hoặc bỏ người, giữ kết quả đã kiểm tra | Chưa có | BA mục 6 |
 | Nhân sự không được chốt DECIDE | Chưa có | LivePayApp cho mọi persona đúng bước quyền chuyển bước |
@@ -102,7 +100,7 @@ Khoảng trống chặn nhiều người dùng là quyền và vai trò. Nhân s
 | Chức năng | Trạng thái | Hiện trạng |
 |---|---|---|
 | Hiển thị hạn thanh toán sau khi duyệt | Đủ | `Requests.PaymentDueAt` trên chi tiết |
-| Đặt hạn xử lý lúc tiếp nhận | Chưa có | `WorkItems.DueAt` có trong thiết kế, chưa có thao tác |
+| Đặt hạn xử lý lúc tiếp nhận | Đủ | `ACCEPT` ghi `WorkItems.DueAt` + `AcceptedAt` |
 | Gia hạn có lý do và lịch sử hạn cũ, hạn mới | Chưa có | Dialog gia hạn chỉ ở UI demo |
 | Nhắc việc theo lịch | Chưa có | Scheduled subflow chưa làm |
 | Cảnh báo quá hạn, không tự chuyển bước | Chưa có | Inbox không tính quá hạn theo hạn xử lý |
@@ -124,17 +122,17 @@ Khoảng trống chặn nhiều người dùng là quyền và vai trò. Nhân s
 |---|---|---|
 | RBAC tĩnh 23 list và thư viện | Đủ | PASS 23/23 theo ma trận V1.9.1 |
 | Chống chạy lại cùng một lệnh | Một phần | DedupeKey gắn command mới; chưa chặn replay |
-| Màn kiểm toán | Một phần | Khung AUDIT; chưa đọc ActivityInternal |
+| Màn kiểm toán | Một phần | Khung AUDIT; ActivityInternal đã ghi khi Rejected/Failed — UI AUDIT chưa list |
 | Quyền động theo hồ sơ và pháp nhân | Chưa có | CHAIR, TCKT, USERS chưa có ACL theo hồ sơ |
 | Cổng lệnh không tin ActorUPN tự khai | Chưa có | Backlog kỹ thuật, mục trusted caller |
-| Nhật ký nghiệp vụ, phân công, hạn | Chưa có | ActivityPublic và ActivityInternal chưa được Flow ghi |
+| Nhật ký nghiệp vụ, phân công, hạn | Một phần | ActivityPublic + StepReviews trên timeline; phân công/gia hạn chưa có |
 
 ### Màn hình
 
 | Chức năng | Trạng thái | Hiện trạng |
 |---|---|---|
 | Tạo hồ sơ | Đủ | LivePayApp |
-| Hồ sơ 360 | Một phần | Có tài liệu, checklist, bước; thiếu phân công, hạn xử lý, nhật ký |
+| Hồ sơ 360 | Một phần | Có tài liệu, checklist, bước, nhật ký Activity, hạn sau ACCEPT; thiếu phân công |
 | Việc của tôi | Một phần | Lọc Requests theo người tạo hoặc trạng thái, không theo WorkItem |
 | Quản trị danh mục quy trình | Một phần | CRUD loại, phòng, thành viên, checklist, người nhận; phiên bản WF chỉ đọc |
 | Tổng quan | Chưa có | BA mục 4.7 |

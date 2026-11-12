@@ -29,6 +29,12 @@ export interface IWorkItemRow {
   state: string;
   decision: string;
   stepInstanceKey: string;
+  acceptedAt?: string;
+  dueAt?: string;
+  acceptedByUPN?: string;
+  decisionNote?: string;
+  responsibleOUCode?: string;
+  reviewRound?: number;
 }
 
 function choiceVal(v: unknown): string {
@@ -134,9 +140,28 @@ export async function listWorkItems(
       stepKey: String(r.StepKey || ''),
       state: choiceVal(r.State),
       decision: choiceVal(r.Decision),
-      stepInstanceKey: String(r.StepInstanceKey || '')
+      stepInstanceKey: String(r.StepInstanceKey || ''),
+      acceptedAt: r.AcceptedAt ? String(r.AcceptedAt) : undefined,
+      dueAt: r.DueAt ? String(r.DueAt) : undefined,
+      acceptedByUPN: r.AcceptedByUPN ? String(r.AcceptedByUPN) : undefined,
+      decisionNote: r.DecisionNote ? String(r.DecisionNote) : undefined,
+      responsibleOUCode: r.ResponsibleOUCode ? String(r.ResponsibleOUCode) : undefined,
+      reviewRound: r.ReviewRound !== undefined && r.ReviewRound !== null ? Number(r.ReviewRound) : undefined
     }))
     .sort((a, b) => a.id - b.id);
+}
+
+/** WI hiện tại của hồ sơ (theo CurrentStepInstanceKey). */
+export function currentWorkItem(
+  items: IWorkItemRow[],
+  currentStepInstanceKey: string
+): IWorkItemRow | undefined {
+  if (!currentStepInstanceKey) return undefined;
+  return items.filter((w) => w.stepInstanceKey === currentStepInstanceKey)[0];
+}
+
+export function isWorkItemAccepted(wi: IWorkItemRow | undefined): boolean {
+  return !!(wi && wi.acceptedAt);
 }
 
 export function stepIndex(stepKey: string): number {

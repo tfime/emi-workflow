@@ -37,6 +37,7 @@ export type BadgeKind = 'mute' | 'warn' | 'ok' | 'info' | 'danger';
 
 export type DialogKind =
   | 'submit'
+  | 'mgrApprove'
   | 'accept'
   | 'assign'
   | 'checklist'
@@ -46,6 +47,7 @@ export type DialogKind =
   | 'withdraw'
   | 'cancel'
   | 'approve'
+  | 'approvePay'
   | 'reject'
   | 'unc'
   | 'confirmPay'

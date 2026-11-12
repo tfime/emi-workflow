@@ -7,4 +7,5 @@ export * from './ChecklistService';
 export * from './UploadService';
 export * from './DocPreview';
 export * from './liveActions';
+export * from './ActivityService';
 export * from './viLabels';

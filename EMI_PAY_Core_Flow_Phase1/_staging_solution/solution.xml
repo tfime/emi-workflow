@@ -5,9 +5,9 @@
       <LocalizedName description="EMI_PAY_CORE_V1" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
-      <Description description="Core Orchestrator HTTP API: POST commandId, sync Response; checklist+UNC+CHAIR" languagecode="1033" />
+      <Description description="Core Orchestrator HTTP API 1.0.0.12: CHAIR dossier then paymentDueAt" languagecode="1033" />
     </Descriptions>
-    <Version>1.0.0.10</Version>
+    <Version>1.0.0.12</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>tfime</UniqueName>

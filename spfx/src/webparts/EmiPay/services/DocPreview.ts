@@ -136,7 +136,16 @@ export function isChecklistDocClass(docClass: string): boolean {
   return (docClass || '').trim().toLowerCase() === 'checklist';
 }
 
-/** Tài liệu hỗ trợ = không phải Checklist (UNC / Supplement / Internal…). */
+/** Tài liệu hỗ trợ = không phải Checklist (StepAttachment / UNC / …). */
 export function isSupportingDoc(doc: { docClass: string }): boolean {
   return !isChecklistDocClass(doc.docClass);
+}
+
+export function docClassVi(docClass: string): string {
+  const map: Record<string, string> = {
+    Checklist: 'Checklist',
+    StepAttachment: 'Đính kèm bước',
+    UNC: 'Ủy nhiệm chi (UNC)'
+  };
+  return map[docClass] || docClass || 'Hỗ trợ';
 }
