@@ -1,0 +1,43 @@
+{
+  "InternalName": "EMI_PAY_ArchiveCancelled",
+  "Guid": "e64e349b-2fca-4925-b18b-08e387163601",
+  "DisplayName": "Kho hồ sơ thanh toán đã hủy",
+  "BaseTemplate": 101,
+  "ItemCount": 0,
+  "Unique": true,
+  "Assignments": [
+    {
+      "PrincipalId": 3,
+      "PrincipalName": "cecm Chủ sở hữu",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    },
+    {
+      "PrincipalId": 11,
+      "PrincipalName": "GR-PAY-SYSADM",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    },
+    {
+      "PrincipalId": 12,
+      "PrincipalName": "GR-PAY-FLOW-SVC",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    }
+  ]
+}

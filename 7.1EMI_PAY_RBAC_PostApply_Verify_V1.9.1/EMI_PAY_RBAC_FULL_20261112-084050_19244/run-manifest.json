@@ -1,0 +1,10 @@
+{
+  "ScriptVersion": "1.9",
+  "Mode": "Audit",
+  "SiteUrl": "https://emicomvn.sharepoint.com/sites/cecm",
+  "StartedAt": "2026-11-12T08:40:50.4954370+07:00",
+  "SiteAclSignature": "11:1073741825|12:1073741825|13:1073741825|17:1073741825|3:1073741825,1073741829|4:1073741826|5:1073741830",
+  "Touched": [],
+  "Completed": [],
+  "Verified": false
+}

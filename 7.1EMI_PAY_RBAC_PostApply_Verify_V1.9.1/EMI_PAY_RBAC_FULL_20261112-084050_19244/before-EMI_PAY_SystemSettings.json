@@ -1,0 +1,43 @@
+{
+  "InternalName": "EMI_PAY_SystemSettings",
+  "Guid": "2d065a1c-c5f3-42f4-9fba-351967e430c7",
+  "DisplayName": "Cấu hình hệ thống",
+  "BaseTemplate": 100,
+  "ItemCount": 0,
+  "Unique": true,
+  "Assignments": [
+    {
+      "PrincipalId": 3,
+      "PrincipalName": "cecm Chủ sở hữu",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    },
+    {
+      "PrincipalId": 11,
+      "PrincipalName": "GR-PAY-SYSADM",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    },
+    {
+      "PrincipalId": 12,
+      "PrincipalName": "GR-PAY-FLOW-SVC",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    }
+  ]
+}

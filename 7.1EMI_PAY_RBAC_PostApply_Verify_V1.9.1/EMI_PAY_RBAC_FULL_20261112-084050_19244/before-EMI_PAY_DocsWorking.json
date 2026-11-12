@@ -1,0 +1,43 @@
+{
+  "InternalName": "EMI_PAY_DocsWorking",
+  "Guid": "c2b4ef47-2c55-41e4-8b3c-c6480a27bbb2",
+  "DisplayName": "Tài liệu hồ sơ đang xử lý",
+  "BaseTemplate": 101,
+  "ItemCount": 0,
+  "Unique": true,
+  "Assignments": [
+    {
+      "PrincipalId": 3,
+      "PrincipalName": "cecm Chủ sở hữu",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    },
+    {
+      "PrincipalId": 11,
+      "PrincipalName": "GR-PAY-SYSADM",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    },
+    {
+      "PrincipalId": 12,
+      "PrincipalName": "GR-PAY-FLOW-SVC",
+      "PrincipalType": "SharePointGroup",
+      "RoleIds": [
+        1073741829
+      ],
+      "RoleNames": [
+        "Kiểm soát Đầy đủ"
+      ]
+    }
+  ]
+}
