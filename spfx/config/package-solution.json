@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "emi-pay-client-side-solution",
+    "id": "1f6644ac-dec4-4657-a307-a7744c58d3e3",
+    "version": "0.1.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "developer": {
+      "name": "EMI",
+      "websiteUrl": "https://emicomvn.sharepoint.com/sites/cecm",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.24.1"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "EMI PAY — hồ sơ thanh toán SPV"
+      },
+      "longDescription": {
+        "default": "SPFx UI cho workflow hồ sơ thanh toán EMI: việc của tôi, tạo hồ sơ, chi tiết theo vai trò."
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "emi-pay Feature",
+        "description": "Activates EMI PAY Web Part.",
+        "id": "e4717848-ba1b-4446-bae6-3ad20f70aaa3",
+        "version": "0.1.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/emi-pay.sppkg"
+  }
+}

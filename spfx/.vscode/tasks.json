@@ -1,0 +1,43 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "gulp:serve",
+      "type": "shell",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"${workspaceFolder}/spfx/scripts/gulp-serve.ps1\"",
+      "options": {
+        "cwd": "${workspaceFolder}/spfx"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "gulp-serve",
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Server started https://localhost:4321"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "emi-pay"
+      }
+    },
+    {
+      "label": "open:workbench",
+      "type": "shell",
+      "command": "cmd /c start \"\" \"https://emicomvn.sharepoint.com/sites/cecm/_layouts/15/workbench.aspx?debug=true&noredir=true&debugManifestsFile=https%3A%2F%2Flocalhost%3A4321%2Ftemp%2Fbuild%2Fmanifests.js\"",
+      "options": { "cwd": "${workspaceFolder}/spfx" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "shared", "close": true }
+    },
+    {
+      "label": "debug:workbench",
+      "dependsOn": ["gulp:serve", "open:workbench"],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "presentation": { "reveal": "silent", "panel": "shared", "close": true }
+    }
+  ]
+}

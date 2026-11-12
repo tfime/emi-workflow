@@ -1,0 +1,22 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "whichFolder": "current",
+    "solutionName": "emi-pay",
+    "environment": "spo",
+    "packageManager": "npm",
+    "skipFeatureDeployment": true,
+    "useGulp": true,
+    "componentType": "webpart",
+    "template": "react",
+    "componentName": "EmiPay",
+    "componentDescription": "EMI PAY — hồ sơ thanh toán SPV",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.14.0",
+    "sdksVersions": {},
+    "version": "1.24.1",
+    "libraryName": "emi-pay",
+    "libraryId": "1f6644ac-dec4-4657-a307-a7744c58d3e3",
+    "solutionShortDescription": "EMI PAY workflow UI for SharePoint CECM"
+  }
+}

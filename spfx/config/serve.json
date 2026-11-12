@@ -1,0 +1,16 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
+  "port": 4321,
+  "https": true,
+  "serveConfigurations": {
+    "default": {
+      "pageUrl": "https://emicomvn.sharepoint.com/sites/cecm/SitePages/EMI-Pay.aspx"
+    },
+    "cecm-workbench": {
+      "pageUrl": "https://emicomvn.sharepoint.com/sites/cecm/_layouts/15/workbench.aspx"
+    },
+    "cecm-pay": {
+      "pageUrl": "https://emicomvn.sharepoint.com/sites/cecm/SitePages/EMI-Pay.aspx"
+    }
+  }
+}
