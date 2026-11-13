@@ -98,6 +98,22 @@ export async function mergeItem(
   await readJson(res);
 }
 
+export async function deleteItem(
+  ctx: ISpRestContext,
+  listGuid: string,
+  id: number
+): Promise<void> {
+  const url = `${ctx.webUrl}/_api/web/lists(guid'${listGuid}')/items(${id})`;
+  const res = await ctx.spHttpClient.post(url, SPHttpClient.configurations.v1, {
+    headers: {
+      Accept: 'application/json;odata=nometadata',
+      'IF-MATCH': '*',
+      'X-HTTP-Method': 'DELETE'
+    }
+  });
+  await readJson(res);
+}
+
 export async function ensureFolder(
   ctx: ISpRestContext,
   libraryTitle: string,

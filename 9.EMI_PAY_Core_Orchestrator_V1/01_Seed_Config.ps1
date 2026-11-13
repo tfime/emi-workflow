@@ -31,12 +31,18 @@ function Get-ListId([string]$Name) {
 function Get-ListItemId {
     param($Item)
     if ($null -eq $Item) { return $null }
-    if ($Item.FieldValues -and $Item.FieldValues.ContainsKey('ID')) {
-        return [int]$Item.FieldValues['ID']
+    # PnP thường để Id trên object, không phải FieldValues['ID']. Bỏ sót Id khiến seed luôn Add và đụng CfgKey unique.
+    try {
+        $direct = $Item.Id
+        if ($direct) { return [int]$direct }
     }
-    $prop = $Item.PSObject.Properties['Id']
-    if ($null -ne $prop -and $null -ne $prop.Value) {
-        return [int]$prop.Value
+    catch { }
+    if ($Item.FieldValues) {
+        foreach ($key in @('ID', 'Id')) {
+            if ($Item.FieldValues.ContainsKey($key) -and $Item.FieldValues[$key]) {
+                return [int]$Item.FieldValues[$key]
+            }
+        }
     }
     return $null
 }
@@ -102,13 +108,13 @@ function Upsert-ByKey {
     try {
         $listId = Get-ListId $ListName
         $writeValues = Values-ForWrite -ListName $ListName -Values $Values
-        $existing = Find-ItemsByEq -ListId $listId -Field $KeyField -Value $KeyValue
+        # @() bắt buộc: 1 item PnP bị unwrap → .Count không còn = 1 → nhầm sang Add → đụng CfgKey unique.
+        $existing = @(Find-ItemsByEq -ListId $listId -Field $KeyField -Value $KeyValue)
+        if ($existing.Count -eq 0 -and $writeValues.ContainsKey('CfgKey') -and $writeValues['CfgKey']) {
+            $existing = @(Find-ItemsByEq -ListId $listId -Field 'CfgKey' -Value ([string]$writeValues['CfgKey']))
+        }
         if ($MatchExtra) {
-            $filtered = [System.Collections.Generic.List[object]]::new()
-            foreach ($row in $existing) {
-                if (& $MatchExtra $row) { $filtered.Add($row) }
-            }
-            $existing = $filtered
+            $existing = @($existing | Where-Object { & $MatchExtra $_ })
         }
 
         $status = 'WouldCreate'
@@ -127,7 +133,16 @@ function Upsert-ByKey {
             else {
                 $status = 'WouldUpdate'
                 if ($Mode -eq 'Apply') {
-                    Set-PnPListItem -List $listId -Identity $itemId -Values $writeValues -Connection $connection | Out-Null
+                    $patch = @{}
+                    foreach ($k in $writeValues.Keys) { $patch[$k] = $writeValues[$k] }
+                    $currentKey = ''
+                    if ($existing[0].FieldValues -and $existing[0].FieldValues.ContainsKey('CfgKey')) {
+                        $currentKey = [string]$existing[0].FieldValues['CfgKey']
+                    }
+                    if ($patch.ContainsKey('CfgKey') -and $currentKey -eq [string]$patch['CfgKey']) {
+                        $patch.Remove('CfgKey')
+                    }
+                    Set-PnPListItem -List $listId -Identity $itemId -Values $patch -Connection $connection | Out-Null
                     $status = 'Updated'
                 }
             }
@@ -149,6 +164,22 @@ Write-Host "Seed Mode=$Mode" -ForegroundColor Cyan
 
 function CfgKey([string[]]$Parts) {
     return (($Parts | ForEach-Object { if ($null -eq $_) { '' } else { $_.ToString().Trim().ToLowerInvariant() } } | Where-Object { $_ }) -join '|')
+}
+
+if ($seed.PSObject.Properties.Name -contains 'orgMembers') {
+    foreach ($m in @($seed.orgMembers)) {
+        Upsert-ByKey -ListName 'EMI_PAY_OrgMembers' -KeyField 'MemberUPN' -KeyValue $m.MemberUPN -Values @{
+            Title      = $m.Title
+            OUCode     = $m.OUCode
+            MemberUPN  = $m.MemberUPN
+            MemberRole = $m.MemberRole
+            IsActive   = [bool]$m.IsActive
+            CfgKey     = (CfgKey @($m.OUCode, $m.MemberUPN))
+        } -MatchExtra {
+            param($item)
+            $item.FieldValues['OUCode'] -eq $m.OUCode
+        }
+    }
 }
 
 foreach ($ou in @($seed.orgUnits)) {
@@ -240,6 +271,17 @@ foreach ($ct in @($seed.checklistTemplates)) {
         param($item)
         ($item.FieldValues['PaymentTypeCode'] -eq $ct.PaymentTypeCode) -and
         ([int]$item.FieldValues['VersionNo'] -eq [int]$ct.VersionNo)
+    }
+}
+
+if ($seed.PSObject.Properties.Name -contains 'systemSettings') {
+    foreach ($ss in @($seed.systemSettings)) {
+        Upsert-ByKey -ListName 'EMI_PAY_SystemSettings' -KeyField 'SettingKey' -KeyValue $ss.SettingKey -Values @{
+            Title              = $ss.Title
+            SettingKey         = $ss.SettingKey
+            SettingValue       = [string]$ss.SettingValue
+            SettingDescription = $ss.SettingDescription
+        }
     }
 }
 

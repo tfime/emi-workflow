@@ -113,7 +113,9 @@ export function resolveActor(
 }
 
 export function actorLabel(actor: ICommandActor, ouName?: string): string {
-  if (actor.memberRole === 'SysAdmin') return 'Quản trị hệ thống — chưa đóng vai';
+  if (actor.memberRole === 'SysAdmin') {
+    return 'Quản trị — tạo/trình được; đóng vai để duyệt xử lý';
+  }
   const ou = ouName || actor.ouCode;
   const role = actor.memberRole === 'Manager' ? 'Trưởng phòng' : 'Thành viên';
   return `${role} · ${ou}`;
@@ -125,7 +127,7 @@ function managerOf(actor: ICommandActor, ouCode: string): boolean {
 
 /**
  * Rỗng = được enqueue. Có chữ = lý do chặn.
- * CREATE: createdOu phải trùng phòng của actor.
+ * CREATE/SUBMIT: mọi nhân sự (kể cả SysAdmin) — vai trò chỉ siết ACCEPT/DECIDE/CONFIRM.
  */
 export function commandDenial(
   actor: ICommandActor,
@@ -134,24 +136,38 @@ export function commandDenial(
   createdOu?: string
 ): string {
   if (!actor.known) return 'Tài khoản chưa có trong danh sách nhân sự phòng ban.';
-  if (actor.memberRole === 'SysAdmin') {
-    return 'Hãy đóng vai một nhân sự trước khi thao tác hồ sơ.';
+
+  const isCreateOrSubmit = command === 'CREATE_REQUEST' || command === 'SUBMIT';
+  if (actor.memberRole === 'SysAdmin' && !isCreateOrSubmit) {
+    return 'Hãy đóng vai trưởng phòng / nhân sự bước xử lý trước khi duyệt hoặc chốt.';
   }
+
   if (command === 'CREATE_REQUEST') {
+    if (!(createdOu || '').trim()) {
+      return 'Chọn đơn vị khởi tạo.';
+    }
+    if (actor.memberRole === 'SysAdmin') {
+      return '';
+    }
     if (!actor.ouCode || !sameOu(actor.ouCode, createdOu || '')) {
-      return 'Chỉ tạo hồ sơ cho đúng phòng của nhân sự đang đóng vai.';
+      return 'Chỉ tạo hồ sơ cho đúng phòng của nhân sự đang dùng.';
     }
     return '';
   }
   if (!master) return 'Không thấy hồ sơ để kiểm tra quyền.';
 
   if (command === 'SUBMIT') {
-    const ok =
+    const stepOk =
       master.currentStepKey === 'BPCM1_PREPARE' &&
       (master.status === 'Draft' || master.status === 'Returned') &&
-      sameUpn(actor.upn, master.creatorUPN) &&
-      sameOu(actor.ouCode, master.createdOUCode);
-    return ok ? '' : 'Chỉ người tạo hồ sơ, khi nháp hoặc bị trả, được trình trưởng phòng.';
+      sameUpn(actor.upn, master.creatorUPN);
+    if (!stepOk) {
+      return 'Chỉ người tạo hồ sơ, khi nháp hoặc bị trả, được trình trưởng phòng.';
+    }
+    if (actor.memberRole !== 'SysAdmin' && !sameOu(actor.ouCode, master.createdOUCode)) {
+      return 'Chỉ người tạo hồ sơ, khi nháp hoặc bị trả, được trình trưởng phòng.';
+    }
+    return '';
   }
 
   if (command === 'DECIDE' && master.status === 'AwaitingManager' && master.currentStepKey === 'BPCM1_PREPARE') {
@@ -182,13 +198,17 @@ export function commandDenial(
   return 'Lệnh không nằm trong quyền của nhân sự đang đóng vai.';
 }
 
+/** Mọi nhân sự (Member/Manager) và SysAdmin được tạo hồ sơ. */
 export function canCreateInOu(actor: ICommandActor, ouCodes: string[]): boolean {
-  if (actor.memberRole === 'SysAdmin' || !actor.known || !actor.ouCode) return false;
-  return ouCodes.some((ou) => sameOu(ou, actor.ouCode));
+  if (!actor.known) return false;
+  if (actor.memberRole === 'SysAdmin') {
+    return ouCodes.length > 0;
+  }
+  return !!actor.ouCode;
 }
 
 export function isRequestCreator(actor: ICommandActor, master: IRequestMaster): boolean {
-  return actor.memberRole !== 'SysAdmin' && sameUpn(actor.upn, master.creatorUPN);
+  return sameUpn(actor.upn, master.creatorUPN);
 }
 
 /** Inbox: SYSADM thấy mọi hồ sơ (Full Control). Vai trò chỉ thấy hồ sơ phòng mình / hồ sơ mình tạo. */
@@ -203,7 +223,7 @@ export function requestVisibleTo(actor: ICommandActor, item: IRequestMaster): bo
 }
 
 export function isActorTodo(actor: ICommandActor, item: IRequestMaster): boolean {
-  if (actor.memberRole === 'SysAdmin' || !actor.known) return false;
+  if (!actor.known) return false;
   if (
     sameUpn(actor.upn, item.creatorUPN) &&
     item.currentStepKey === 'BPCM1_PREPARE' &&
@@ -211,6 +231,7 @@ export function isActorTodo(actor: ICommandActor, item: IRequestMaster): boolean
   ) {
     return true;
   }
+  if (actor.memberRole === 'SysAdmin') return false;
   if (
     managerOf(actor, item.createdOUCode) &&
     item.status === 'AwaitingManager' &&

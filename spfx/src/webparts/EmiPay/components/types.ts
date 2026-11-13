@@ -4,6 +4,7 @@ export type PayView =
   | 'detail'
   | 'search'
   | 'audit'
+  | 'dashboard'
   | 'features';
 
 /** UI persona xem theo ma trận (không thay ACL SharePoint). */

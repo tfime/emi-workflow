@@ -8,7 +8,7 @@ export interface IPayRoute {
   requestKey?: string;
 }
 
-const LIVE_VIEWS: PayView[] = ['inbox', 'create', 'detail', 'audit'];
+const LIVE_VIEWS: PayView[] = ['inbox', 'create', 'detail', 'audit', 'dashboard'];
 const INBOX_FILTERS: PayInboxFilter[] = ['all', 'todo', 'mine'];
 const RK_SAFE = /^[A-Za-z0-9._-]+$/;
 

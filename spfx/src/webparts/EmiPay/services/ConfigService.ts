@@ -235,3 +235,93 @@ export async function listStepRecipients(ctx: ISpRestContext): Promise<IStepReci
         a.stepKey.localeCompare(b.stepKey)
     );
 }
+
+export interface ISystemSetting {
+  id: number;
+  settingKey: string;
+  settingValue: string;
+  settingDescription: string;
+  title: string;
+}
+
+/** Ngưỡng Dashboard — đọc từ EMI_PAY_SystemSettings; thiếu key → fallback. */
+export interface IDashboardThresholds {
+  dueSoonDays: number;
+  paymentDueSoonDays: number;
+  overloadWaitingAccept: number;
+  overloadOverdueWi: number;
+  alertReviewRound: number;
+}
+
+export const DASHBOARD_THRESHOLD_DEFAULTS: IDashboardThresholds = {
+  dueSoonDays: 3,
+  paymentDueSoonDays: 7,
+  overloadWaitingAccept: 5,
+  overloadOverdueWi: 3,
+  alertReviewRound: 3
+};
+
+export async function listSystemSettings(
+  ctx: ISpRestContext
+): Promise<ISystemSetting[]> {
+  const rows = await getItems<Record<string, unknown>>(
+    ctx,
+    PAY_LISTS.SystemSettings,
+    `$select=Id,Title,SettingKey,SettingValue,SettingDescription&$top=200`
+  );
+  return rows
+    .map((r) => ({
+      id: Number(r.Id),
+      settingKey: String(r.SettingKey || ''),
+      settingValue: String(r.SettingValue || ''),
+      settingDescription: String(r.SettingDescription || ''),
+      title: String(r.Title || r.SettingKey || '')
+    }))
+    .filter((r) => !!r.settingKey);
+}
+
+function parsePositiveInt(raw: string, fallback: number): number {
+  const n = parseInt((raw || '').trim(), 10);
+  if (isNaN(n) || n < 0) return fallback;
+  return n;
+}
+
+export function resolveDashboardThresholds(
+  settings: ISystemSetting[]
+): IDashboardThresholds {
+  const map: { [key: string]: string } = {};
+  for (let i = 0; i < settings.length; i++) {
+    map[settings[i].settingKey] = settings[i].settingValue;
+  }
+  const d = DASHBOARD_THRESHOLD_DEFAULTS;
+  return {
+    dueSoonDays: parsePositiveInt(map.DASH_DUE_SOON_DAYS, d.dueSoonDays),
+    paymentDueSoonDays: parsePositiveInt(
+      map.DASH_PAYMENT_DUE_SOON_DAYS,
+      d.paymentDueSoonDays
+    ),
+    overloadWaitingAccept: parsePositiveInt(
+      map.DASH_OVERLOAD_WAITING_ACCEPT,
+      d.overloadWaitingAccept
+    ),
+    overloadOverdueWi: parsePositiveInt(
+      map.DASH_OVERLOAD_OVERDUE_WI,
+      d.overloadOverdueWi
+    ),
+    alertReviewRound: parsePositiveInt(
+      map.DASH_ALERT_REVIEW_ROUND,
+      d.alertReviewRound
+    )
+  };
+}
+
+export async function getDashboardThresholds(
+  ctx: ISpRestContext
+): Promise<IDashboardThresholds> {
+  try {
+    const rows = await listSystemSettings(ctx);
+    return resolveDashboardThresholds(rows);
+  } catch {
+    return { ...DASHBOARD_THRESHOLD_DEFAULTS };
+  }
+}

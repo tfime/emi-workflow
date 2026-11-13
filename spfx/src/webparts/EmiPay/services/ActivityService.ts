@@ -128,6 +128,22 @@ function eventKind(eventType: string): ITimelineItem['kind'] {
   return 'mute';
 }
 
+function mapActivityRow(r: Record<string, unknown>): IActivityPublicRow {
+  return {
+    id: Number(r.Id),
+    activityKey: String(r.ActivityKey || r.Title || ''),
+    requestKey: String(r.RequestKey || ''),
+    stepInstanceKey: String(r.StepInstanceKey || ''),
+    reviewRound: Number(r.ReviewRound || 1),
+    eventType: String(r.EventType || ''),
+    eventTime: String(r.EventTime || ''),
+    actorUPN: String(r.ActorUPN || ''),
+    fromState: String(r.FromState || ''),
+    toState: String(r.ToState || ''),
+    note: String(r.Note || '')
+  };
+}
+
 export async function listActivityPublic(
   ctx: ISpRestContext,
   requestKey: string
@@ -138,20 +154,22 @@ export async function listActivityPublic(
     `$filter=RequestKey eq '${escapeOData(requestKey)}'&$select=Id,Title,ActivityKey,RequestKey,StepInstanceKey,ReviewRound,EventType,EventTime,ActorUPN,FromState,ToState,Note&$top=100`
   );
   return rows
-    .map((r) => ({
-      id: Number(r.Id),
-      activityKey: String(r.ActivityKey || r.Title || ''),
-      requestKey: String(r.RequestKey || ''),
-      stepInstanceKey: String(r.StepInstanceKey || ''),
-      reviewRound: Number(r.ReviewRound || 1),
-      eventType: String(r.EventType || ''),
-      eventTime: String(r.EventTime || ''),
-      actorUPN: String(r.ActorUPN || ''),
-      fromState: String(r.FromState || ''),
-      toState: String(r.ToState || ''),
-      note: String(r.Note || '')
-    }))
+    .map(mapActivityRow)
     .sort((a, b) => String(b.eventTime).localeCompare(String(a.eventTime)));
+}
+
+/** Nhật ký gần đây toàn list — Dashboard «người thao tác», không phải lượt mở trang. */
+export async function listRecentActivityPublic(
+  ctx: ISpRestContext,
+  opts?: { top?: number }
+): Promise<IActivityPublicRow[]> {
+  const top = opts?.top ?? 200;
+  const rows = await getItems<Record<string, unknown>>(
+    ctx,
+    PAY_LISTS.ActivityPublic,
+    `$select=Id,Title,ActivityKey,RequestKey,StepInstanceKey,ReviewRound,EventType,EventTime,ActorUPN,FromState,ToState,Note&$orderby=EventTime desc&$top=${top}`
+  );
+  return rows.map(mapActivityRow);
 }
 
 export async function listStepReviews(

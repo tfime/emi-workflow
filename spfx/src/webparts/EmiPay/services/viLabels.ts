@@ -111,7 +111,12 @@ export function commandStateVi(state: string): string {
 export function moneyVi(amount?: number): string {
   if (amount === undefined || amount === null || isNaN(amount)) return '—';
   try {
-    return amount.toLocaleString('vi-VN') + ' ₫';
+    return (
+      amount.toLocaleString('vi-VN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }) + ' ₫'
+    );
   } catch {
     return String(amount) + ' ₫';
   }

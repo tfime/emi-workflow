@@ -30,6 +30,7 @@ export interface IRequestMaster {
 
 export interface IWorkItemRow {
   id: number;
+  requestKey?: string;
   stepKey: string;
   state: string;
   decision: string;
@@ -193,11 +194,12 @@ export async function listWorkItems(
   const rows = await getItems<Record<string, unknown>>(
     ctx,
     PAY_LISTS.WorkItems,
-    `$filter=RequestKey eq '${escapeOData(requestKey)}'&$select=Id,StepKey,State,Decision,StepInstanceKey,AcceptedAt,DueAt,ClosedAt,AcceptedByUPN,DecisionNote,ResponsibleOUCode,ReviewRound&$top=50`
+    `$filter=RequestKey eq '${escapeOData(requestKey)}'&$select=Id,RequestKey,StepKey,State,Decision,StepInstanceKey,AcceptedAt,DueAt,ClosedAt,AcceptedByUPN,DecisionNote,ResponsibleOUCode,ReviewRound&$top=50`
   );
   return rows
     .map((r) => ({
       id: Number(r.Id),
+      requestKey: r.RequestKey ? String(r.RequestKey) : undefined,
       stepKey: String(r.StepKey || ''),
       state: choiceVal(r.State),
       decision: choiceVal(r.Decision),
@@ -211,6 +213,55 @@ export async function listWorkItems(
       reviewRound: r.ReviewRound !== undefined && r.ReviewRound !== null ? Number(r.ReviewRound) : undefined
     }))
     .sort((a, b) => a.id - b.id);
+}
+
+function mapWorkItemRow(r: Record<string, unknown>): IWorkItemRow {
+  return {
+    id: Number(r.Id),
+    requestKey: String(r.RequestKey || ''),
+    stepKey: String(r.StepKey || ''),
+    state: choiceVal(r.State),
+    decision: choiceVal(r.Decision),
+    stepInstanceKey: String(r.StepInstanceKey || ''),
+    acceptedAt: r.AcceptedAt ? String(r.AcceptedAt) : undefined,
+    dueAt: r.DueAt ? String(r.DueAt) : undefined,
+    closedAt: r.ClosedAt ? String(r.ClosedAt) : undefined,
+    acceptedByUPN: r.AcceptedByUPN ? String(r.AcceptedByUPN) : undefined,
+    decisionNote: r.DecisionNote ? String(r.DecisionNote) : undefined,
+    responsibleOUCode: r.ResponsibleOUCode ? String(r.ResponsibleOUCode) : undefined,
+    reviewRound:
+      r.ReviewRound !== undefined && r.ReviewRound !== null
+        ? Number(r.ReviewRound)
+        : undefined
+  };
+}
+
+/**
+ * WorkItems gần đây cho Dashboard (mở + đã đóng) — tỉ lệ hiệu suất / hạn.
+ */
+export async function listWorkItemsForDashboard(
+  ctx: ISpRestContext,
+  opts?: { top?: number }
+): Promise<IWorkItemRow[]> {
+  const top = opts?.top ?? 400;
+  const rows = await getItems<Record<string, unknown>>(
+    ctx,
+    PAY_LISTS.WorkItems,
+    `$select=Id,RequestKey,StepKey,State,Decision,StepInstanceKey,AcceptedAt,DueAt,ClosedAt,AcceptedByUPN,DecisionNote,ResponsibleOUCode,ReviewRound&$orderby=Id desc&$top=${top}`
+  );
+  return rows.map(mapWorkItemRow);
+}
+
+/**
+ * WorkItems có DueAt (dashboard hạn xử lý).
+ * Lọc bỏ WI đã đóng nếu ClosedAt có giá trị; top lớn cho overview.
+ */
+export async function listWorkItemsWithDueAt(
+  ctx: ISpRestContext,
+  opts?: { top?: number }
+): Promise<IWorkItemRow[]> {
+  const rows = await listWorkItemsForDashboard(ctx, opts);
+  return rows.filter((w) => !!w.dueAt && !w.closedAt);
 }
 
 /** WI hiện tại của hồ sơ (theo CurrentStepInstanceKey). */

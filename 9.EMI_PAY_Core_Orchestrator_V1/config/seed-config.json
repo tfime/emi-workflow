@@ -5,49 +5,5645 @@
   "checklistVersion": 1,
   "_comment": "Core Flow StepKey + EMI_PAY_SPV. BPCM1: 5 OU đều IsDefault (ai cũng tạo; CreatedOUCode từ payload). Các bước sau: Flow/orchestrator đọc StepRecipients list, không hardcode OU.",
   "orgUnits": [
-    { "OUCode": "OU_HCNS", "OUName": "Phòng Hành chính - Nhân sự", "HomeLECode": "SPV", "ManagerUPN": "TO_FILL", "EntraGroupId": "", "IsActive": true },
-    { "OUCode": "OU_TONGHOP", "OUName": "Phòng Tổng hợp", "HomeLECode": "SPV", "ManagerUPN": "TO_FILL", "EntraGroupId": "", "IsActive": true },
-    { "OUCode": "OU_KINHTE", "OUName": "Phòng Kinh tế - Kế hoạch", "HomeLECode": "SPV", "ManagerUPN": "TO_FILL", "EntraGroupId": "", "IsActive": true },
-    { "OUCode": "OU_KYTHUAT", "OUName": "Phòng Kỹ thuật - Hạ tầng", "HomeLECode": "SPV", "ManagerUPN": "TO_FILL", "EntraGroupId": "", "IsActive": true },
-    { "OUCode": "OU_TCKT", "OUName": "Phòng Tài chính - Kế toán", "HomeLECode": "SPV", "ManagerUPN": "TO_FILL", "EntraGroupId": "", "IsActive": true },
-    { "OUCode": "OU_CHAIR", "OUName": "CT.HĐQT", "HomeLECode": "SPV", "ManagerUPN": "TO_FILL", "EntraGroupId": "", "IsActive": true }
+    {
+      "OUCode": "OU_HCNS",
+      "OUName": "Phòng Hành chính - Nhân sự",
+      "HomeLECode": "SPV",
+      "ManagerUPN": "tp.hcns@emi.com.vn",
+      "EntraGroupId": "",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_TONGHOP",
+      "OUName": "Phòng Tổng hợp",
+      "HomeLECode": "SPV",
+      "ManagerUPN": "TO_FILL",
+      "EntraGroupId": "",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_KINHTE",
+      "OUName": "Phòng Kinh tế - Kế hoạch",
+      "HomeLECode": "SPV",
+      "ManagerUPN": "tp.kinhte@emi.com.vn",
+      "EntraGroupId": "",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_KYTHUAT",
+      "OUName": "Phòng Kỹ thuật - Hạ tầng",
+      "HomeLECode": "SPV",
+      "ManagerUPN": "tp.kythuat@emi.com.vn",
+      "EntraGroupId": "",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_TCKT",
+      "OUName": "Phòng Tài chính - Kế toán",
+      "HomeLECode": "SPV",
+      "ManagerUPN": "tp.tckt@emi.com.vn",
+      "EntraGroupId": "",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_CHAIR",
+      "OUName": "CT.HĐQT",
+      "HomeLECode": "SPV",
+      "ManagerUPN": "chair.hdqt@emi.com.vn",
+      "EntraGroupId": "",
+      "IsActive": true
+    }
+  ],
+  "_orgMembersComment": "UPN tạm cho dev. Gắn user thật = sửa MemberUPN (và ManagerUPN cùng phòng), không sửa SPFx. tinh.pt@emi.com.vn không nằm ở đây — quản trị đóng vai qua UI.",
+  "orgMembers": [
+    {
+      "OUCode": "OU_HCNS",
+      "MemberUPN": "bpcm1.hcns@emi.com.vn",
+      "MemberRole": "Member",
+      "Title": "Thành viên HCNS (tạm)",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_HCNS",
+      "MemberUPN": "tp.hcns@emi.com.vn",
+      "MemberRole": "Manager",
+      "Title": "Trưởng phòng HCNS (tạm)",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_KYTHUAT",
+      "MemberUPN": "tp.kythuat@emi.com.vn",
+      "MemberRole": "Manager",
+      "Title": "Trưởng phòng Kỹ thuật (tạm)",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_KINHTE",
+      "MemberUPN": "tp.kinhte@emi.com.vn",
+      "MemberRole": "Manager",
+      "Title": "Trưởng phòng Kinh tế (tạm)",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_TCKT",
+      "MemberUPN": "tp.tckt@emi.com.vn",
+      "MemberRole": "Manager",
+      "Title": "Trưởng phòng TCKT (tạm)",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_CHAIR",
+      "MemberUPN": "chair.hdqt@emi.com.vn",
+      "MemberRole": "Manager",
+      "Title": "CT.HĐQT (tạm)",
+      "IsActive": true
+    }
   ],
   "paymentTypes": [
-    { "PaymentTypeCode": "SPV_PAYMENT", "ChecklistVersion": 1, "WorkflowCode": "EMI_PAY_SPV", "IsActive": true, "Title": "Hồ sơ thanh toán SPV" }
+    {
+      "PaymentTypeCode": "SPV_PAYMENT",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Hồ sơ thanh toán SPV"
+    },
+    {
+      "PaymentTypeCode": "DT-01",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi phí bồi thường, hỗ trợ và tái định cư (Nhà nước thu hồi đất, nhà đầu tư ứng trước kinh phí)"
+    },
+    {
+      "PaymentTypeCode": "DT-01.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Bồi thường, hỗ trợ chi trả trực tiếp theo thỏa thuận (cây trồng, hoa màu, ảnh hưởng thi công) (NGHIỆP VỤ BỔ SUNG)"
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Hồ sơ tạm ứng hợp đồng"
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Thanh toán đợt – hợp đồng tư vấn thiết kế, tư vấn khác"
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Thanh toán đợt – hợp đồng tư vấn giám sát (TVGS)"
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Thanh toán đợt – hợp đồng xây dựng"
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Thanh toán đợt – hợp đồng cung cấp, lắp đặt thiết bị (NGHIỆP VỤ BỔ SUNG)"
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Quyết toán – hợp đồng tư vấn thiết kế, tư vấn khác"
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Quyết toán – hợp đồng TVGS"
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Quyết toán – hợp đồng xây dựng"
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Quyết toán – hợp đồng cung cấp, lắp đặt thiết bị (NGHIỆP VỤ BỔ SUNG)"
+    },
+    {
+      "PaymentTypeCode": "TC-01",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Lãi vay ngắn hạn, dài hạn, phí ngân hàng"
+    },
+    {
+      "PaymentTypeCode": "TC-02",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Gốc vay ngân hàng"
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Cổ tức, lợi nhuận trả cho chủ sở hữu"
+    },
+    {
+      "PaymentTypeCode": "TH-01",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Thuế giá trị gia tăng"
+    },
+    {
+      "PaymentTypeCode": "TH-02",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Thuế thu nhập cá nhân"
+    },
+    {
+      "PaymentTypeCode": "TH-03.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Tạm nộp thuế TNDN"
+    },
+    {
+      "PaymentTypeCode": "TH-03.2",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Nộp theo quyết toán"
+    },
+    {
+      "PaymentTypeCode": "TH-04",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi thuế nhà thầu"
+    },
+    {
+      "PaymentTypeCode": "TH-05",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Thuế, phí, lệ phí khác"
+    },
+    {
+      "PaymentTypeCode": "VH-01",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi phí quản lý vận hành nhà máy"
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Quản lý vận hành tua bin (VESTAS)"
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Quản lý vận hành đường dây (Điện 3)"
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Bảo hiểm rủi ro tài sản"
+    },
+    {
+      "PaymentTypeCode": "VH-03",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Thử nghiệm, kiểm định, kiểm tra"
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Kiểm định dụng cụ an toàn điện; thử nghiệm, kiểm định định kỳ trạm biến áp"
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Dịch vụ kiểm tra trước khi hết hạn bảo hành tua bin"
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Kiểm tra, bảo dưỡng hệ thống PCCC"
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Kiểm định sàn thang nâng người"
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Mua sắm tài sản cố định, công cụ dụng cụ (laptop, đồ dùng…)"
+    },
+    {
+      "PaymentTypeCode": "VH-05",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi phí thuê văn phòng"
+    },
+    {
+      "PaymentTypeCode": "VH-06",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Điện nước thuê văn phòng; Internet"
+    },
+    {
+      "PaymentTypeCode": "VH-07",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Điện tự dùng"
+    },
+    {
+      "PaymentTypeCode": "VH-08",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Điện trạm trộn, điện sinh hoạt, công suất phản kháng"
+    },
+    {
+      "PaymentTypeCode": "VH-09",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Kênh truyền"
+    },
+    {
+      "PaymentTypeCode": "VH-10.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Lương và phụ cấp"
+    },
+    {
+      "PaymentTypeCode": "VH-10.2",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Bảo hiểm xã hội"
+    },
+    {
+      "PaymentTypeCode": "VH-10.3",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Đám hiếu, hỷ CBNV"
+    },
+    {
+      "PaymentTypeCode": "VH-10.4",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi phí phúc lợi CBNV"
+    },
+    {
+      "PaymentTypeCode": "VH-10.5",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Kinh phí công đoàn (NGHIỆP VỤ BỔ SUNG)"
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi phí ô tô, xe máy (sửa chữa, bảo dưỡng, kiểm định, xăng xe, vé cầu đường…)"
+    },
+    {
+      "PaymentTypeCode": "VH-12",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi phí vận hành chung nhà máy"
+    },
+    {
+      "PaymentTypeCode": "VH-12.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Huấn luyện an toàn, vệ sinh lao động"
+    },
+    {
+      "PaymentTypeCode": "VH-12.2",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Quan trắc môi trường lao động"
+    },
+    {
+      "PaymentTypeCode": "VH-12.3",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Lấy mẫu, đo quan trắc môi trường định kỳ"
+    },
+    {
+      "PaymentTypeCode": "VH-13",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi phí hành chính (văn phòng phẩm, công chứng, chuyển phát nhanh, điện thoại, lễ, vệ sinh…)"
+    },
+    {
+      "PaymentTypeCode": "VH-13.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Văn phòng phẩm"
+    },
+    {
+      "PaymentTypeCode": "VH-13.2",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Công chứng"
+    },
+    {
+      "PaymentTypeCode": "VH-13.3",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chuyển phát nhanh"
+    },
+    {
+      "PaymentTypeCode": "VH-14",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi phí công tác"
+    },
+    {
+      "PaymentTypeCode": "VH-14.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Vé máy bay"
+    },
+    {
+      "PaymentTypeCode": "VH-15",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi phí dịch vụ (tư vấn, kế toán, kiểm toán, thuế)"
+    },
+    {
+      "PaymentTypeCode": "VH-15.1",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Tư vấn"
+    },
+    {
+      "PaymentTypeCode": "VH-15.2",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Kiểm toán"
+    },
+    {
+      "PaymentTypeCode": "VH-15.3",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Thẩm định giá"
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Phần mềm"
+    },
+    {
+      "PaymentTypeCode": "VH-16",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi phí khác"
+    },
+    {
+      "PaymentTypeCode": "VH-17",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Tín chỉ VER"
+    },
+    {
+      "PaymentTypeCode": "VH-18",
+      "ChecklistVersion": 1,
+      "WorkflowCode": "EMI_PAY_SPV",
+      "IsActive": true,
+      "Title": "Chi phí nhân công thuê ngoài"
+    }
   ],
   "workflowVersions": [
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "Lifecycle": "Published", "Title": "EMI_PAY_SPV v1" }
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "Lifecycle": "Published",
+      "Title": "EMI_PAY_SPV v1"
+    }
   ],
   "workflowSteps": [
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM1_PREPARE", "StepOrder": 1, "StepName": "BPCM1 · Khởi tạo / điều chỉnh", "StepKind": "Initiator", "IsActive": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM2_TECH", "StepOrder": 2, "StepName": "BPCM2 · Kiểm tra kỹ thuật", "StepKind": "Department", "IsActive": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM3_PRICE", "StepOrder": 3, "StepName": "BPCM3 · Kiểm tra giá", "StepKind": "Department", "IsActive": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "TCKT_CHECK", "StepOrder": 4, "StepName": "TCKT · Kiểm tra hồ sơ", "StepKind": "Department", "IsActive": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "CHAIR_APPROVE", "StepOrder": 5, "StepName": "CT.HĐQT · Phê duyệt", "StepKind": "Approval", "IsActive": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "TCKT_PAY", "StepOrder": 6, "StepName": "TCKT · Thanh toán / UNC", "StepKind": "Payment", "IsActive": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "SYSTEM_ARCHIVE", "StepOrder": 7, "StepName": "Hệ thống · Lưu trữ", "StepKind": "Payment", "IsActive": true }
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM1_PREPARE",
+      "StepOrder": 1,
+      "StepName": "BPCM1 · Khởi tạo / điều chỉnh",
+      "StepKind": "Initiator",
+      "IsActive": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM2_TECH",
+      "StepOrder": 2,
+      "StepName": "BPCM2 · Kiểm tra kỹ thuật",
+      "StepKind": "Department",
+      "IsActive": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM3_PRICE",
+      "StepOrder": 3,
+      "StepName": "BPCM3 · Kiểm tra giá",
+      "StepKind": "Department",
+      "IsActive": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "TCKT_CHECK",
+      "StepOrder": 4,
+      "StepName": "TCKT · Kiểm tra hồ sơ",
+      "StepKind": "Department",
+      "IsActive": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "CHAIR_APPROVE",
+      "StepOrder": 5,
+      "StepName": "CT.HĐQT · Phê duyệt",
+      "StepKind": "Approval",
+      "IsActive": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "TCKT_PAY",
+      "StepOrder": 6,
+      "StepName": "TCKT · Thanh toán / UNC",
+      "StepKind": "Payment",
+      "IsActive": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "SYSTEM_ARCHIVE",
+      "StepOrder": 7,
+      "StepName": "Hệ thống · Lưu trữ",
+      "StepKind": "Payment",
+      "IsActive": true
+    }
   ],
   "stepRecipients": [
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM1_PREPARE", "OUCode": "OU_HCNS", "IsDefault": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM1_PREPARE", "OUCode": "OU_TONGHOP", "IsDefault": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM1_PREPARE", "OUCode": "OU_KINHTE", "IsDefault": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM1_PREPARE", "OUCode": "OU_KYTHUAT", "IsDefault": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM1_PREPARE", "OUCode": "OU_TCKT", "IsDefault": true },
-
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM2_TECH", "OUCode": "OU_KYTHUAT", "IsDefault": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM2_TECH", "OUCode": "OU_KINHTE", "IsDefault": false },
-
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM3_PRICE", "OUCode": "OU_KINHTE", "IsDefault": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "BPCM3_PRICE", "OUCode": "OU_TONGHOP", "IsDefault": false },
-
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "TCKT_CHECK", "OUCode": "OU_TCKT", "IsDefault": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "CHAIR_APPROVE", "OUCode": "OU_CHAIR", "IsDefault": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "TCKT_PAY", "OUCode": "OU_TCKT", "IsDefault": true },
-    { "WorkflowCode": "EMI_PAY_SPV", "VersionNo": 1, "StepKey": "SYSTEM_ARCHIVE", "OUCode": "OU_TCKT", "IsDefault": true }
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM1_PREPARE",
+      "OUCode": "OU_HCNS",
+      "IsDefault": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM1_PREPARE",
+      "OUCode": "OU_TONGHOP",
+      "IsDefault": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM1_PREPARE",
+      "OUCode": "OU_KINHTE",
+      "IsDefault": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM1_PREPARE",
+      "OUCode": "OU_KYTHUAT",
+      "IsDefault": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM1_PREPARE",
+      "OUCode": "OU_TCKT",
+      "IsDefault": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM2_TECH",
+      "OUCode": "OU_KYTHUAT",
+      "IsDefault": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM2_TECH",
+      "OUCode": "OU_KINHTE",
+      "IsDefault": false
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM3_PRICE",
+      "OUCode": "OU_KINHTE",
+      "IsDefault": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "BPCM3_PRICE",
+      "OUCode": "OU_TONGHOP",
+      "IsDefault": false
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "TCKT_CHECK",
+      "OUCode": "OU_TCKT",
+      "IsDefault": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "CHAIR_APPROVE",
+      "OUCode": "OU_CHAIR",
+      "IsDefault": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "TCKT_PAY",
+      "OUCode": "OU_TCKT",
+      "IsDefault": true
+    },
+    {
+      "WorkflowCode": "EMI_PAY_SPV",
+      "VersionNo": 1,
+      "StepKey": "SYSTEM_ARCHIVE",
+      "OUCode": "OU_TCKT",
+      "IsDefault": true
+    }
   ],
   "checklistTemplates": [
-    { "PaymentTypeCode": "SPV_PAYMENT", "VersionNo": 1, "ItemCode": "DOC_REQUEST", "ItemLabel": "Đề nghị thanh toán", "IsRequired": true, "MinFileCount": 1, "DisplayOrder": 1 },
-    { "PaymentTypeCode": "SPV_PAYMENT", "VersionNo": 1, "ItemCode": "DOC_INVOICE", "ItemLabel": "Hóa đơn / chứng từ", "IsRequired": true, "MinFileCount": 1, "DisplayOrder": 2 },
-    { "PaymentTypeCode": "SPV_PAYMENT", "VersionNo": 1, "ItemCode": "DOC_CONTRACT", "ItemLabel": "Hợp đồng liên quan", "IsRequired": false, "MinFileCount": 0, "DisplayOrder": 3 }
-  ]
+    {
+      "PaymentTypeCode": "SPV_PAYMENT",
+      "VersionNo": 1,
+      "ItemCode": "DOC_REQUEST",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "SPV_PAYMENT",
+      "VersionNo": 1,
+      "ItemCode": "DOC_INVOICE",
+      "ItemLabel": "Hóa đơn / chứng từ",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "SPV_PAYMENT",
+      "VersionNo": 1,
+      "ItemCode": "DOC_CONTRACT",
+      "ItemLabel": "Hợp đồng liên quan",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-01",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "DT-01",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_02",
+      "ItemLabel": "Thông báo nộp tiền",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "DT-01",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_03",
+      "ItemLabel": "Quyết định phê duyệt phương án đền bù",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-01",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_04",
+      "ItemLabel": "Quyết định thu hồi đất / thông báo thu hồi đất (bản sao)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "DT-01",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_05",
+      "ItemLabel": "Văn bản đề nghị / thỏa thuận ứng trước kinh phí bồi thường giữa Công ty và UBND hoặc tổ chức làm nhiệm vụ bồi thường",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "DT-01",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_06",
+      "ItemLabel": "Phương án bồi thường chi tiết kèm bảng tổng hợp, danh sách chi trả từng hộ",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "DT-01",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_07",
+      "ItemLabel": "Danh sách chi trả có ký nhận của người có đất thu hồi / chứng từ chuyển khoản cho từng hộ (tổ chức bồi thường cung cấp sau khi chi trả)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "DT-01",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_08",
+      "ItemLabel": "Biên bản bàn giao mặt bằng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "DT-01.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "DT-01.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_1_02",
+      "ItemLabel": "Tờ trình / phê duyệt chi trả bồi thường, hỗ trợ",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "DT-01.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_1_03",
+      "ItemLabel": "Biên bản kiểm kê, xác nhận khối lượng (có xác nhận của chính quyền địa phương)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-01.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_1_04",
+      "ItemLabel": "Biên bản thỏa thuận mức bồi thường, hỗ trợ với hộ dân",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "DT-01.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_1_05",
+      "ItemLabel": "Căn cước công dân của người nhận tiền; giấy tờ về đất, tài sản (nếu có)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "DT-01.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_1_06",
+      "ItemLabel": "Biên bản nhận tiền có ký nhận / chứng từ chuyển khoản cho từng hộ",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "DT-01.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_01_1_07",
+      "ItemLabel": "Biên bản bàn giao mặt bằng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_03",
+      "ItemLabel": "Công văn đề nghị tạm ứng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_04",
+      "ItemLabel": "Hợp đồng gốc",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_05",
+      "ItemLabel": "Hồ sơ năng lực nhà thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_06",
+      "ItemLabel": "Bảo hiểm trách nhiệm nghề nghiệp (Theo quy định của Hợp đồng)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_07",
+      "ItemLabel": "Bảo lãnh tạm ứng, Bảo lãnh thực hiện hợp đồng (Theo quy định của Hợp đồng)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_08",
+      "ItemLabel": "Hóa đơn GTGT (Theo quy định của Hợp đồng)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_09",
+      "ItemLabel": "Các tài liệu khác (Theo quy định của Hợp đồng)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_10",
+      "ItemLabel": "Quyết định phê duyệt kết quả lựa chọn nhà thầu / chỉ định thầu",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_11",
+      "ItemLabel": "Hợp đồng thi công: kế hoạch / biên bản bàn giao mặt bằng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_12",
+      "ItemLabel": "Xác thực thư bảo lãnh với ngân hàng phát hành (văn bản / thư điện tử xác nhận, mã tra cứu)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_13",
+      "ItemLabel": "Nhà thầu thi công: giấy chứng nhận bảo hiểm cho người lao động trên công trường và bảo hiểm trách nhiệm đối với bên thứ ba",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_14",
+      "ItemLabel": "Hồ sơ rút vốn vay: giấy đề nghị giải ngân, bảng kê, chấp thuận giải ngân của ngân hàng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 14
+    },
+    {
+      "PaymentTypeCode": "DT-02.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_1_15",
+      "ItemLabel": "Bảng theo dõi tạm ứng và kế hoạch thu hồi tạm ứng theo hợp đồng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 15
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_02",
+      "ItemLabel": "Tờ trình đề nghị thanh toán đợt/giai đoạn",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_03",
+      "ItemLabel": "Công văn đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_04",
+      "ItemLabel": "Hóa đơn GTGT (Sau khi chủ đầu tư xác nhận giá trị thanh toán)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_05",
+      "ItemLabel": "Báo cáo và các đề xuất chất lượng hồ sơ/ sản phẩm tiến độ thực hiện và các nội dung khác nếu có liên quan đến phạt vi phạm theo quy định của Hợp đồng trong giai đoạn thanh toán toán của nhà thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_06",
+      "ItemLabel": "Hồ sơ thanh toán giá trị",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_07",
+      "ItemLabel": "Bảng tính giá trị đề nghị thanh toán: giá trị hoàn thành theo hợp đồng, phát sinh, thu hồi tạm ứng, giữ lại bảo hành, phạt; lũy kế đến kỳ này",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_08",
+      "ItemLabel": "Bảng tính giá trị phát sinh ngoài hợp đồng kèm phụ lục / phê duyệt phát sinh",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_09",
+      "ItemLabel": "Bảo lãnh thực hiện hợp đồng, bảo lãnh tạm ứng còn hiệu lực đến sau ngày thanh toán",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_10",
+      "ItemLabel": "Hồ sơ rút vốn vay của đợt thanh toán",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_11",
+      "ItemLabel": "Hợp đồng và phụ lục (kỳ thanh toán đầu tiên hoặc khi có phụ lục mới)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_12",
+      "ItemLabel": "Biên bản bàn giao Hồ sơ/ Sản phẩm của hợp đồng có xác nhận của các bên",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_13",
+      "ItemLabel": "Biên bản nghiệm thu hồ sơ, Sản phẩm tư vấn (đã được phê duyệt hoặc được giao nhận, tùy theo quy định của Hợp đồng)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_1_14",
+      "ItemLabel": "Văn bản thẩm định / phê duyệt / chấp thuận của cơ quan có thẩm quyền đối với sản phẩm tư vấn (nếu phạm vi công việc yêu cầu)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 14
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_02",
+      "ItemLabel": "Tờ trình đề nghị thanh toán đợt/giai đoạn",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_03",
+      "ItemLabel": "Công văn đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_04",
+      "ItemLabel": "Hóa đơn GTGT (Sau khi chủ đầu tư xác nhận giá trị thanh toán)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_05",
+      "ItemLabel": "Báo cáo và các đề xuất chất lượng hồ sơ/ sản phẩm tiến độ thực hiện và các nội dung khác nếu có liên quan đến phạt vi phạm theo quy định của Hợp đồng trong giai đoạn thanh toán toán của nhà thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_06",
+      "ItemLabel": "Hồ sơ thanh toán giá trị",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_07",
+      "ItemLabel": "Bảng tính giá trị đề nghị thanh toán: giá trị hoàn thành theo hợp đồng, phát sinh, thu hồi tạm ứng, giữ lại bảo hành, phạt; lũy kế đến kỳ này",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_08",
+      "ItemLabel": "Bảng tính giá trị phát sinh ngoài hợp đồng kèm phụ lục / phê duyệt phát sinh",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_09",
+      "ItemLabel": "Bảo lãnh thực hiện hợp đồng, bảo lãnh tạm ứng còn hiệu lực đến sau ngày thanh toán",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_10",
+      "ItemLabel": "Hồ sơ rút vốn vay của đợt thanh toán",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_11",
+      "ItemLabel": "Hợp đồng và phụ lục (kỳ thanh toán đầu tiên hoặc khi có phụ lục mới)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_12",
+      "ItemLabel": "Biên bản nghiệm thu công việc TVGS trong kỳ được BQLDA xác nhận",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_13",
+      "ItemLabel": "Báo cáo kết quả thực hiện công việc trong kỳ thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_2_14",
+      "ItemLabel": "Bảng chấm công của kỳ thanh toán (Đối với Hợp đồng TVGS hoặc Hợp đồng tính giá trị theo công)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 14
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_02",
+      "ItemLabel": "Tờ trình đề nghị thanh toán đợt/giai đoạn",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_03",
+      "ItemLabel": "Công văn đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_04",
+      "ItemLabel": "Hóa đơn GTGT (Sau khi chủ đầu tư xác nhận giá trị thanh toán)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_05",
+      "ItemLabel": "Báo cáo và các đề xuất chất lượng hồ sơ/ sản phẩm tiến độ thực hiện và các nội dung khác nếu có liên quan đến phạt vi phạm theo quy định của Hợp đồng trong giai đoạn thanh toán toán của nhà thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_06",
+      "ItemLabel": "Hồ sơ thanh toán giá trị",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_07",
+      "ItemLabel": "Bảng tính giá trị đề nghị thanh toán: giá trị hoàn thành theo hợp đồng, phát sinh, thu hồi tạm ứng, giữ lại bảo hành, phạt; lũy kế đến kỳ này",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_08",
+      "ItemLabel": "Bảng tính giá trị phát sinh ngoài hợp đồng kèm phụ lục / phê duyệt phát sinh",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_09",
+      "ItemLabel": "Bảo lãnh thực hiện hợp đồng, bảo lãnh tạm ứng còn hiệu lực đến sau ngày thanh toán",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_10",
+      "ItemLabel": "Hồ sơ rút vốn vay của đợt thanh toán",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_11",
+      "ItemLabel": "Hợp đồng và phụ lục (kỳ thanh toán đầu tiên hoặc khi có phụ lục mới)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_12",
+      "ItemLabel": "Báo cáo về hồ sơ thanh toán: chất lượng, tiến độ, khối lượng, giá trị thanh toán; sơ bộ về tình hình tình hình thực hiện thi công (An toàn lao động, vệ sinh môi trường, biện pháp thi công, nhân lực, thiết bị…) và các nội dung khác",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_13",
+      "ItemLabel": "Hồ sơ quản lý chất lượng (Theo quy định của Hợp đồng)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_14",
+      "ItemLabel": "Bản vẽ hoàn công/ sơ họa hoàn công giai đoạn",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 14
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_15",
+      "ItemLabel": "Các văn bản tài liệu khác theo quy định của Hợp đồng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 15
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_16",
+      "ItemLabel": "Biên bản nghiệm thu khối lượng hoàn thành trong kỳ có xác nhận của hai bên và tư vấn giám sát",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 16
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_3_17",
+      "ItemLabel": "Biên bản nghiệm thu công việc xây dựng / giai đoạn thi công, bộ phận công trình của kỳ thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 17
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_02",
+      "ItemLabel": "Tờ trình đề nghị thanh toán đợt/giai đoạn",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_03",
+      "ItemLabel": "Công văn đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_04",
+      "ItemLabel": "Hóa đơn GTGT (Sau khi chủ đầu tư xác nhận giá trị thanh toán)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_05",
+      "ItemLabel": "Báo cáo và các đề xuất chất lượng hồ sơ/ sản phẩm tiến độ thực hiện và các nội dung khác nếu có liên quan đến phạt vi phạm theo quy định của Hợp đồng trong giai đoạn thanh toán toán của nhà thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_06",
+      "ItemLabel": "Hồ sơ thanh toán giá trị",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_07",
+      "ItemLabel": "Bảng tính giá trị đề nghị thanh toán: giá trị hoàn thành theo hợp đồng, phát sinh, thu hồi tạm ứng, giữ lại bảo hành, phạt; lũy kế đến kỳ này",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_08",
+      "ItemLabel": "Bảng tính giá trị phát sinh ngoài hợp đồng kèm phụ lục / phê duyệt phát sinh",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_09",
+      "ItemLabel": "Bảo lãnh thực hiện hợp đồng, bảo lãnh tạm ứng còn hiệu lực đến sau ngày thanh toán",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_10",
+      "ItemLabel": "Hồ sơ rút vốn vay của đợt thanh toán",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_11",
+      "ItemLabel": "Hợp đồng và phụ lục (kỳ thanh toán đầu tiên hoặc khi có phụ lục mới)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_12",
+      "ItemLabel": "Biên bản giao nhận thiết bị tại công trường (có xác nhận của tư vấn giám sát)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_13",
+      "ItemLabel": "Chứng từ hàng hóa: packing list, vận đơn, chứng nhận xuất xứ (CO), chất lượng (CQ), biên bản thử nghiệm xuất xưởng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_14",
+      "ItemLabel": "Hàng nhập khẩu do Công ty đứng tên: tờ khai hải quan, chứng từ nộp thuế khâu nhập khẩu",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 14
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_15",
+      "ItemLabel": "Biên bản nghiệm thu lắp đặt, chạy thử theo mốc thanh toán của hợp đồng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 15
+    },
+    {
+      "PaymentTypeCode": "DT-02.2.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_2_4_16",
+      "ItemLabel": "Phiếu nhập kho thiết bị (khi thiết bị về kho trước khi lắp đặt)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 16
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_02",
+      "ItemLabel": "Tờ trình đề nghị quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_03",
+      "ItemLabel": "Công văn đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_04",
+      "ItemLabel": "Hóa đơn GTGT (Sau khi chủ đầu tư xác nhận giá trị Quyết toán)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_05",
+      "ItemLabel": "Hồ sơ quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_06",
+      "ItemLabel": "Biên bản nghiệm thu hoàn thành toàn bộ các công việc của Hợp đồng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_07",
+      "ItemLabel": "Biên bản thanh lý hợp đồng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_08",
+      "ItemLabel": "Báo cáo đề xuất chất lượng/ hồ sơ, sản phẩm, tiến độ thực hiện và các nội dung khác nêu có liên quan đến phạt vi phạm theo quy định của Hợp đồng trong quá trình thực hiện hợp đồng của nhà thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_09",
+      "ItemLabel": "Bảng tính giá trị quyết toán hợp đồng (quyết toán A–B): giá trị hoàn thành, phát sinh, đã tạm ứng – thanh toán, còn phải trả",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_10",
+      "ItemLabel": "Biên bản đối chiếu công nợ đến ngày quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_11",
+      "ItemLabel": "Bảng tổng hợp hóa đơn đã nhận so với giá trị quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_12",
+      "ItemLabel": "Hồ sơ rút vốn vay của lần thanh toán cuối",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_13",
+      "ItemLabel": "Biên bản bàn giao Hồ sơ/ Sản phẩm của hợp đồng có xác nhận của các bên",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.1",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_1_14",
+      "ItemLabel": "Văn bản thỏa thuận/chấp thuận/xác nhận của cơ quan chức năng có thẩm quyền (nếu phạm vi công việc yêu cầu)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 14
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_02",
+      "ItemLabel": "Tờ trình đề nghị quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_03",
+      "ItemLabel": "Công văn đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_04",
+      "ItemLabel": "Hóa đơn GTGT (Sau khi chủ đầu tư xác nhận giá trị Quyết toán)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_05",
+      "ItemLabel": "Hồ sơ quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_06",
+      "ItemLabel": "Biên bản nghiệm thu hoàn thành toàn bộ các công việc của Hợp đồng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_07",
+      "ItemLabel": "Biên bản thanh lý hợp đồng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_08",
+      "ItemLabel": "Báo cáo đề xuất chất lượng/ hồ sơ, sản phẩm, tiến độ thực hiện và các nội dung khác nêu có liên quan đến phạt vi phạm theo quy định của Hợp đồng trong quá trình thực hiện hợp đồng của nhà thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_09",
+      "ItemLabel": "Bảng tính giá trị quyết toán hợp đồng (quyết toán A–B): giá trị hoàn thành, phát sinh, đã tạm ứng – thanh toán, còn phải trả",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_10",
+      "ItemLabel": "Biên bản đối chiếu công nợ đến ngày quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_11",
+      "ItemLabel": "Bảng tổng hợp hóa đơn đã nhận so với giá trị quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_12",
+      "ItemLabel": "Hồ sơ rút vốn vay của lần thanh toán cuối",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.2",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_2_13",
+      "ItemLabel": "Báo cáo của nhà thầu về kết quả thực hiện TVGS của toàn bộ hợp đồng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_02",
+      "ItemLabel": "Tờ trình đề nghị quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_03",
+      "ItemLabel": "Công văn đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_04",
+      "ItemLabel": "Hóa đơn GTGT (Sau khi chủ đầu tư xác nhận giá trị Quyết toán)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_05",
+      "ItemLabel": "Hồ sơ quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_06",
+      "ItemLabel": "Biên bản nghiệm thu hoàn thành toàn bộ các công việc của Hợp đồng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_07",
+      "ItemLabel": "Biên bản thanh lý hợp đồng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_08",
+      "ItemLabel": "Báo cáo đề xuất chất lượng/ hồ sơ, sản phẩm, tiến độ thực hiện và các nội dung khác nêu có liên quan đến phạt vi phạm theo quy định của Hợp đồng trong quá trình thực hiện hợp đồng của nhà thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_09",
+      "ItemLabel": "Bảng tính giá trị quyết toán hợp đồng (quyết toán A–B): giá trị hoàn thành, phát sinh, đã tạm ứng – thanh toán, còn phải trả",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_10",
+      "ItemLabel": "Biên bản đối chiếu công nợ đến ngày quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_11",
+      "ItemLabel": "Bảng tổng hợp hóa đơn đã nhận so với giá trị quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_12",
+      "ItemLabel": "Hồ sơ rút vốn vay của lần thanh toán cuối",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_13",
+      "ItemLabel": "Báo cáo về hồ sơ thanh toán: chất lượng, tiến độ, khối lượng, giá trị thanh toán; sơ bộ về tình hình tình hình thực hiện thi công (An toàn lao động, vệ sinh môi trường, biện pháp thi công, nhân lực, thiết bị…) và các nội dung khác",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_14",
+      "ItemLabel": "Bản vẽ hoàn công",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 14
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_15",
+      "ItemLabel": "Hồ sơ quản lý chất lượng (Theo quy định của Hợp đồng)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 15
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_16",
+      "ItemLabel": "Biên bản nghiệm thu hoàn thành công trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 16
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_17",
+      "ItemLabel": "Giấy chứng nhận/ Phê duyệt/ nghiệm thu của Cơ quan chức năng có thẩm quyền (nếu có) theo quy định của Hợp đồng, pháp luật",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 17
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_18",
+      "ItemLabel": "Bảo lãnh bảo hành hoặc Cam kết bảo hành theo quy đinh",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 18
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_19",
+      "ItemLabel": "Hồ sơ pháp lý gói thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 19
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_20",
+      "ItemLabel": "Các văn bản khác có liên qua theo quy định của Hợp đồng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 20
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_21",
+      "ItemLabel": "Nhật ký thi công",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 21
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_22",
+      "ItemLabel": "Biên bản bàn giao công trình / hạng mục đưa vào sử dụng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 22
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.3",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_3_23",
+      "ItemLabel": "Danh mục hồ sơ hoàn thành công trình đã bàn giao cho chủ đầu tư",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 23
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_02",
+      "ItemLabel": "Tờ trình đề nghị quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_03",
+      "ItemLabel": "Công văn đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_04",
+      "ItemLabel": "Hóa đơn GTGT (Sau khi chủ đầu tư xác nhận giá trị Quyết toán)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_05",
+      "ItemLabel": "Hồ sơ quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_06",
+      "ItemLabel": "Biên bản nghiệm thu hoàn thành toàn bộ các công việc của Hợp đồng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_07",
+      "ItemLabel": "Biên bản thanh lý hợp đồng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_08",
+      "ItemLabel": "Báo cáo đề xuất chất lượng/ hồ sơ, sản phẩm, tiến độ thực hiện và các nội dung khác nêu có liên quan đến phạt vi phạm theo quy định của Hợp đồng trong quá trình thực hiện hợp đồng của nhà thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_09",
+      "ItemLabel": "Bảng tính giá trị quyết toán hợp đồng (quyết toán A–B): giá trị hoàn thành, phát sinh, đã tạm ứng – thanh toán, còn phải trả",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_10",
+      "ItemLabel": "Biên bản đối chiếu công nợ đến ngày quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_11",
+      "ItemLabel": "Bảng tổng hợp hóa đơn đã nhận so với giá trị quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_12",
+      "ItemLabel": "Hồ sơ rút vốn vay của lần thanh toán cuối",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_13",
+      "ItemLabel": "Biên bản nghiệm thu hoàn thành lắp đặt, chạy thử, bàn giao đưa vào vận hành",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_14",
+      "ItemLabel": "Chứng nhận bảo hành thiết bị của nhà sản xuất; tài liệu hướng dẫn vận hành, bảo dưỡng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 14
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_15",
+      "ItemLabel": "Bảo lãnh bảo hành hoặc cam kết bảo hành theo hợp đồng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 15
+    },
+    {
+      "PaymentTypeCode": "DT-02.3.4",
+      "VersionNo": 1,
+      "ItemCode": "DT_02_3_4_16",
+      "ItemLabel": "Hồ sơ nhập khẩu, chứng nhận xuất xứ, chất lượng toàn bộ lô thiết bị (đối chiếu với các đợt)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 16
+    },
+    {
+      "PaymentTypeCode": "TC-01",
+      "VersionNo": 1,
+      "ItemCode": "TC_01_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "TC-01",
+      "VersionNo": 1,
+      "ItemCode": "TC_01_02",
+      "ItemLabel": "Thông báo phí, gốc và lãi vay của ngân hàng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "TC-01",
+      "VersionNo": 1,
+      "ItemCode": "TC_01_03",
+      "ItemLabel": "Bảng tính lãi vay, phí của kế toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "TC-01",
+      "VersionNo": 1,
+      "ItemCode": "TC_01_04",
+      "ItemLabel": "Thông báo thay đổi lãi suất (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "TC-01",
+      "VersionNo": 1,
+      "ItemCode": "TC_01_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "TC-01",
+      "VersionNo": 1,
+      "ItemCode": "TC_01_06",
+      "ItemLabel": "Khế ước nhận nợ / giấy nhận nợ và lịch trả nợ của từng lần giải ngân (kỳ trả lãi đầu tiên của khế ước)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "TC-01",
+      "VersionNo": 1,
+      "ItemCode": "TC_01_07",
+      "ItemLabel": "Hóa đơn / chứng từ thu phí do ngân hàng phát hành (phí bảo lãnh, phí thu xếp, phí quản lý khoản vay…)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "TC-01",
+      "VersionNo": 1,
+      "ItemCode": "TC_01_08",
+      "ItemLabel": "Bảng phân bổ lãi vay được vốn hóa vào dự án theo khế ước (giai đoạn đầu tư)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "TC-01",
+      "VersionNo": 1,
+      "ItemCode": "TC_01_09",
+      "ItemLabel": "Bên cho vay không phải tổ chức tín dụng: hợp đồng vay và bảng tính lãi theo hợp đồng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "TC-01",
+      "VersionNo": 1,
+      "ItemCode": "TC_01_10",
+      "ItemLabel": "Bên cho vay là cá nhân: bảng tính và chứng từ khấu trừ thuế TNCN 5% trên tiền lãi",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "TC-02",
+      "VersionNo": 1,
+      "ItemCode": "TC_02_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "TC-02",
+      "VersionNo": 1,
+      "ItemCode": "TC_02_02",
+      "ItemLabel": "Thông báo phí, gốc và lãi vay của ngân hàng (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "TC-02",
+      "VersionNo": 1,
+      "ItemCode": "TC_02_03",
+      "ItemLabel": "Báo cáo tình hình trả nợ gốc vay",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "TC-02",
+      "VersionNo": 1,
+      "ItemCode": "TC_02_04",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "TC-02",
+      "VersionNo": 1,
+      "ItemCode": "TC_02_05",
+      "ItemLabel": "Lịch trả nợ gốc theo hợp đồng tín dụng / khế ước (đối chiếu kỳ hạn và số tiền)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "TC-02",
+      "VersionNo": 1,
+      "ItemCode": "TC_02_06",
+      "ItemLabel": "Trả nợ trước hạn: tờ trình phê duyệt và văn bản đề nghị / chấp thuận của ngân hàng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "TC-02",
+      "VersionNo": 1,
+      "ItemCode": "TC_02_07",
+      "ItemLabel": "Xác nhận dư nợ sau khi trả (sao kê khoản vay / thông báo dư nợ của ngân hàng)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "VersionNo": 1,
+      "ItemCode": "TC_03_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "VersionNo": 1,
+      "ItemCode": "TC_03_02",
+      "ItemLabel": "Thông báo chi trả cổ tức",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "VersionNo": 1,
+      "ItemCode": "TC_03_03",
+      "ItemLabel": "Biên bản họp ĐHĐCĐ",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "VersionNo": 1,
+      "ItemCode": "TC_03_04",
+      "ItemLabel": "Nghị quyết họp ĐHĐCĐ",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "VersionNo": 1,
+      "ItemCode": "TC_03_05",
+      "ItemLabel": "Biên bản họp HĐQT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "VersionNo": 1,
+      "ItemCode": "TC_03_06",
+      "ItemLabel": "Quyết định HĐQT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "VersionNo": 1,
+      "ItemCode": "TC_03_07",
+      "ItemLabel": "Giấy đăng ký nhận cổ tức",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "VersionNo": 1,
+      "ItemCode": "TC_03_08",
+      "ItemLabel": "Danh sách cổ đông được nhận cổ tức: mức cổ tức mỗi cổ phần, thời hạn và hình thức trả",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "VersionNo": 1,
+      "ItemCode": "TC_03_09",
+      "ItemLabel": "Báo cáo tài chính năm đã được ĐHĐCĐ thông qua và bảng kiểm tra điều kiện trả cổ tức (đã hoàn thành nghĩa vụ thuế, trích quỹ, bù lỗ; sau khi trả vẫn thanh toán đủ nợ đến hạn)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "VersionNo": 1,
+      "ItemCode": "TC_03_10",
+      "ItemLabel": "Bảng tính và chứng từ khấu trừ thuế TNCN 5% đối với cổ tức trả cho cổ đông cá nhân",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "TC-03",
+      "VersionNo": 1,
+      "ItemCode": "TC_03_11",
+      "ItemLabel": "Văn bản chấp thuận của ngân hàng tài trợ về việc chia cổ tức (khi hợp đồng tín dụng có cam kết hạn chế)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "TH-01",
+      "VersionNo": 1,
+      "ItemCode": "TH_01_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "TH-01",
+      "VersionNo": 1,
+      "ItemCode": "TH_01_02",
+      "ItemLabel": "Bộ tờ khai thuế GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "TH-01",
+      "VersionNo": 1,
+      "ItemCode": "TH_01_03",
+      "ItemLabel": "Thông báo tiếp nhận / chấp nhận hồ sơ khai thuế điện tử",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "TH-01",
+      "VersionNo": 1,
+      "ItemCode": "TH_01_04",
+      "ItemLabel": "Bảng đối chiếu số liệu tờ khai với sổ kế toán (thuế GTGT đầu vào, đầu ra) và bảng kê hóa đơn",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "TH-01",
+      "VersionNo": 1,
+      "ItemCode": "TH_01_05",
+      "ItemLabel": "Giấy nộp tiền vào ngân sách nhà nước",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "TH-02",
+      "VersionNo": 1,
+      "ItemCode": "TH_02_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "TH-02",
+      "VersionNo": 1,
+      "ItemCode": "TH_02_02",
+      "ItemLabel": "Bộ tờ khai thuế TNCN",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "TH-02",
+      "VersionNo": 1,
+      "ItemCode": "TH_02_03",
+      "ItemLabel": "Bảng tổng hợp lương",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "TH-02",
+      "VersionNo": 1,
+      "ItemCode": "TH_02_04",
+      "ItemLabel": "Thông báo tiếp nhận hồ sơ khai thuế điện tử",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "TH-02",
+      "VersionNo": 1,
+      "ItemCode": "TH_02_05",
+      "ItemLabel": "Giấy nộp tiền vào ngân sách nhà nước",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "TH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "TH_03_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "TH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "TH_03_1_02",
+      "ItemLabel": "Bảng tạm tính thuế TNDN theo Báo cáo kết quả kinh doanh dự kiến",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "TH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "TH_03_1_03",
+      "ItemLabel": "Bảng theo dõi lũy kế thuế TNDN đã tạm nộp so với mức tối thiểu 80% số thuế ước quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "TH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "TH_03_1_04",
+      "ItemLabel": "Giấy nộp tiền vào ngân sách nhà nước",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "TH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "TH_03_2_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "TH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "TH_03_2_02",
+      "ItemLabel": "Quyết toán thuế TNDN",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "TH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "TH_03_2_03",
+      "ItemLabel": "Báo cáo tài chính năm kèm theo tờ khai quyết toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "TH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "TH_03_2_04",
+      "ItemLabel": "Thông báo tiếp nhận hồ sơ quyết toán thuế",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "TH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "TH_03_2_05",
+      "ItemLabel": "Giấy nộp tiền vào ngân sách nhà nước",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "TH-04",
+      "VersionNo": 1,
+      "ItemCode": "TH_04_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "TH-04",
+      "VersionNo": 1,
+      "ItemCode": "TH_04_02",
+      "ItemLabel": "Bảng tính thuế nhà thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "TH-04",
+      "VersionNo": 1,
+      "ItemCode": "TH_04_03",
+      "ItemLabel": "Bộ tờ khai thuế nhà thầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "TH-04",
+      "VersionNo": 1,
+      "ItemCode": "TH_04_04",
+      "ItemLabel": "Hợp đồng với nhà thầu nước ngoài (bản sao, lần khai đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "TH-04",
+      "VersionNo": 1,
+      "ItemCode": "TH_04_05",
+      "ItemLabel": "Invoice và chứng từ thanh toán cho nhà thầu nước ngoài của kỳ khai thuế",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "TH-04",
+      "VersionNo": 1,
+      "ItemCode": "TH_04_06",
+      "ItemLabel": "Hồ sơ đề nghị miễn, giảm thuế theo Hiệp định tránh đánh thuế hai lần",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "TH-04",
+      "VersionNo": 1,
+      "ItemCode": "TH_04_07",
+      "ItemLabel": "Giấy nộp tiền vào ngân sách nhà nước",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "TH-05",
+      "VersionNo": 1,
+      "ItemCode": "TH_05_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "TH-05",
+      "VersionNo": 1,
+      "ItemCode": "TH_05_02",
+      "ItemLabel": "Biên lai",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "TH-05",
+      "VersionNo": 1,
+      "ItemCode": "TH_05_03",
+      "ItemLabel": "Các giấy tờ liên quan",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "TH-05",
+      "VersionNo": 1,
+      "ItemCode": "TH_05_04",
+      "ItemLabel": "Thông báo nộp tiền của cơ quan thuế / cơ quan có thẩm quyền (tiền thuê đất, phí, lệ phí)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "TH-05",
+      "VersionNo": 1,
+      "ItemCode": "TH_05_05",
+      "ItemLabel": "Tờ khai (đối với khoản Công ty tự khai)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "TH-05",
+      "VersionNo": 1,
+      "ItemCode": "TH_05_06",
+      "ItemLabel": "Giấy nộp tiền vào ngân sách nhà nước",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-01",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-01",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-01",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_03",
+      "ItemLabel": "Báo cáo đánh giá của BQLVH",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-01",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-01",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_05",
+      "ItemLabel": "Hóa đơn GTGT (Photo)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-01",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_06",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-01",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-01",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_08",
+      "ItemLabel": "Biên bản nghiệm thu / xác nhận khối lượng, chất lượng dịch vụ vận hành kỳ thanh toán (ký giữa BQLVH và nhà thầu)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-01",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_09",
+      "ItemLabel": "Bảng tính thưởng / phạt, giảm trừ theo cam kết độ khả dụng, hiệu suất của hợp đồng (nếu hợp đồng có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-01",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_10",
+      "ItemLabel": "Bảo lãnh thực hiện hợp đồng còn hiệu lực (nếu hợp đồng quy định)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_03",
+      "ItemLabel": "Báo cáo đánh giá của BQLVH",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_05",
+      "ItemLabel": "Hóa đơn GTGT (Photo)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_06",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_08",
+      "ItemLabel": "Biên bản nghiệm thu / xác nhận khối lượng, chất lượng dịch vụ vận hành kỳ thanh toán (ký giữa BQLVH và nhà thầu)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_09",
+      "ItemLabel": "Bảng tính thưởng / phạt, giảm trừ theo cam kết độ khả dụng, hiệu suất của hợp đồng (nếu hợp đồng có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_10",
+      "ItemLabel": "Bảo lãnh thực hiện hợp đồng còn hiệu lực (nếu hợp đồng quy định)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_11",
+      "ItemLabel": "Bảng kê phí thường niên",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "VH-01.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_1_12",
+      "ItemLabel": "Báo cáo vận hành hàng tháng của Vestas",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_03",
+      "ItemLabel": "Báo cáo đánh giá của BQLVH",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_05",
+      "ItemLabel": "Hóa đơn GTGT (Photo)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_06",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_08",
+      "ItemLabel": "Biên bản nghiệm thu / xác nhận khối lượng, chất lượng dịch vụ vận hành kỳ thanh toán (ký giữa BQLVH và nhà thầu)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_09",
+      "ItemLabel": "Bảng tính thưởng / phạt, giảm trừ theo cam kết độ khả dụng, hiệu suất của hợp đồng (nếu hợp đồng có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_10",
+      "ItemLabel": "Bảo lãnh thực hiện hợp đồng còn hiệu lực (nếu hợp đồng quy định)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_11",
+      "ItemLabel": "Bảng thanh toán, quyết toán hợp đồng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_12",
+      "ItemLabel": "Báo cáo kết quả Công tác QLVH định kỳ trong tháng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "VH-01.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_01_2_13",
+      "ItemLabel": "Biên bản xác nhận giá trị Công việc có sự xác nhận các bên",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_04",
+      "ItemLabel": "Thông báo phí",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_05",
+      "ItemLabel": "Giấy chứng nhận bảo hiểm",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_06",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_08",
+      "ItemLabel": "Bản chào phí, so sánh phương án và phê duyệt lựa chọn doanh nghiệp bảo hiểm (khi mua mới / tái tục)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_09",
+      "ItemLabel": "Đơn bảo hiểm (quy tắc, điều khoản) và sửa đổi bổ sung của kỳ bảo hiểm",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_10",
+      "ItemLabel": "Giấy chứng nhận bảo hiểm cháy, nổ bắt buộc (cơ sở thuộc diện phải mua)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_11",
+      "ItemLabel": "Giấy chứng nhận bảo hiểm công trình trong thời gian xây dựng (mảng Đầu tư – công trình thuộc diện bắt buộc)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_12",
+      "ItemLabel": "Xác nhận ngân hàng nhận thế chấp là người thụ hưởng bảo hiểm (khi tài sản đang thế chấp)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "VH-02",
+      "VersionNo": 1,
+      "ItemCode": "VH_02_13",
+      "ItemLabel": "Bảng phân bổ phí bảo hiểm trả trước theo thời hạn bảo hiểm",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "VH-03",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-03",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-03",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-03",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-03",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_05",
+      "ItemLabel": "Biên bản nghiệm thu hoàn thành công việc",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-03",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_06",
+      "ItemLabel": "Hồ sơ thanh/quyết toán giá trị",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-03",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_07",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-03",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_08",
+      "ItemLabel": "Biên bản Thanh lý HĐ (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-03",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_09",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-03",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_10",
+      "ItemLabel": "Giấy đăng ký hoạt động / chứng nhận đủ điều kiện của tổ chức thử nghiệm, kiểm định (lần đầu thuê)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_05",
+      "ItemLabel": "Biên bản nghiệm thu hoàn thành công việc",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_06",
+      "ItemLabel": "Hồ sơ thanh/quyết toán giá trị",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_07",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_08",
+      "ItemLabel": "Biên bản Thanh lý HĐ (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_09",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_10",
+      "ItemLabel": "Giấy đăng ký hoạt động / chứng nhận đủ điều kiện của tổ chức thử nghiệm, kiểm định (lần đầu thuê)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_11",
+      "ItemLabel": "Giấy chứng nhận kiểm định",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "VH-03.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_1_12",
+      "ItemLabel": "Biên bản / kết quả thử nghiệm, kiểm định và ảnh tem kiểm định từng thiết bị, dụng cụ",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_05",
+      "ItemLabel": "Biên bản nghiệm thu hoàn thành công việc",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_06",
+      "ItemLabel": "Hồ sơ thanh/quyết toán giá trị",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_07",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_08",
+      "ItemLabel": "Biên bản Thanh lý HĐ (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_09",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_10",
+      "ItemLabel": "Giấy đăng ký hoạt động / chứng nhận đủ điều kiện của tổ chức thử nghiệm, kiểm định (lần đầu thuê)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_11",
+      "ItemLabel": "Báo cáo đánh giá của BQLVH",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "VH-03.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_2_12",
+      "ItemLabel": "Báo cáo kiểm tra kết thúc bảo hành",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_05",
+      "ItemLabel": "Biên bản nghiệm thu hoàn thành công việc",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_06",
+      "ItemLabel": "Hồ sơ thanh/quyết toán giá trị",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_07",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_08",
+      "ItemLabel": "Biên bản Thanh lý HĐ (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_09",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_10",
+      "ItemLabel": "Giấy đăng ký hoạt động / chứng nhận đủ điều kiện của tổ chức thử nghiệm, kiểm định (lần đầu thuê)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_11",
+      "ItemLabel": "Báo cáo đánh giá của BQLVH",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_12",
+      "ItemLabel": "Biên bản kiểm tra bảo dưỡng hệ thống, phương tiện PCCC",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "VH-03.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_3_13",
+      "ItemLabel": "Danh mục phương tiện PCCC đã kiểm tra, bảo dưỡng kèm kết quả",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_05",
+      "ItemLabel": "Biên bản nghiệm thu hoàn thành công việc",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_06",
+      "ItemLabel": "Hồ sơ thanh/quyết toán giá trị",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_07",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_08",
+      "ItemLabel": "Biên bản Thanh lý HĐ (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_09",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_10",
+      "ItemLabel": "Giấy đăng ký hoạt động / chứng nhận đủ điều kiện của tổ chức thử nghiệm, kiểm định (lần đầu thuê)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_11",
+      "ItemLabel": "Báo cáo đánh giá của BQLVH",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "VH-03.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_03_4_12",
+      "ItemLabel": "Biên bản kiểm định, giấy chứng nhận kết quả kiểm định và hình ảnh dán tem kiểm định",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "VersionNo": 1,
+      "ItemCode": "VH_04_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "VersionNo": 1,
+      "ItemCode": "VH_04_02",
+      "ItemLabel": "Phiếu yêu cầu/ Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "VersionNo": 1,
+      "ItemCode": "VH_04_03",
+      "ItemLabel": "Biên bản bàn giao cho bộ phận sử dụng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "VersionNo": 1,
+      "ItemCode": "VH_04_04",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "VersionNo": 1,
+      "ItemCode": "VH_04_05",
+      "ItemLabel": "Biên bản giao nhận",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "VersionNo": 1,
+      "ItemCode": "VH_04_06",
+      "ItemLabel": "Phiếu bảo hành",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "VersionNo": 1,
+      "ItemCode": "VH_04_07",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "VersionNo": 1,
+      "ItemCode": "VH_04_08",
+      "ItemLabel": "Báo giá cạnh tranh, bảng so sánh và phê duyệt lựa chọn nhà cung cấp (từ hạn mức quy chế mua sắm quy định)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "VersionNo": 1,
+      "ItemCode": "VH_04_09",
+      "ItemLabel": "TSCĐ: biên bản giao nhận TSCĐ, mã tài sản / thẻ TSCĐ",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "VersionNo": 1,
+      "ItemCode": "VH_04_10",
+      "ItemLabel": "Chứng nhận xuất xứ, chất lượng (CO, CQ) đối với thiết bị hợp đồng yêu cầu",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-04",
+      "VersionNo": 1,
+      "ItemCode": "VH_04_11",
+      "ItemLabel": "Hàng nhập khẩu: tờ khai hải quan và chứng từ nộp thuế khâu nhập khẩu",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "VH-05",
+      "VersionNo": 1,
+      "ItemCode": "VH_05_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-05",
+      "VersionNo": 1,
+      "ItemCode": "VH_05_02",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-05",
+      "VersionNo": 1,
+      "ItemCode": "VH_05_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-05",
+      "VersionNo": 1,
+      "ItemCode": "VH_05_04",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-05",
+      "VersionNo": 1,
+      "ItemCode": "VH_05_05",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-05",
+      "VersionNo": 1,
+      "ItemCode": "VH_05_06",
+      "ItemLabel": "Biên bản bàn giao mặt bằng thuê (kỳ đầu)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-05",
+      "VersionNo": 1,
+      "ItemCode": "VH_05_07",
+      "ItemLabel": "Thông báo / phụ lục điều chỉnh giá thuê (khi thay đổi)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-05",
+      "VersionNo": 1,
+      "ItemCode": "VH_05_08",
+      "ItemLabel": "Bên cho thuê là cá nhân: chứng từ trả tiền thuê và chứng từ nộp thuế thay (nếu hợp đồng thỏa thuận Công ty nộp thay)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-06",
+      "VersionNo": 1,
+      "ItemCode": "VH_06_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-06",
+      "VersionNo": 1,
+      "ItemCode": "VH_06_02",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-06",
+      "VersionNo": 1,
+      "ItemCode": "VH_06_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-06",
+      "VersionNo": 1,
+      "ItemCode": "VH_06_04",
+      "ItemLabel": "Bảng xác nhận chỉ số công tơ",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-06",
+      "VersionNo": 1,
+      "ItemCode": "VH_06_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-06",
+      "VersionNo": 1,
+      "ItemCode": "VH_06_06",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-06",
+      "VersionNo": 1,
+      "ItemCode": "VH_06_07",
+      "ItemLabel": "Bảng phân bổ điện, nước do bên cho thuê lập kèm bản sao hóa đơn của đơn vị điện, nước (khi bên cho thuê thu hộ)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-07",
+      "VersionNo": 1,
+      "ItemCode": "VH_07_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-07",
+      "VersionNo": 1,
+      "ItemCode": "VH_07_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-07",
+      "VersionNo": 1,
+      "ItemCode": "VH_07_03",
+      "ItemLabel": "Biên bản giao nhận điện năng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-07",
+      "VersionNo": 1,
+      "ItemCode": "VH_07_04",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-07",
+      "VersionNo": 1,
+      "ItemCode": "VH_07_05",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-07",
+      "VersionNo": 1,
+      "ItemCode": "VH_07_06",
+      "ItemLabel": "Bảng đối chiếu sản lượng điện nhận từ lưới với số liệu đo đếm của nhà máy (BQLVH xác nhận)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-08",
+      "VersionNo": 1,
+      "ItemCode": "VH_08_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-08",
+      "VersionNo": 1,
+      "ItemCode": "VH_08_02",
+      "ItemLabel": "Hóa đơn GTGT (Có sau khi thanh toán)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-08",
+      "VersionNo": 1,
+      "ItemCode": "VH_08_03",
+      "ItemLabel": "Bảng theo dõi lũy kế tiền điện sử dụng tới tháng thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-08",
+      "VersionNo": 1,
+      "ItemCode": "VH_08_04",
+      "ItemLabel": "Thông báo tiền điện",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-08",
+      "VersionNo": 1,
+      "ItemCode": "VH_08_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-08",
+      "VersionNo": 1,
+      "ItemCode": "VH_08_06",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-09",
+      "VersionNo": 1,
+      "ItemCode": "VH_09_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-09",
+      "VersionNo": 1,
+      "ItemCode": "VH_09_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-09",
+      "VersionNo": 1,
+      "ItemCode": "VH_09_03",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-09",
+      "VersionNo": 1,
+      "ItemCode": "VH_09_04",
+      "ItemLabel": "Bảng kê cước hàng tháng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-09",
+      "VersionNo": 1,
+      "ItemCode": "VH_09_05",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-09",
+      "VersionNo": 1,
+      "ItemCode": "VH_09_06",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-09",
+      "VersionNo": 1,
+      "ItemCode": "VH_09_07",
+      "ItemLabel": "Biên bản ghi nhận sự cố",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-09",
+      "VersionNo": 1,
+      "ItemCode": "VH_09_08",
+      "ItemLabel": "Hóa đơn điều chỉnh",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-09",
+      "VersionNo": 1,
+      "ItemCode": "VH_09_09",
+      "ItemLabel": "Biên bản điều chỉnh Hóa đơn",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-09",
+      "VersionNo": 1,
+      "ItemCode": "VH_09_10",
+      "ItemLabel": "Bảng tính cước của phòng Kinh tế",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-10.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-10.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_1_02",
+      "ItemLabel": "Bảng tổng hợp lương",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-10.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_1_03",
+      "ItemLabel": "Bảng chấm công có xác nhận của Trưởng bộ phận",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-10.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_1_04",
+      "ItemLabel": "Bảng thanh toán lương chi tiết từng người (bảng kê trả lương) và danh sách chuyển khoản",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-10.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_1_05",
+      "ItemLabel": "Bảng tính thuế TNCN khấu trừ từ tiền lương",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-10.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_1_06",
+      "ItemLabel": "Quyết định / hợp đồng lao động, phụ lục của người mới tuyển, thay đổi lương, nghỉ việc trong kỳ",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-10.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_2_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-10.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_2_02",
+      "ItemLabel": "Bảng tính BHXH phòng HCNS",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-10.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_2_03",
+      "ItemLabel": "Thông báo bảo hiểm xã hội (C12) cung cấp vào thời điểm có",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-10.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_2_04",
+      "ItemLabel": "Hồ sơ báo tăng, giảm lao động tham gia BHXH trong kỳ",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-10.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_3_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-10.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_3_02",
+      "ItemLabel": "Quy chế công ty",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-10.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_3_03",
+      "ItemLabel": "Giấy tờ chứng minh sự kiện (giấy báo tử, thiệp cưới / giấy đăng ký kết hôn…) và giấy nhận tiền",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-10.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_4_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-10.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_4_02",
+      "ItemLabel": "Tờ trình phê duyệt chủ trương",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-10.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_4_03",
+      "ItemLabel": "Kế hoạch / dự toán chi được duyệt",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-10.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_4_04",
+      "ItemLabel": "Danh sách CBNV thụ hưởng có ký nhận (hoặc chứng từ chuyển khoản)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-10.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_4_05",
+      "ItemLabel": "Hóa đơn GTGT của hàng hóa, dịch vụ mua để chi phúc lợi",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-10.5",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_5_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-10.5",
+      "VersionNo": 1,
+      "ItemCode": "VH_10_5_02",
+      "ItemLabel": "Bảng tính kinh phí công đoàn 2% trên quỹ lương làm căn cứ đóng BHXH",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_02",
+      "ItemLabel": "Phiếu yêu cầu nếu sửa chữa và bảo dưỡng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_03",
+      "ItemLabel": "Bảng theo dõi sửa chữa",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_04",
+      "ItemLabel": "Nhật trình xe",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_05",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_06",
+      "ItemLabel": "Bảng kê thanh toán HĐ",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_07",
+      "ItemLabel": "Bảng kê xăng xe ô tô",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_08",
+      "ItemLabel": "Bảng báo giá (nếu sửa chữa)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_09",
+      "ItemLabel": "Biên bản nghiệm thu sửa chữa - Đối với ô tô",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_10",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_11",
+      "ItemLabel": "Định mức nhiên liệu / mức khoán theo quy chế (tham chiếu để đối chiếu bảng kê xăng xe)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_12",
+      "ItemLabel": "Bảng kê giao dịch thu phí không dừng (ETC) kèm hóa đơn điện tử của đơn vị thu phí",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "VH-11",
+      "VersionNo": 1,
+      "ItemCode": "VH_11_13",
+      "ItemLabel": "Khoản chi kiểm định, bảo hiểm xe: giấy chứng nhận kiểm định, giấy chứng nhận bảo hiểm TNDS bắt buộc",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 13
+    },
+    {
+      "PaymentTypeCode": "VH-12",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-12",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-12",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-12",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-12",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-12",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_06",
+      "ItemLabel": "Biên bản thanh lý (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-12",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-12.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-12.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_1_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-12.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_1_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-12.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_1_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-12.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_1_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-12.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_1_06",
+      "ItemLabel": "Biên bản thanh lý (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-12.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_1_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-12.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_1_08",
+      "ItemLabel": "Chứng chỉ huấn luyện ATVSLĐ",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-12.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_1_09",
+      "ItemLabel": "Danh sách người được huấn luyện và kết quả kiểm tra, sát hạch",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-12.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_1_10",
+      "ItemLabel": "Biên bản nghiệm thu / thanh lý hợp đồng huấn luyện",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-12.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_2_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-12.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_2_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-12.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_2_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-12.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_2_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-12.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_2_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-12.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_2_06",
+      "ItemLabel": "Biên bản thanh lý (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-12.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_2_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-12.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_2_08",
+      "ItemLabel": "Biên bản nghiệm thu công việc hoàn thành",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-12.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_2_09",
+      "ItemLabel": "Báo cáo kết quả quan trắc môi trường lao động",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-12.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_3_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-12.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_3_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-12.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_3_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-12.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_3_04",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-12.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_3_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-12.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_3_06",
+      "ItemLabel": "Biên bản thanh lý (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-12.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_3_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-12.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_3_08",
+      "ItemLabel": "Biên bản nghiệm thu công việc hoàn thành",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-12.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_3_09",
+      "ItemLabel": "Báo cáo / phiếu kết quả quan trắc môi trường định kỳ",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-12.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_12_3_10",
+      "ItemLabel": "Giấy chứng nhận đủ điều kiện hoạt động dịch vụ quan trắc môi trường của đơn vị thực hiện (lần đầu thuê)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-13",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-13",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-13",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_03",
+      "ItemLabel": "Khoán chi (điện thoại…): mức khoán theo quy chế và danh sách người hưởng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-13.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-13.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_1_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-13.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_1_03",
+      "ItemLabel": "Khoán chi (điện thoại…): mức khoán theo quy chế và danh sách người hưởng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-13.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_1_04",
+      "ItemLabel": "Phiếu yêu cầu mua văn phòng phẩm",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-13.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_1_05",
+      "ItemLabel": "Phiếu bàn giao văn phòng phẩm cho phòng ban sử dụng",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-13.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_1_06",
+      "ItemLabel": "Biên bản bàn giao",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-13.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_2_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-13.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_2_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-13.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_2_03",
+      "ItemLabel": "Khoán chi (điện thoại…): mức khoán theo quy chế và danh sách người hưởng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-13.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_2_04",
+      "ItemLabel": "Phiếu yêu cầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-13.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_3_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-13.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_3_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-13.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_3_03",
+      "ItemLabel": "Khoán chi (điện thoại…): mức khoán theo quy chế và danh sách người hưởng",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-13.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_3_04",
+      "ItemLabel": "Phiếu yêu cầu (với đơn Hỏa tốc)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-13.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_13_3_05",
+      "ItemLabel": "Bảng kê chi tiết đính kèm",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-14",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-14",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-14",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_03",
+      "ItemLabel": "Kế hoạch công tác",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-14",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_04",
+      "ItemLabel": "Bảng kê chi phí",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-14",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_05",
+      "ItemLabel": "Quyết định / giấy cử đi công tác (lập trước ngày đi tối thiểu 01 tuần)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-14",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_06",
+      "ItemLabel": "Hóa đơn lưu trú, đi lại (taxi, tàu xe) trong thời gian công tác",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-14",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_07",
+      "ItemLabel": "Báo cáo kết quả công tác / giấy đi đường có xác nhận nơi đến (khi khoán phụ cấp theo quy chế)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-14.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-14.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_1_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-14.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_1_03",
+      "ItemLabel": "Kế hoạch công tác",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-14.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_1_04",
+      "ItemLabel": "Bảng kê chi phí",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-14.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_1_05",
+      "ItemLabel": "Quyết định / giấy cử đi công tác (lập trước ngày đi tối thiểu 01 tuần)",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-14.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_1_06",
+      "ItemLabel": "Hóa đơn lưu trú, đi lại (taxi, tàu xe) trong thời gian công tác",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-14.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_1_07",
+      "ItemLabel": "Báo cáo kết quả công tác / giấy đi đường có xác nhận nơi đến (khi khoán phụ cấp theo quy chế)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-14.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_1_08",
+      "ItemLabel": "Bảng kê chi tiết đính kèm",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-14.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_1_09",
+      "ItemLabel": "Vé máy bay điện tử",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-14.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_14_1_10",
+      "ItemLabel": "Thẻ lên máy bay (boarding pass). Không thu hồi được thẻ: vé điện tử + quyết định cử đi công tác + chứng từ thanh toán không dùng tiền mặt",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-15",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-15",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-15",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_03",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-15",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_04",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-15",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-15",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_06",
+      "ItemLabel": "Biên bản thanh lý (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-15",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-15",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_08",
+      "ItemLabel": "Chứng nhận đủ điều kiện kinh doanh dịch vụ của đơn vị cung cấp (kiểm toán, kế toán, đại lý thuế, thẩm định giá) – lần đầu thuê",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-15.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_1_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-15.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_1_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-15.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_1_03",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-15.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_1_04",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-15.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_1_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-15.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_1_06",
+      "ItemLabel": "Biên bản thanh lý (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-15.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_1_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-15.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_1_08",
+      "ItemLabel": "Chứng nhận đủ điều kiện kinh doanh dịch vụ của đơn vị cung cấp (kiểm toán, kế toán, đại lý thuế, thẩm định giá) – lần đầu thuê",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-15.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_1_09",
+      "ItemLabel": "Biên bản nghiệm thu công việc",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-15.1",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_1_10",
+      "ItemLabel": "Báo cáo tư vấn",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-15.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_2_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-15.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_2_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-15.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_2_03",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-15.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_2_04",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-15.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_2_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-15.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_2_06",
+      "ItemLabel": "Biên bản thanh lý (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-15.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_2_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-15.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_2_08",
+      "ItemLabel": "Chứng nhận đủ điều kiện kinh doanh dịch vụ của đơn vị cung cấp (kiểm toán, kế toán, đại lý thuế, thẩm định giá) – lần đầu thuê",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-15.2",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_2_09",
+      "ItemLabel": "Báo cáo kiểm toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-15.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_3_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-15.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_3_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-15.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_3_03",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-15.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_3_04",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-15.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_3_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-15.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_3_06",
+      "ItemLabel": "Biên bản thanh lý (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-15.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_3_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-15.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_3_08",
+      "ItemLabel": "Chứng nhận đủ điều kiện kinh doanh dịch vụ của đơn vị cung cấp (kiểm toán, kế toán, đại lý thuế, thẩm định giá) – lần đầu thuê",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-15.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_3_09",
+      "ItemLabel": "Chứng thư thẩm định giá",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-15.3",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_3_10",
+      "ItemLabel": "Báo cáo thẩm định giá kèm theo chứng thư",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_02",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_03",
+      "ItemLabel": "Công văn ĐNTT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_04",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_06",
+      "ItemLabel": "Biên bản thanh lý (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_07",
+      "ItemLabel": "Hồ sơ khác theo yêu cầu của hợp đồng (Nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_08",
+      "ItemLabel": "Chứng nhận đủ điều kiện kinh doanh dịch vụ của đơn vị cung cấp (kiểm toán, kế toán, đại lý thuế, thẩm định giá) – lần đầu thuê",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_09",
+      "ItemLabel": "Phiếu yêu cầu",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 9
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_10",
+      "ItemLabel": "Báo giá",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 10
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_11",
+      "ItemLabel": "Biên bản bàn giao / nghiệm thu phần mềm, thông tin bản quyền (license), tài khoản",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 11
+    },
+    {
+      "PaymentTypeCode": "VH-15.4",
+      "VersionNo": 1,
+      "ItemCode": "VH_15_4_12",
+      "ItemLabel": "Hợp đồng / đơn đặt hàng / điều khoản dịch vụ phần mềm",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 12
+    },
+    {
+      "PaymentTypeCode": "VH-16",
+      "VersionNo": 1,
+      "ItemCode": "VH_16_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-16",
+      "VersionNo": 1,
+      "ItemCode": "VH_16_02",
+      "ItemLabel": "Phiếu yêu cầu/ tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-16",
+      "VersionNo": 1,
+      "ItemCode": "VH_16_03",
+      "ItemLabel": "Hóa đơn GTGT",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-16",
+      "VersionNo": 1,
+      "ItemCode": "VH_16_04",
+      "ItemLabel": "Biên bản nghiệm thu, bàn giao…",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-16",
+      "VersionNo": 1,
+      "ItemCode": "VH_16_05",
+      "ItemLabel": "Hợp đồng (cho kỳ thanh toán đầu tiên)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-16",
+      "VersionNo": 1,
+      "ItemCode": "VH_16_06",
+      "ItemLabel": "Biên bản thanh lý (nếu có)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-17",
+      "VersionNo": 1,
+      "ItemCode": "VH_17_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-17",
+      "VersionNo": 1,
+      "ItemCode": "VH_17_02",
+      "ItemLabel": "Hóa đơn",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-17",
+      "VersionNo": 1,
+      "ItemCode": "VH_17_03",
+      "ItemLabel": "Bảng thông báo phí",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-17",
+      "VersionNo": 1,
+      "ItemCode": "VH_17_04",
+      "ItemLabel": "Hợp đồng / thỏa thuận dịch vụ liên quan tín chỉ (tư vấn, thẩm tra, phát hành, đăng ký)",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-17",
+      "VersionNo": 1,
+      "ItemCode": "VH_17_05",
+      "ItemLabel": "Báo cáo thẩm tra / thông báo phát hành tín chỉ làm căn cứ tính phí",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-18",
+      "VersionNo": 1,
+      "ItemCode": "VH_18_01",
+      "ItemLabel": "Đề nghị thanh toán",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 1
+    },
+    {
+      "PaymentTypeCode": "VH-18",
+      "VersionNo": 1,
+      "ItemCode": "VH_18_02",
+      "ItemLabel": "Tờ trình",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 2
+    },
+    {
+      "PaymentTypeCode": "VH-18",
+      "VersionNo": 1,
+      "ItemCode": "VH_18_03",
+      "ItemLabel": "Hợp đồng dịch vụ",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 3
+    },
+    {
+      "PaymentTypeCode": "VH-18",
+      "VersionNo": 1,
+      "ItemCode": "VH_18_04",
+      "ItemLabel": "Bảng chấm công/ Biên bản nghiệm thu công việc",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 4
+    },
+    {
+      "PaymentTypeCode": "VH-18",
+      "VersionNo": 1,
+      "ItemCode": "VH_18_05",
+      "ItemLabel": "Thuê cá nhân: căn cước công dân, mã số thuế cá nhân",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 5
+    },
+    {
+      "PaymentTypeCode": "VH-18",
+      "VersionNo": 1,
+      "ItemCode": "VH_18_06",
+      "ItemLabel": "Bảng kê thanh toán có ký nhận của người lao động / chứng từ chuyển khoản",
+      "IsRequired": true,
+      "MinFileCount": 1,
+      "DisplayOrder": 6
+    },
+    {
+      "PaymentTypeCode": "VH-18",
+      "VersionNo": 1,
+      "ItemCode": "VH_18_07",
+      "ItemLabel": "Thuê qua doanh nghiệp: hóa đơn GTGT",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 7
+    },
+    {
+      "PaymentTypeCode": "VH-18",
+      "VersionNo": 1,
+      "ItemCode": "VH_18_08",
+      "ItemLabel": "Thuê qua doanh nghiệp cho thuê lại lao động: giấy phép hoạt động cho thuê lại lao động",
+      "IsRequired": false,
+      "MinFileCount": 0,
+      "DisplayOrder": 8
+    }
+  ],
+  "_systemSettingsComment": "Ngưỡng Dashboard — chỉnh trên list EMI_PAY_SystemSettings (SYSADM). SPFx chỉ đọc.",
+  "systemSettings": [
+    {
+      "SettingKey": "DASH_DUE_SOON_DAYS",
+      "SettingValue": "3",
+      "SettingDescription": "Số ngày còn lại để coi hạn xử lý (WorkItems.DueAt) là sắp hết hạn",
+      "Title": "Dashboard · sắp hết hạn xử lý (ngày)"
+    },
+    {
+      "SettingKey": "DASH_PAYMENT_DUE_SOON_DAYS",
+      "SettingValue": "7",
+      "SettingDescription": "Số ngày còn lại để coi hạn thanh toán (Requests.PaymentDueAt) là sắp đến hạn",
+      "Title": "Dashboard · sắp đến hạn TT (ngày)"
+    },
+    {
+      "SettingKey": "DASH_OVERLOAD_WAITING_ACCEPT",
+      "SettingValue": "5",
+      "SettingDescription": "Cảnh báo phòng khi số hồ sơ WaitingAcceptance ≥ ngưỡng",
+      "Title": "Dashboard · quá tải chờ tiếp nhận"
+    },
+    {
+      "SettingKey": "DASH_OVERLOAD_OVERDUE_WI",
+      "SettingValue": "3",
+      "SettingDescription": "Cảnh báo phòng khi số WorkItem quá hạn ≥ ngưỡng",
+      "Title": "Dashboard · quá tải WI quá hạn"
+    },
+    {
+      "SettingKey": "DASH_ALERT_REVIEW_ROUND",
+      "SettingValue": "3",
+      "SettingDescription": "Cảnh báo hồ sơ khi ReviewRound ≥ ngưỡng",
+      "Title": "Dashboard · ReviewRound cao"
+    }
+  ],
+  "_nhxChecklistComment": "NHX Phụ lục 01: loại lá only (bỏ nhóm điều hướng VH-10/TH-03/DT-02/DT-02.2/DT-02.3). TT=B→IsRequired. Giữ SPV_PAYMENT. Nguồn: EMI_Checklist_Ho_so_Chung_tu_2_cap.xlsx"
 }

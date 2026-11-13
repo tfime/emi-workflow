@@ -1,6 +1,6 @@
 import { IChecklistTemplate } from './ConfigService';
 import { PAY_LISTS, escapeOData } from './PayLists';
-import { ISpRestContext, createItem, getItems, mergeItem } from './SpRest';
+import { ISpRestContext, createItem, deleteItem, getItems, mergeItem } from './SpRest';
 
 export interface IChecklistItemRow {
   id: number;
@@ -50,6 +50,11 @@ export async function listChecklistItems(
   return rows.map(mapRow).sort((a, b) => a.id - b.id);
 }
 
+/**
+ * Đồng bộ ChecklistItems theo template loại hồ sơ.
+ * Flow CREATE còn hardcode DOC_REQUEST/DOC_INVOICE (nhãn ASCII) — bước này
+ * bổ sung mục thiếu, cập nhật nhãn từ template, và xóa mục thừa (chưa tải tệp).
+ */
 export async function reconcileChecklistFromTemplates(
   ctx: ISpRestContext,
   requestKey: string,
@@ -61,21 +66,46 @@ export async function reconcileChecklistFromTemplates(
     byCode[e.itemCode] = e;
   });
 
+  const templateCodes: Record<string, true> = {};
   for (const t of templates) {
-    if (byCode[t.itemCode]) continue;
-    await createItem(ctx, PAY_LISTS.ChecklistItems, {
-      Title: `${requestKey}-${t.itemCode}`,
-      RequestKey: requestKey,
-      ChecklistItemKey: `${requestKey}|${t.itemCode}`,
-      ItemCode: t.itemCode,
+    templateCodes[t.itemCode] = true;
+    const row = byCode[t.itemCode];
+    if (!row) {
+      await createItem(ctx, PAY_LISTS.ChecklistItems, {
+        Title: `${requestKey}-${t.itemCode}`,
+        RequestKey: requestKey,
+        ChecklistItemKey: `${requestKey}|${t.itemCode}`,
+        ItemCode: t.itemCode,
+        ItemLabel: t.itemLabel,
+        IsRequired: t.isRequired,
+        MinFileCount: t.minFileCount,
+        UploadedCount: 0,
+        ItemStatus: 'Missing',
+        IsLocked: false
+      });
+      continue;
+    }
+    // Cùng ItemCode (vd Flow stub DOC_REQUEST) → căn nhãn/required theo template nếu chưa có tệp.
+    if (row.uploadedCount > 0 || row.isLocked) continue;
+    const needPatch =
+      row.itemLabel !== t.itemLabel ||
+      row.isRequired !== t.isRequired ||
+      row.minFileCount !== t.minFileCount;
+    if (!needPatch) continue;
+    await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, {
       ItemLabel: t.itemLabel,
       IsRequired: t.isRequired,
-      MinFileCount: t.minFileCount,
-      UploadedCount: 0,
-      ItemStatus: 'Missing',
-      IsLocked: false
+      MinFileCount: t.minFileCount
     });
   }
+
+  // Xóa stub Flow / mục không thuộc loại hồ sơ (chỉ khi chưa tải tệp, chưa khóa).
+  for (const e of existing) {
+    if (templateCodes[e.itemCode]) continue;
+    if (e.uploadedCount > 0 || e.isLocked) continue;
+    await deleteItem(ctx, PAY_LISTS.ChecklistItems, e.id);
+  }
+
   return listChecklistItems(ctx, requestKey);
 }
 
