@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) {
 $phaseRoot = Split-Path $PSScriptRoot -Parent
 $repoRoot = Split-Path $phaseRoot -Parent
 if ([string]::IsNullOrWhiteSpace($OutZip)) {
-    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_19.zip'
+    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_20.zip'
 }
 $staging = Join-Path $phaseRoot '_staging_solution'
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
@@ -340,21 +340,34 @@ $definition = [ordered]@{
             runAfter = @{ INIT_CommandETag = @('Succeeded') }
         }
 
+        # Terminal → Response ngay (không Claim lại). Processing xử lý ở else → IF_AlreadyProcessing.
         IF_AlreadyDone = [ordered]@{
             type       = 'If'
             runAfter   = @{ INIT_MasterETag = @('Succeeded') }
             expression = [ordered]@{
-                and = @(
+                or = @(
                     [ordered]@{
                         equals = @(
-                            "@coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], '')"
-                            'Succeeded'
+                            "@toLower(trim(string(coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], ''))))"
+                            'succeeded'
+                        )
+                    }
+                    [ordered]@{
+                        equals = @(
+                            "@toLower(trim(string(coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], ''))))"
+                            'rejected'
+                        )
+                    }
+                    [ordered]@{
+                        equals = @(
+                            "@toLower(trim(string(coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], ''))))"
+                            'failed'
                         )
                     }
                 )
             }
             actions    = [ordered]@{
-                RESP_AlreadySucceeded = [ordered]@{
+                RESP_AlreadyTerminal = [ordered]@{
                     type   = 'Response'
                     kind   = 'Http'
                     inputs = [ordered]@{
@@ -367,11 +380,11 @@ $definition = [ordered]@{
                         }
                         body       = [ordered]@{
                             commandId       = "@variables('CommandId')"
-                            state           = 'Succeeded'
-                            requestKey      = "@variables('RequestKey')"
-                            stepInstanceKey = "@variables('StepInstanceKey')"
-                            errorMessage    = ''
-                            commandType     = "@variables('CommandType')"
+                            state           = "@coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], '')"
+                            requestKey      = "@coalesce(body('HTTP_LoadCommand')?['RequestKey'], variables('RequestKey'))"
+                            stepInstanceKey = "@coalesce(body('HTTP_LoadCommand')?['StepInstanceKey'], variables('StepInstanceKey'))"
+                            errorMessage    = "@coalesce(body('HTTP_LoadCommand')?['ErrorMessage'], '')"
+                            commandType     = "@coalesce(body('HTTP_LoadCommand')?['CommandType'], variables('CommandType'))"
                         }
                     }
                 }
@@ -393,7 +406,8 @@ $definition = [ordered]@{
                                 'parameters/headers' = [ordered]@{
                                     Accept          = 'application/json;odata=nometadata'
                                     'Content-Type'  = 'application/json;odata=nometadata'
-                                    'IF-MATCH'      = "@variables('CommandETag')"
+                                    # Claim dùng * — CommandETag dễ 412 → nhánh fail + RESP_Api (Skipped) = dual Response.
+                                    'IF-MATCH'      = '*'
                                     'X-HTTP-Method' = 'MERGE'
                                 }
                                 'parameters/body'    = '{"State":"Processing"}'
@@ -2615,37 +2629,12 @@ $newElse['IF_AuthOk'] = [ordered]@{
 $httpGetFinal.runAfter = @{ IF_AuthOk = @('Succeeded') }
 $newElse['HTTP_GetFinal'] = $httpGetFinal
 $newElse['IF_WriteActivityInternal'] = $ifWriteInternal
+# Không gồm Skipped: khi Claim/Auth bị skip, RESP_Api vẫn chạy → dual Response với RESP_After*.
+$respApi.runAfter = @{ IF_WriteActivityInternal = @('Succeeded', 'Failed', 'TimedOut') }
 $newElse['RESP_Api'] = $respApi
 
-# Claim 412/fail → đợi lệnh terminal (run khác đã claim cùng commandId).
-$untilClaimFail = [ordered]@{
-    type       = 'Until'
-    runAfter   = @{ HTTP_ClaimProcessing = @('Failed', 'TimedOut') }
-    expression = (New-UntilTerminalExpr 'HTTP_WaitCmd_CF')
-    limit      = $untilWaitTerminal.limit
-    actions    = [ordered]@{
-        DELAY_WaitCmd_CF = [ordered]@{
-            type   = 'Wait'
-            inputs = [ordered]@{ interval = [ordered]@{ count = 2; unit = 'Second' } }
-        }
-        HTTP_WaitCmd_CF = [ordered]@{
-            type     = 'OpenApiConnection'
-            runAfter = @{ DELAY_WaitCmd_CF = @('Succeeded') }
-            inputs   = $untilWaitTerminal.actions.HTTP_WaitCmd.inputs
-        }
-    }
-}
-$newElse['UNTIL_WaitClaimFail'] = $untilClaimFail
-$newElse['RESP_AfterClaimFail'] = [ordered]@{
-    type     = 'Response'
-    kind     = 'Http'
-    runAfter = @{ UNTIL_WaitClaimFail = @('Succeeded', 'Failed', 'TimedOut', 'Skipped') }
-    inputs   = [ordered]@{
-        statusCode = 200
-        headers    = $respHeaders
-        body       = (New-RespBody "@coalesce(body('HTTP_WaitCmd_CF')?['State'], body('HTTP_WaitCmd_CF')?['State/Value'], 'Failed')" "@coalesce(body('HTTP_WaitCmd_CF')?['ErrorMessage'],'CLAIM_CONFLICT')")
-    }
-}
+# Không nhánh Claim-Failed + Response song song với RESP_Api (gây CLAIM_CONFLICT / dual Response).
+# Race cùng commandId: IF_AlreadyProcessing (Until) hoặc IF_AlreadyDone (terminal).
 
 $claimAuthPipeline = $newElse
 
@@ -2717,8 +2706,8 @@ $topElse = [ordered]@{
             and = @(
                 [ordered]@{
                     equals = @(
-                        "@coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], '')"
-                        'Processing'
+                        "@toLower(trim(string(coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], ''))))"
+                        'processing'
                     )
                 }
             )
@@ -2728,11 +2717,18 @@ $topElse = [ordered]@{
             RESP_AfterProcessing = [ordered]@{
                 type     = 'Response'
                 kind     = 'Http'
-                runAfter = @{ UNTIL_WaitProcessing = @('Succeeded', 'Failed', 'TimedOut', 'Skipped') }
+                runAfter = @{ UNTIL_WaitProcessing = @('Succeeded', 'Failed', 'TimedOut') }
                 inputs   = [ordered]@{
                     statusCode = 200
                     headers    = $respHeaders
-                    body       = (New-RespBody "@coalesce(body('HTTP_WaitCmd_P')?['State'], body('HTTP_WaitCmd_P')?['State/Value'], 'Failed')" "@coalesce(body('HTTP_WaitCmd_P')?['ErrorMessage'],'WAIT_TIMEOUT')")
+                    body       = [ordered]@{
+                        commandId       = "@variables('CommandId')"
+                        state           = "@coalesce(body('HTTP_WaitCmd_P')?['State'], body('HTTP_WaitCmd_P')?['State/Value'], 'Failed')"
+                        requestKey      = "@coalesce(body('HTTP_WaitCmd_P')?['RequestKey'], variables('RequestKey'), '')"
+                        stepInstanceKey = "@coalesce(body('HTTP_WaitCmd_P')?['StepInstanceKey'], variables('StepInstanceKey'), '')"
+                        errorMessage    = "@coalesce(body('HTTP_WaitCmd_P')?['ErrorMessage'], '')"
+                        commandType     = "@coalesce(body('HTTP_WaitCmd_P')?['CommandType'], variables('CommandType'))"
+                    }
                 }
             }
         }
@@ -2938,9 +2934,9 @@ $solution = @"
       <LocalizedName description="EMI_PAY_CORE_V1" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
-      <Description description="Core Orchestrator HTTP API 1.0.0.19: Goi3 Dedupe+ETag no trigger concurrency (sync Response); AUTH" languagecode="1033" />
+      <Description description="Core Orchestrator HTTP API 1.0.0.20: fix dual Response CLAIM_CONFLICT; terminal/Processing gates; AUTH" languagecode="1033" />
     </Descriptions>
-    <Version>1.0.0.19</Version>
+    <Version>1.0.0.20</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>tfime</UniqueName>

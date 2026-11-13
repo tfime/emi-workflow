@@ -1,41 +1,32 @@
-##Các bước cần triển khai tiếp theo
+## Các bước cần triển khai tiếp theo
 1. Data Models	Tạo Lists, Libraries và cột	Đã tạo
 2. RBAC tĩnh	Nhóm và ACL 23 List/Library	Đã xong (V1.9.1); Dyn ACL theo hồ sơ: kit V1 (`10.EMI_PAY_Dynamic_Permission_V1`)
 3. Configuration	Cấu hình phòng ban, trưởng phòng, loại hồ sơ, checklist, quy trình	Một phần (seed gói 9; seed EMI_PAY_SPV kit còn lại)
-4. Core Orchestrator	PA Solution `EMI_PAY_CORE_V1` (Phase1+2 gates)	**1.0.0.13** — AUTH OrgMembers (cần Import + UAT)
-5. SPFx	Giao diện live trên EMI-Pay.aspx (tạo dynamic + upload + Commands)	Đang làm — Fluent UI 8 + Contoso teal (màn hồ sơ / hộp thư / tạo / tổng quan / khung shell)
-6. Kiểm thử	Chạy hồ sơ thanh toán từ đầu đến cuối	UAT Core PASS (09/04/08); UAT UI trên EMI-Pay.aspx còn lại
+4. Core Orchestrator	PA Solution `EMI_PAY_CORE_V1` (Phase1+2 gates)	**1.0.0.20** trong repo — Import tenant + UAT AUTH/chuyển bước
+5. SPFx	Giao diện live trên EMI-Pay.aspx (tạo dynamic + upload + Commands)	Fluent UI 8 + Contoso teal (shell/detail/inbox/create/dashboard/audit)
+6. Kiểm thử	Chạy hồ sơ thanh toán từ đầu đến cuối	UAT Core PASS (09/04/08); UAT UI + Import 1.0.0.20 còn lại
 
-### Core Flow (1.0.0.13 — HTTP API + AUTH)
+### Core Flow (1.0.0.20 — HTTP API + AUTH + Perf Gói 3)
 - CREATE → checklist → SUBMIT → AwaitingManager → TP DECIDE → ACCEPT(+DueAt) → DECIDE PASS/REJECT → CHAIR duyệt hồ sơ → duyệt TT + `paymentDueAt` → UNC gate → CONFIRM → Archiving
 - 5 lệnh: `CREATE_REQUEST` | `SUBMIT` | `ACCEPT` | `DECIDE` | `CONFIRM_PAYMENT`
-- ActivityPublic sau Succeeded; ActivityInternal khi Rejected/Failed
-- CHAIR hai bước (1.0.0.12): PASS không due = giữ CHAIR; PASS + due (sau dossier) → TCKT_PAY
-- REJECT về BPCM1; SUBMIT lại tăng `ReviewRound`, vào lại BPCM2
-- ZIP: `EMI_PAY_CORE_V1_1_0_0_13.zip` · runbook/UAT: `EMI_PAY_Core_Flow_Phase1/` · AUTH: `AUTH_ORGMEMBERS_GATE.md`
+- AUTH OrgMembers (`AUTH_ORGMEMBERS_GATE.md`); CREATE đủ field + ChecklistTemplates (Gói 2)
+- Gói 3: Dedupe + Master ETag; `IF_AlreadyDone` (terminal) / `IF_AlreadyProcessing`; **không** trigger concurrency (sync Response); fix dual Response / CLAIM_CONFLICT
+- ZIP Import: **`EMI_PAY_CORE_V1_1_0_0_20.zip`** · docs: `PERF_GOI3.md`, `PERF_MEASURE.md`, `AUTH_ORGMEMBERS_GATE.md`
 
 ### UAT đã PASS (tenant CECM)
 - `09_UAT_Phase2_ActivityAccept.ps1` — Activity + ACCEPT gates
 - `04_UAT_Phase1_HappyPath.ps1` — full path + CHAIR two-step (`PAY-CMD-20261112162811-39705a`)
 - `08_UAT_Phase2_ChairPaymentDueAt.ps1` — gate due trước dossier / dossier / payment
+- Perf đo (2026-11-13): CREATE ~18s; parallel 3 CREATE ~34s wall (`10_` / `11_PERF_*.ps1`) — trước khi chốt 1.0.0.20
 
-### SPFx (Demo Off) gần đây
-- **Fluent UI 8** (theme Contoso teal): hầu hết UI live — chi tiết / hộp thư / tạo·sửa hồ sơ / tổng quan / audit / header·nav / rail / hộp thoại live+demo / Panel tệp / ComboBox / Busy·Notice; khung shell CSS chỉ giữ layout grid
-- Nhật ký Activity: mới nhất trước, badge/tiêu đề tiếng Việt; tab **Nhật ký / Ghi chú** có badge đỏ đếm
-- Tab Ghi chú: list Note/Reason; gửi StepReviews (`USER_NOTE` trong ChecklistItemKey; Dyn ListContribute StepReviews theo UPN)
-- Chưa ACCEPT (BPCM2/3/TCKT): khoá **đánh giá checklist** và **gửi ghi chú** (tab + preview tệp); chỉ tin AcceptedAt của WI đúng CurrentStepInstanceKey
-- Banner Returned hiện lý do REJECT
-- Tab Tài liệu hỗ trợ: tải `DocClass=StepAttachment`
-- CT.HĐQT: «Phê duyệt hồ sơ» rồi «Duyệt thanh toán» (dialog hạn chỉ ở bước 2)
-- Checklist: full lúc CREATE; phòng tự đánh giá mục chưa khóa; **không** đòi Đạt hết để DECIDE PASS; sau PASS khóa mục Pass/Fail (`lockReviewedItems`)
-- Draft/Returned (BPCM1): form **Sửa thông tin hồ sơ** (title/amount/explanation/OU/RoutePlan) qua `patchRequestBusinessFields`
+### SPFx (Demo Off)
+- Fluent UI 8 Contoso teal: tách `shell` / `detail` / `inbox` / `create` / `dashboard` / `audit` / `dialogs`
+- Act-as + OrgMembers; Admin tạo trực tiếp; Member phòng xem/review (không DECIDE)
+- Perf Gói 1: boot/loadDetail song song; `perfMark` (`localStorage.emiPayPerf=1`); DedupeKey idempotent
+- Checklist / ghi chú / UNC / CHAIR hai bước / sửa Draft·Returned như trước
 
-### Việc tiếp
-- ~~Seed OrgMembers + Đóng vai~~; ~~Admin tạo/trình trực tiếp~~; ~~Member phòng kiểm tra (xem/review, không DECIDE)~~
-- **Perf Gói 1 (SPFx)** — DONE: `loadDetail`/`boot` song song; spinner tắt sau lệnh; reconcile chỉ khi lệch; ghi checklist `mapPool(4)`
-- **Perf Gói 2 (Flow)** — DONE trong repo: Core **1.0.0.14** CREATE đủ field + ChecklistTemplates; SPFx bỏ patch/reconcile — còn **Import ZIP** trên tenant
-- **Perf Gói 3** — DONE trong repo **1.0.0.19** (`PERF_GOI3.md`): Dedupe + Claim/Master ETag (không trigger concurrency — sync Response); Dyn ACL PnP async — còn **Import ZIP** + `11_PERF_Goi3_Concurrent.ps1`
-- Cổng OrgMembers (trong 1.0.0.14+) — Import + UAT AUTH reject/pass
-- Dyn ACL child Flow (sau Response) khi gắn kit V1; DocsInternal/Archive ACL (Dyn V1.1)
-- Assignments (phân công nhiều người) sau
-
+### Việc tiếp (ưu tiên)
+1. **Import `1.0.0.20`** + Flow On → UAT chuyển bước (SUBMIT/ACCEPT/DECIDE) + `11_PERF_Goi3_Concurrent.ps1`
+2. UAT AUTH OrgMembers (reject/pass theo `AUTH_ORGMEMBERS_GATE.md`)
+3. Dyn ACL: Apply PnP sau hồ sơ thật; child Flow / DocsInternal·Archive = V1.1
+4. Catch toàn cục Commands `Failed` (PHASE2 #8); Assignments sau

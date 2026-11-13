@@ -51,8 +51,8 @@
             "variables": [
               {
                 "name": "CommandId",
-                "value": "@int(coalesce(triggerBody()?['commandId'],0))",
-                "type": "integer"
+                "type": "integer",
+                "value": "@int(coalesce(triggerBody()?['commandId'],0))"
               }
             ]
           },
@@ -88,8 +88,8 @@
             "variables": [
               {
                 "name": "CommandKey",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandKey'],'')",
-                "type": "string"
+                "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandKey'],'')"
               }
             ]
           },
@@ -105,8 +105,8 @@
             "variables": [
               {
                 "name": "CommandType",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandType'],'')",
-                "type": "string"
+                "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandType'],'')"
               }
             ]
           },
@@ -122,8 +122,8 @@
             "variables": [
               {
                 "name": "RequestKey",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['RequestKey'],'')",
-                "type": "string"
+                "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['RequestKey'],'')"
               }
             ]
           },
@@ -139,8 +139,8 @@
             "variables": [
               {
                 "name": "Payload",
-                "value": "@json(if(empty(coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'')),'{}',coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'{}')))",
-                "type": "object"
+                "type": "object",
+                "value": "@json(if(empty(coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'')),'{}',coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'{}')))"
               }
             ]
           },
@@ -156,8 +156,8 @@
             "variables": [
               {
                 "name": "NextStepKey",
-                "value": "",
-                "type": "string"
+                "type": "string",
+                "value": ""
               }
             ]
           },
@@ -173,8 +173,8 @@
             "variables": [
               {
                 "name": "NextStepOrder",
-                "value": 0,
-                "type": "integer"
+                "type": "integer",
+                "value": 0
               }
             ]
           },
@@ -190,8 +190,8 @@
             "variables": [
               {
                 "name": "NextStepKind",
-                "value": "Department",
-                "type": "string"
+                "type": "string",
+                "value": "Department"
               }
             ]
           },
@@ -207,8 +207,8 @@
             "variables": [
               {
                 "name": "NextReqStatus",
-                "value": "InReview",
-                "type": "string"
+                "type": "string",
+                "value": "InReview"
               }
             ]
           },
@@ -224,8 +224,8 @@
             "variables": [
               {
                 "name": "NextWiState",
-                "value": "InReview",
-                "type": "string"
+                "type": "string",
+                "value": "InReview"
               }
             ]
           },
@@ -241,8 +241,8 @@
             "variables": [
               {
                 "name": "NextOU",
-                "value": "",
-                "type": "string"
+                "type": "string",
+                "value": ""
               }
             ]
           },
@@ -258,8 +258,8 @@
             "variables": [
               {
                 "name": "StepInstanceKey",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['StepInstanceKey'],'')",
-                "type": "string"
+                "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['StepInstanceKey'],'')"
               }
             ]
           },
@@ -275,8 +275,8 @@
             "variables": [
               {
                 "name": "MasterId",
-                "value": "",
-                "type": "string"
+                "type": "string",
+                "value": ""
               }
             ]
           },
@@ -292,8 +292,8 @@
             "variables": [
               {
                 "name": "WorkItemId",
-                "value": "",
-                "type": "string"
+                "type": "string",
+                "value": ""
               }
             ]
           },
@@ -309,8 +309,8 @@
             "variables": [
               {
                 "name": "ReviewRound",
-                "value": 1,
-                "type": "integer"
+                "type": "integer",
+                "value": 1
               }
             ]
           },
@@ -326,8 +326,8 @@
             "variables": [
               {
                 "name": "ErrorMessage",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['ErrorMessage'],'')",
-                "type": "string"
+                "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['ErrorMessage'],'')"
               }
             ]
           },
@@ -343,8 +343,8 @@
             "variables": [
               {
                 "name": "AuthorEmail",
-                "value": "@toLower(trim(coalesce(body('HTTP_LoadCommand')?['Author']?['EMail'], body('HTTP_LoadCommand')?['Author']?['Email'], body('HTTP_LoadCommand')?['Author']?['Email'], '')))",
-                "type": "string"
+                "type": "string",
+                "value": "@toLower(trim(coalesce(body('HTTP_LoadCommand')?['Author']?['EMail'], body('HTTP_LoadCommand')?['Author']?['Email'], body('HTTP_LoadCommand')?['Author']?['Email'], '')))"
               }
             ]
           },
@@ -360,8 +360,8 @@
             "variables": [
               {
                 "name": "EffectiveActorUPN",
-                "value": "",
-                "type": "string"
+                "type": "string",
+                "value": ""
               }
             ]
           },
@@ -377,8 +377,8 @@
             "variables": [
               {
                 "name": "AuthError",
-                "value": "",
-                "type": "string"
+                "type": "string",
+                "value": ""
               }
             ]
           },
@@ -394,8 +394,8 @@
             "variables": [
               {
                 "name": "DedupeKey",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['DedupeKey'],'')",
-                "type": "string"
+                "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['DedupeKey'],'')"
               }
             ]
           },
@@ -411,8 +411,8 @@
             "variables": [
               {
                 "name": "CommandETag",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['@odata.etag'],'*')",
-                "type": "string"
+                "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['@odata.etag'],'*')"
               }
             ]
           },
@@ -428,8 +428,8 @@
             "variables": [
               {
                 "name": "MasterETag",
-                "value": "*",
-                "type": "string"
+                "type": "string",
+                "value": "*"
               }
             ]
           },
@@ -447,17 +447,29 @@
             ]
           },
           "expression": {
-            "and": [
+            "or": [
               {
                 "equals": [
-                  "@coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], '')",
-                  "Succeeded"
+                  "@toLower(trim(string(coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], ''))))",
+                  "succeeded"
+                ]
+              },
+              {
+                "equals": [
+                  "@toLower(trim(string(coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], ''))))",
+                  "rejected"
+                ]
+              },
+              {
+                "equals": [
+                  "@toLower(trim(string(coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], ''))))",
+                  "failed"
                 ]
               }
             ]
           },
           "actions": {
-            "RESP_AlreadySucceeded": {
+            "RESP_AlreadyTerminal": {
               "type": "Response",
               "kind": "Http",
               "inputs": {
@@ -470,11 +482,11 @@
                 },
                 "body": {
                   "commandId": "@variables('CommandId')",
-                  "state": "Succeeded",
-                  "requestKey": "@variables('RequestKey')",
-                  "stepInstanceKey": "@variables('StepInstanceKey')",
-                  "errorMessage": "",
-                  "commandType": "@variables('CommandType')"
+                  "state": "@coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], '')",
+                  "requestKey": "@coalesce(body('HTTP_LoadCommand')?['RequestKey'], variables('RequestKey'))",
+                  "stepInstanceKey": "@coalesce(body('HTTP_LoadCommand')?['StepInstanceKey'], variables('StepInstanceKey'))",
+                  "errorMessage": "@coalesce(body('HTTP_LoadCommand')?['ErrorMessage'], '')",
+                  "commandType": "@coalesce(body('HTTP_LoadCommand')?['CommandType'], variables('CommandType'))"
                 }
               }
             }
@@ -487,8 +499,8 @@
                   "and": [
                     {
                       "equals": [
-                        "@coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], '')",
-                        "Processing"
+                        "@toLower(trim(string(coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], ''))))",
+                        "processing"
                       ]
                     }
                   ]
@@ -544,8 +556,7 @@
                       "UNTIL_WaitProcessing": [
                         "Succeeded",
                         "Failed",
-                        "TimedOut",
-                        "Skipped"
+                        "TimedOut"
                       ]
                     },
                     "inputs": {
@@ -559,10 +570,10 @@
                       "body": {
                         "commandId": "@variables('CommandId')",
                         "state": "@coalesce(body('HTTP_WaitCmd_P')?['State'], body('HTTP_WaitCmd_P')?['State/Value'], 'Failed')",
-                        "requestKey": "@coalesce(variables('RequestKey'),'')",
-                        "stepInstanceKey": "@coalesce(variables('StepInstanceKey'),'')",
-                        "errorMessage": "@coalesce(body('HTTP_WaitCmd_P')?['ErrorMessage'],'WAIT_TIMEOUT')",
-                        "commandType": "@variables('CommandType')"
+                        "requestKey": "@coalesce(body('HTTP_WaitCmd_P')?['RequestKey'], variables('RequestKey'), '')",
+                        "stepInstanceKey": "@coalesce(body('HTTP_WaitCmd_P')?['StepInstanceKey'], variables('StepInstanceKey'), '')",
+                        "errorMessage": "@coalesce(body('HTTP_WaitCmd_P')?['ErrorMessage'], '')",
+                        "commandType": "@coalesce(body('HTTP_WaitCmd_P')?['CommandType'], variables('CommandType'))"
                       }
                     }
                   }
@@ -707,7 +718,7 @@
                                 "parameters/headers": {
                                   "Accept": "application/json;odata=nometadata",
                                   "Content-Type": "application/json;odata=nometadata",
-                                  "IF-MATCH": "@variables('CommandETag')",
+                                  "IF-MATCH": "*",
                                   "X-HTTP-Method": "MERGE"
                                 },
                                 "parameters/body": "{\"State\":\"Processing\"}"
@@ -3968,8 +3979,7 @@
                               "IF_WriteActivityInternal": [
                                 "Succeeded",
                                 "Failed",
-                                "TimedOut",
-                                "Skipped"
+                                "TimedOut"
                               ]
                             },
                             "inputs": {
@@ -3987,84 +3997,6 @@
                                 "stepInstanceKey": "@coalesce(body('HTTP_GetFinal')?['StepInstanceKey'], variables('StepInstanceKey'))",
                                 "errorMessage": "@coalesce(body('HTTP_GetFinal')?['ErrorMessage'],'')",
                                 "commandType": "@coalesce(body('HTTP_GetFinal')?['CommandType'], variables('CommandType'))"
-                              }
-                            }
-                          },
-                          "UNTIL_WaitClaimFail": {
-                            "type": "Until",
-                            "runAfter": {
-                              "HTTP_ClaimProcessing": [
-                                "Failed",
-                                "TimedOut"
-                              ]
-                            },
-                            "expression": "@or(equals(coalesce(body('HTTP_WaitCmd_CF')?['State'], body('HTTP_WaitCmd_CF')?['State/Value'], ''), 'Succeeded'), equals(coalesce(body('HTTP_WaitCmd_CF')?['State'], body('HTTP_WaitCmd_CF')?['State/Value'], ''), 'Rejected'), equals(coalesce(body('HTTP_WaitCmd_CF')?['State'], body('HTTP_WaitCmd_CF')?['State/Value'], ''), 'Failed'))",
-                            "limit": {
-                              "count": 60,
-                              "timeout": "PT2M"
-                            },
-                            "actions": {
-                              "DELAY_WaitCmd_CF": {
-                                "type": "Wait",
-                                "inputs": {
-                                  "interval": {
-                                    "count": 2,
-                                    "unit": "Second"
-                                  }
-                                }
-                              },
-                              "HTTP_WaitCmd_CF": {
-                                "type": "OpenApiConnection",
-                                "runAfter": {
-                                  "DELAY_WaitCmd_CF": [
-                                    "Succeeded"
-                                  ]
-                                },
-                                "inputs": {
-                                  "host": {
-                                    "connectionName": "shared_sharepointonline",
-                                    "operationId": "HttpRequest",
-                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
-                                  },
-                                  "parameters": {
-                                    "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
-                                    "parameters/method": "GET",
-                                    "parameters/uri": "@concat('_api/web/lists(guid''e16b76dc-7686-43e9-b232-18c80e2b31d2'')/items(', string(variables('CommandId')), ')?$select=Id,State,RequestKey,StepInstanceKey,ErrorMessage,CommandType')",
-                                    "parameters/headers": {
-                                      "Accept": "application/json;odata=nometadata"
-                                    }
-                                  },
-                                  "authentication": "@parameters('$authentication')"
-                                }
-                              }
-                            }
-                          },
-                          "RESP_AfterClaimFail": {
-                            "type": "Response",
-                            "kind": "Http",
-                            "runAfter": {
-                              "UNTIL_WaitClaimFail": [
-                                "Succeeded",
-                                "Failed",
-                                "TimedOut",
-                                "Skipped"
-                              ]
-                            },
-                            "inputs": {
-                              "statusCode": 200,
-                              "headers": {
-                                "Access-Control-Allow-Origin": "*",
-                                "Access-Control-Allow-Methods": "POST, OPTIONS",
-                                "Access-Control-Allow-Headers": "Content-Type",
-                                "Content-Type": "application/json"
-                              },
-                              "body": {
-                                "commandId": "@variables('CommandId')",
-                                "state": "@coalesce(body('HTTP_WaitCmd_CF')?['State'], body('HTTP_WaitCmd_CF')?['State/Value'], 'Failed')",
-                                "requestKey": "@coalesce(variables('RequestKey'),'')",
-                                "stepInstanceKey": "@coalesce(variables('StepInstanceKey'),'')",
-                                "errorMessage": "@coalesce(body('HTTP_WaitCmd_CF')?['ErrorMessage'],'CLAIM_CONFLICT')",
-                                "commandType": "@variables('CommandType')"
                               }
                             }
                           }

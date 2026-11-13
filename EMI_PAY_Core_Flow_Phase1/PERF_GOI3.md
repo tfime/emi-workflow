@@ -1,19 +1,21 @@
 # Perf Gói 3 — Dedupe + ETag Master + concurrency HTTP
 
-**Trạng thái:** DONE trong repo — Solution **1.0.0.19** (`EMI_PAY_CORE_V1_1_0_0_19.zip`). Cần Import + Flow On.
+**Trạng thái:** DONE trong repo — Solution **1.0.0.20** (`EMI_PAY_CORE_V1_1_0_0_20.zip`). Cần Import + Flow On.
 
-### Import fail log
+### Import / runtime fail log
 
-| Ver | Lỗi XRM | Sửa |
-|-----|---------|-----|
+| Ver | Lỗi | Sửa |
+|-----|-----|-----|
 | 1.0.0.16 | `Until` expression object | Chuỗi `@or(...)` |
 | 1.0.0.17 | `SetVariable` self-ref RequestKey | Chỉ lấy từ body Dedupe |
-| 1.0.0.18 | `InvalidConcurrencyConfiguration` | **Bỏ** `trigger.concurrency.runs` — HTTP + **sync** `Response` (SPFx) không được bật concurrency control; song song vẫn mặc định; an toàn = Dedupe + ETag |
+| 1.0.0.18–19 | `InvalidConcurrencyConfiguration` | Bỏ trigger `concurrency.runs` |
+| **1.0.0.20** | `CLAIM_CONFLICT` + `RESP_Api` skipped (dual Response) | Bỏ nhánh Claim-fail+Response; `RESP_Api` không `runAfter Skipped`; Claim `IF-MATCH *`; `IF_AlreadyDone` = terminal Succeeded\|Rejected\|Failed; Processing so sánh `toLower` |
 
 ### Không làm / không làm lại
 
 - `runtimeConfiguration.concurrency.runs` trên trigger Request khi còn Response sync  
 - `Response` + `operationOptions: Asynchronous` (phá `enqueueAndRun` đồng bộ)  
+- Song song `RESP_AfterClaimFail` + `RESP_Api` (runAfter gồm Skipped)  
 **Phụ thuộc:** Gói 1–2 đã trên tenant (CREATE template OK).
 
 ## Mục tiêu
