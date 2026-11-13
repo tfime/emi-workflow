@@ -1,7 +1,9 @@
 import * as React from 'react';
-import { Stack, Text, ThemeProvider } from '@fluentui/react';
+import { Separator, Stack, Text, ThemeProvider } from '@fluentui/react';
 import { emiPayFluentTheme } from '../../theme/fluentPayTheme';
+import { payTokens } from '../../theme/payTokens';
 import { cardStack, fillStack, themeHostStyle } from '../detail/detailStyles';
+import { hintText, sectionTitle } from './createFormStyles';
 
 export interface ICreateRailProps {
   typeTitle: string;
@@ -9,6 +11,8 @@ export interface ICreateRailProps {
   amountDisplay: string;
   ouCode: string;
   actorUPN: string;
+  partyKindLabel: string;
+  nccSummary?: string;
   templateCount: number;
   requiredCount: number;
 }
@@ -20,17 +24,24 @@ const kv = (label: string, value: React.ReactNode): React.ReactNode => (
     tokens={{ childrenGap: 8 }}
     styles={{
       root: {
-        padding: '7px 0',
-        borderBottom: '1px solid #e5e7eb'
+        padding: '8px 0',
+        borderBottom: `1px solid ${payTokens.line}`
       }
     }}
   >
-    <Text variant="small" styles={{ root: { color: '#4b5563', fontWeight: 500 } }}>
+    <Text variant="small" styles={{ root: { color: payTokens.muted, fontWeight: 500 } }}>
       {label}
     </Text>
     <Text
       variant="small"
-      styles={{ root: { textAlign: 'right', maxWidth: '62%', wordBreak: 'break-word' } }}
+      styles={{
+        root: {
+          textAlign: 'right',
+          maxWidth: '62%',
+          wordBreak: 'break-word',
+          fontWeight: 600
+        }
+      }}
     >
       {value}
     </Text>
@@ -42,22 +53,25 @@ const CreateRail: React.FC<ICreateRailProps> = (props) => {
     <ThemeProvider theme={emiPayFluentTheme} style={themeHostStyle}>
       <Stack tokens={{ childrenGap: 12 }} styles={fillStack}>
         <Stack tokens={{ childrenGap: 2 }} styles={cardStack}>
-          <Text variant="mediumPlus" styles={{ root: { fontWeight: 600, marginBottom: 4 } }}>
+          <Text variant="mediumPlus" styles={{ ...sectionTitle, root: { ...sectionTitle.root, marginBottom: 4 } }}>
             Xem trước
           </Text>
-          {kv('Loại', props.typeTitle || '—')}
           {kv('Tiêu đề', props.title || '—')}
           {kv('Số tiền', props.amountDisplay)}
           {kv('Đơn vị', props.ouCode || '—')}
+          {kv('Đối tượng', props.partyKindLabel || '—')}
+          {!!props.nccSummary && kv('NCC', props.nccSummary)}
+          {kv('Loại', props.typeTitle || '—')}
           {kv('Người tạo', props.actorUPN)}
           {kv('Checklist', `${props.templateCount} mục · ${props.requiredCount} bắt buộc`)}
         </Stack>
-        <Stack tokens={{ childrenGap: 6 }} styles={cardStack}>
-          <Text variant="mediumPlus" styles={{ root: { fontWeight: 600 } }}>
-            Gợi ý
+        <Stack tokens={{ childrenGap: 8 }} styles={cardStack}>
+          <Text variant="mediumPlus" styles={sectionTitle}>
+            Tiếp theo
           </Text>
-          <Text variant="small" styles={{ root: { color: '#4b5563', lineHeight: 1.45 } }}>
-            Sau khi tạo: tải đủ tài liệu bắt buộc rồi mới «Gửi hồ sơ».
+          <Separator />
+          <Text variant="small" styles={hintText}>
+            Sau khi tạo: tải đủ tài liệu bắt buộc rồi «Trình trưởng phòng».
           </Text>
         </Stack>
       </Stack>

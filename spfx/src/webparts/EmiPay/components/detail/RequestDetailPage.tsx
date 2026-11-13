@@ -17,6 +17,7 @@ import {
   requiredChecklistReady
 } from '../../services/ChecklistService';
 import { IOrgUnit, IStepRecipient } from '../../services/ConfigService';
+import { IPartyBizInfo } from '../../services/partyBiz';
 import {
   canEditRequestBusinessFields,
   displayRequestTitle,
@@ -59,6 +60,7 @@ export interface IRequestDetailPageProps {
   editAmount: string;
   editExpl: string;
   editOu: string;
+  editPartyBiz: IPartyBizInfo;
   editRoutePlan: Record<string, string>;
   orgUnits: IOrgUnit[];
   stepRecipients: IStepRecipient[];
@@ -72,6 +74,7 @@ export interface IRequestDetailPageProps {
   onEditAmountChange: (v: string) => void;
   onEditExplChange: (v: string) => void;
   onEditOuChange: (v: string) => void;
+  onEditPartyBizChange: (v: IPartyBizInfo) => void;
   onEditRouteChange: (stepKey: string, ouCode: string) => void;
   onSaveBusinessFields: () => void;
   onRefresh: () => void;
@@ -231,6 +234,7 @@ const RequestDetailPage: React.FC<IRequestDetailPageProps> = (props) => {
             editAmount={props.editAmount}
             editExpl={props.editExpl}
             editOu={props.editOu}
+            editPartyBiz={props.editPartyBiz}
             editRoutePlan={props.editRoutePlan}
             orgUnits={props.orgUnits}
             stepRecipients={props.stepRecipients}
@@ -241,6 +245,7 @@ const RequestDetailPage: React.FC<IRequestDetailPageProps> = (props) => {
             onAmountChange={(v) => props.onEditAmountChange(formatAmountInput(v))}
             onExplChange={props.onEditExplChange}
             onOuChange={props.onEditOuChange}
+            onPartyBizChange={props.onEditPartyBizChange}
             onRouteChange={props.onEditRouteChange}
             onSave={props.onSaveBusinessFields}
           />

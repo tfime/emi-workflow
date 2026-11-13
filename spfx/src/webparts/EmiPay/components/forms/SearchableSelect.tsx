@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { ComboBox, IComboBox, IComboBoxOption } from '@fluentui/react';
+import { createComboStyles } from '../create/createFormStyles';
 
 export interface ISearchableSelectOption {
   value: string;
@@ -14,6 +15,8 @@ export interface ISearchableSelectProps {
   disabled?: boolean;
   placeholder?: string;
   emptyText?: string;
+  label?: string;
+  required?: boolean;
   id?: string;
 }
 
@@ -34,7 +37,6 @@ const SearchableSelect: React.FC<ISearchableSelectProps> = (props) => {
       props.onChange(String(option.key));
       return;
     }
-    // free input: try match by label/value
     const q = (value || '').trim().toLowerCase();
     if (!q) return;
     const hit = props.options.filter((o) => {
@@ -47,6 +49,8 @@ const SearchableSelect: React.FC<ISearchableSelectProps> = (props) => {
   return (
     <ComboBox
       id={props.id}
+      label={props.label}
+      required={props.required}
       selectedKey={props.value || undefined}
       options={comboOptions}
       disabled={props.disabled}
@@ -55,10 +59,7 @@ const SearchableSelect: React.FC<ISearchableSelectProps> = (props) => {
       useComboBoxAsMenuWidth={true}
       placeholder={props.placeholder || 'Gõ để tìm…'}
       onChange={onChange}
-      styles={{
-        root: { maxWidth: '100%' },
-        input: { borderRadius: 4 }
-      }}
+      styles={createComboStyles}
     />
   );
 };

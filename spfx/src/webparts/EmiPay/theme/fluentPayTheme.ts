@@ -41,5 +41,19 @@ export const emiPayFluentTheme: ITheme = createTheme({
   },
   effects: {
     roundedCorner2: '4px'
+  },
+  /** Input Fluent: border xám nhạt (không đen từ neutralSecondary). */
+  semanticColors: {
+    inputBorder: payTokens.line,
+    inputBorderHovered: payTokens.brandMid,
+    inputFocusBorderAlt: payTokens.brand,
+    inputBackground: payTokens.card,
+    inputBackgroundChecked: payTokens.brand,
+    inputBackgroundCheckedHovered: payTokens.brandDark,
+    inputForegroundChecked: payTokens.card,
+    inputPlaceholderText: payTokens.muted,
+    disabledBorder: payTokens.line,
+    focusBorder: payTokens.brand,
+    smallInputBorder: payTokens.line
   }
 });

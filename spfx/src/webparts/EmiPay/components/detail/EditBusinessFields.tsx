@@ -1,7 +1,18 @@
 import * as React from 'react';
 import { PrimaryButton, Stack, Text, TextField } from '@fluentui/react';
 import { IOrgUnit, IStepRecipient } from '../../services/ConfigService';
+import { IPartyBizInfo } from '../../services/partyBiz';
 import { IRequestMaster } from '../../services/RequestService';
+import {
+  createMultilineStyles,
+  createTextFieldStyles,
+  formCellClass,
+  formFieldGap,
+  formGrid2Class,
+  groupLabel,
+  hintText
+} from '../create/createFormStyles';
+import PartyBizFields from '../forms/PartyBizFields';
 import SearchableSelect from '../forms/SearchableSelect';
 import { actionBtnStyles, cardStack } from './detailStyles';
 
@@ -17,6 +28,7 @@ export interface IEditBusinessFieldsProps {
   editAmount: string;
   editExpl: string;
   editOu: string;
+  editPartyBiz: IPartyBizInfo;
   editRoutePlan: Record<string, string>;
   orgUnits: IOrgUnit[];
   stepRecipients: IStepRecipient[];
@@ -27,6 +39,7 @@ export interface IEditBusinessFieldsProps {
   onAmountChange: (v: string) => void;
   onExplChange: (v: string) => void;
   onOuChange: (v: string) => void;
+  onPartyBizChange: (v: IPartyBizInfo) => void;
   onRouteChange: (stepKey: string, ouCode: string) => void;
   onSave: () => void;
 }
@@ -48,7 +61,7 @@ const EditBusinessFields: React.FC<IEditBusinessFieldsProps> = (props) => {
         }));
 
   return (
-    <Stack tokens={{ childrenGap: 12 }} styles={cardStack}>
+    <Stack tokens={{ childrenGap: formFieldGap }} styles={cardStack}>
       <Stack horizontal horizontalAlign="space-between" verticalAlign="center">
         <Text variant="large" styles={{ root: { fontWeight: 600 } }}>
           Sửa thông tin hồ sơ
@@ -64,23 +77,24 @@ const EditBusinessFields: React.FC<IEditBusinessFieldsProps> = (props) => {
         onChange={(_, v) => props.onTitleChange(v || '')}
         placeholder="Ví dụ: Thanh toán công tác tháng 11…"
         disabled={props.busy}
+        styles={createTextFieldStyles}
       />
 
-      <Stack horizontal tokens={{ childrenGap: 12 }} wrap>
-        <TextField
-          label="Số tiền đề nghị (VND)"
-          value={props.editAmount}
-          onChange={(_, v) => props.onAmountChange(v || '')}
-          inputMode="decimal"
-          placeholder="Ví dụ: 1.000.000,50"
-          disabled={props.busy}
-          styles={{ root: { minWidth: 200, flex: 1 } }}
-        />
-        <Stack styles={{ root: { minWidth: 200, flex: 1 } }}>
-          <Text variant="small" styles={{ root: { fontWeight: 600, marginBottom: 5 } }}>
-            Đơn vị khởi tạo
-          </Text>
+      <div className={formGrid2Class}>
+        <div className={formCellClass}>
+          <TextField
+            label="Số tiền đề nghị (VND)"
+            value={props.editAmount}
+            onChange={(_, v) => props.onAmountChange(v || '')}
+            inputMode="decimal"
+            placeholder="Ví dụ: 1.000.000,50"
+            disabled={props.busy}
+            styles={createTextFieldStyles}
+          />
+        </div>
+        <div className={formCellClass}>
           <SearchableSelect
+            label="Đơn vị khởi tạo"
             options={ouOptions}
             value={props.editOu}
             disabled={props.busy || !!props.actorOuCode}
@@ -88,14 +102,20 @@ const EditBusinessFields: React.FC<IEditBusinessFieldsProps> = (props) => {
             emptyText="Không tìm thấy phòng"
             onChange={props.onOuChange}
           />
-        </Stack>
-      </Stack>
+        </div>
+      </div>
+
+      <PartyBizFields
+        value={props.editPartyBiz}
+        disabled={props.busy}
+        onChange={props.onPartyBizChange}
+      />
 
       <Stack tokens={{ childrenGap: 8 }}>
-        <Text variant="small" styles={{ root: { fontWeight: 600 } }}>
+        <Text variant="small" styles={groupLabel}>
           Phòng nhận kiểm tra
         </Text>
-        <Stack horizontal tokens={{ childrenGap: 12 }} wrap>
+        <div className={formGrid2Class}>
           {props.routeStepsUi.map((rs) => {
             const opts = props.stepRecipients.filter((r) => r.stepKey === rs.key);
             const selected =
@@ -111,14 +131,9 @@ const EditBusinessFields: React.FC<IEditBusinessFieldsProps> = (props) => {
                 })
               : [{ value: '', label: '—', hint: '' }];
             return (
-              <Stack key={rs.key} styles={{ root: { minWidth: 160, flex: '1 1 160px' } }}>
-                <Text
-                  variant="small"
-                  styles={{ root: { color: '#4b5563', marginBottom: 4 } }}
-                >
-                  {rs.label}
-                </Text>
+              <div key={rs.key} className={formCellClass}>
                 <SearchableSelect
+                  label={rs.label}
                   options={options}
                   value={selected}
                   disabled={props.busy}
@@ -126,11 +141,11 @@ const EditBusinessFields: React.FC<IEditBusinessFieldsProps> = (props) => {
                   emptyText="Không có phòng"
                   onChange={(v) => props.onRouteChange(rs.key, v)}
                 />
-              </Stack>
+              </div>
             );
           })}
-        </Stack>
-        <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+        </div>
+        <Text variant="small" styles={hintText}>
           Loại hồ sơ: {props.master.paymentTypeCode} (không đổi).
         </Text>
       </Stack>
@@ -139,9 +154,11 @@ const EditBusinessFields: React.FC<IEditBusinessFieldsProps> = (props) => {
         label="Diễn giải"
         multiline
         rows={2}
+        resizable={false}
         value={props.editExpl}
         onChange={(_, v) => props.onExplChange(v || '')}
         disabled={props.busy}
+        styles={createMultilineStyles}
       />
 
       <Stack horizontal tokens={{ childrenGap: 8 }}>

@@ -9,6 +9,10 @@ import {
 } from '../../services/RequestService';
 import { IDocumentIndexRow } from '../../services/UploadService';
 import { isChairDossierApproved } from '../../services/liveActions';
+import {
+  parsePartyBizFromRouteJson,
+  partyKindLabel
+} from '../../services/partyBiz';
 import { chairStatusDetailVi, moneyVi, stepShortVi } from '../../services/viLabels';
 import { emiPayFluentTheme } from '../../theme/fluentPayTheme';
 import styles from '../EmiPay.module.scss';
@@ -64,6 +68,7 @@ const DetailRail: React.FC<IDetailRailProps> = (props) => {
   }
 
   const m = props.master;
+  const party = parsePartyBizFromRouteJson(m.routePlanJson);
   const status = chairStatusDetailVi(
     m.currentStepKey,
     m.status,
@@ -98,6 +103,16 @@ const DetailRail: React.FC<IDetailRailProps> = (props) => {
             Tóm tắt nhanh
           </Text>
           {kv('Tiêu đề', displayRequestTitle(m))}
+          {kv('Đối tượng', partyKindLabel(party.partyKind))}
+          {party.partyKind === 'NCC' && (
+            <>
+              {kv('Dự án', party.project || '—')}
+              {kv('Hạng mục / gói / KMCP', party.packageItem || '—')}
+              {kv('Hợp đồng số', party.contractNo || '—')}
+              {kv('Loại tiền', party.currency || '—')}
+              {kv('Lần thanh toán', party.paymentTimes || '—')}
+            </>
+          )}
           {kv('Loại', m.paymentTypeCode || '—')}
           {kv('Đơn vị', m.currentOUCode || m.createdOUCode || '—')}
           {kv('Người tạo', m.creatorUPN || '—')}

@@ -1,11 +1,9 @@
 import * as React from 'react';
 import {
   DefaultButton,
-  DetailsList,
-  DetailsListLayoutMode,
-  IColumn,
+  MessageBar,
+  MessageBarType,
   PrimaryButton,
-  SelectionMode,
   Stack,
   Text,
   TextField,
@@ -17,16 +15,29 @@ import {
   IStepRecipient,
   IChecklistTemplate
 } from '../../services/ConfigService';
+import { IPartyBizInfo, partyBizDenial } from '../../services/partyBiz';
 import { emiPayFluentTheme } from '../../theme/fluentPayTheme';
+import { payTokens } from '../../theme/payTokens';
 import {
   actionBtnStyles,
   cardStack,
   fillStack,
   themeHostStyle
 } from '../detail/detailStyles';
-import { badgeBg, badgeColor } from '../detail/fluentBadge';
+import PartyBizFields from '../forms/PartyBizFields';
 import SearchableSelect from '../forms/SearchableSelect';
 import { amountError, formatAmountInput, parseAmountInput } from './amountValidate';
+import {
+  createMultilineStyles,
+  createTextFieldStyles,
+  formCellClass,
+  formFieldGap,
+  formGrid2Class,
+  formSectionGap,
+  groupLabel,
+  hintText,
+  sectionTitle
+} from './createFormStyles';
 
 export interface ICreateRouteStep {
   key: string;
@@ -39,6 +50,7 @@ export interface ICreateRequestPageProps {
   createAmount: string;
   createExpl: string;
   createOu: string;
+  createPartyBiz: IPartyBizInfo;
   actorOuCode: string;
   selectedType: string;
   paymentTypes: IPaymentType[];
@@ -52,6 +64,7 @@ export interface ICreateRequestPageProps {
   onAmountChange: (v: string) => void;
   onExplChange: (v: string) => void;
   onOuChange: (v: string) => void;
+  onPartyBizChange: (v: IPartyBizInfo) => void;
   onTypeChange: (v: string) => void;
   onRouteChange: (stepKey: string, ouCode: string) => void;
   onBack: () => void;
@@ -96,116 +109,72 @@ const CreateRequestPage: React.FC<ICreateRequestPageProps> = (props) => {
     });
   }
 
+  const partyDeny = partyBizDenial(props.createPartyBiz);
   const canSubmit =
     !props.busy &&
     !!props.selectedType &&
     amountCheck.ok &&
-    !!(props.createTitle || '').trim();
-
-  const tplColumns: IColumn[] = [
-    {
-      key: 'stt',
-      name: 'STT',
-      minWidth: 40,
-      maxWidth: 50,
-      onRender: (_t: IChecklistTemplate, idx?: number) => (idx !== undefined ? idx + 1 : '')
-    },
-    {
-      key: 'label',
-      name: 'Mục tài liệu',
-      minWidth: 160,
-      isResizable: true,
-      onRender: (t: IChecklistTemplate) => (
-        <Text styles={{ root: { fontWeight: 600 } }}>{t.itemLabel}</Text>
-      )
-    },
-    {
-      key: 'req',
-      name: 'Bắt buộc',
-      minWidth: 90,
-      maxWidth: 110,
-      onRender: (t: IChecklistTemplate) => {
-        const kind = t.isRequired ? 'warn' : 'mute';
-        return (
-          <Text
-            variant="small"
-            styles={{
-              root: {
-                fontWeight: '600',
-                color: badgeColor(kind),
-                background: badgeBg(kind),
-                borderRadius: 4,
-                padding: '2px 8px'
-              }
-            }}
-          >
-            {t.isRequired ? 'Bắt buộc' : 'Tuỳ chọn'}
-          </Text>
-        );
-      }
-    },
-    {
-      key: 'min',
-      name: 'Tối thiểu',
-      minWidth: 70,
-      maxWidth: 90,
-      onRender: (t: IChecklistTemplate) =>
-        t.isRequired || t.minFileCount > 0 ? `${t.minFileCount || 1} tệp` : '—'
-    }
-  ];
+    !!(props.createTitle || '').trim() &&
+    !partyDeny;
 
   return (
     <ThemeProvider theme={emiPayFluentTheme} style={themeHostStyle}>
-      <Stack tokens={{ childrenGap: 14 }} styles={fillStack}>
+      <Stack tokens={{ childrenGap: formSectionGap }} styles={fillStack}>
         <Stack
           horizontal
           horizontalAlign="space-between"
           verticalAlign="center"
           wrap
-          tokens={{ childrenGap: 12 }}
-          styles={cardStack}
+          tokens={{ childrenGap: formFieldGap }}
         >
-          <Text variant="xLarge" styles={{ root: { fontWeight: 700 } }}>
-            Tạo hồ sơ thanh toán
-          </Text>
+          <Stack tokens={{ childrenGap: 2 }}>
+            <Text variant="xLarge" styles={{ root: { fontWeight: 700 } }}>
+              Tạo hồ sơ thanh toán
+            </Text>
+            <Text variant="small" styles={hintText}>
+              Điền tiêu đề, số tiền rồi chọn loại hồ sơ và phòng nhận.
+            </Text>
+          </Stack>
           <DefaultButton text="Quay lại" onClick={props.onBack} styles={actionBtnStyles} />
         </Stack>
 
-        <Stack tokens={{ childrenGap: 12 }} styles={cardStack}>
-          <Text variant="large" styles={{ root: { fontWeight: 600 } }}>
-            Thông tin hồ sơ
+        {/* 1. Identity trước — Fluent: primary fields trên cùng */}
+        <Stack tokens={{ childrenGap: formFieldGap }} styles={cardStack}>
+          <Text variant="mediumPlus" styles={sectionTitle}>
+            1. Thông tin hồ sơ
           </Text>
+
           <TextField
             label="Tiêu đề hồ sơ"
+            required
             value={props.createTitle}
             onChange={(_, v) => props.onTitleChange(v || '')}
             placeholder="Ví dụ: Thanh toán đợt 2 theo HĐ…"
             disabled={props.busy}
+            styles={createTextFieldStyles}
           />
-          <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
-            <TextField
-              label="Số tiền đề nghị (VND)"
-              value={props.createAmount}
-              onChange={(_, v) => props.onAmountChange(formatAmountInput(v || ''))}
-              inputMode="decimal"
-              placeholder="Ví dụ: 1.000.000,50"
-              errorMessage={amountMsg || undefined}
-              description={
-                amountMsg
-                  ? undefined
-                  : 'Dấu chấm phân nghìn, dấu phẩy thập phân (tối đa 2 số).'
-              }
-              disabled={props.busy}
-              styles={{ root: { flex: '1 1 200px', minWidth: 180 } }}
-            />
-            <Stack styles={{ root: { flex: '1 1 200px', minWidth: 180 } }}>
-              <Text
-                variant="small"
-                styles={{ root: { fontWeight: 600, marginBottom: 5 } }}
-              >
-                Đơn vị khởi tạo
-              </Text>
+
+          <div className={formGrid2Class}>
+            <div className={formCellClass}>
+              <TextField
+                label="Số tiền đề nghị (VND)"
+                required
+                value={props.createAmount}
+                onChange={(_, v) => props.onAmountChange(formatAmountInput(v || ''))}
+                inputMode="decimal"
+                placeholder="1.000.000"
+                errorMessage={amountMsg || undefined}
+                description={
+                  amountMsg ? undefined : 'Dấu chấm phân nghìn, phẩy thập phân (tối đa 2 số).'
+                }
+                disabled={props.busy}
+                styles={createTextFieldStyles}
+              />
+            </div>
+            <div className={formCellClass}>
               <SearchableSelect
+                label="Đơn vị khởi tạo"
+                required
                 options={ouOptions}
                 value={createOuCode}
                 disabled={lockedOu || props.busy}
@@ -213,26 +182,56 @@ const CreateRequestPage: React.FC<ICreateRequestPageProps> = (props) => {
                 emptyText="Không tìm thấy phòng"
                 onChange={props.onOuChange}
               />
-            </Stack>
-          </Stack>
-          <Stack>
-            <Text variant="small" styles={{ root: { fontWeight: 600, marginBottom: 5 } }}>
-              Loại hồ sơ
-            </Text>
-            <SearchableSelect
-              options={typeOptions}
-              value={props.selectedType}
-              disabled={props.busy}
-              placeholder="Gõ để tìm loại hồ sơ…"
-              emptyText="Không tìm thấy loại hồ sơ"
-              onChange={props.onTypeChange}
-            />
-          </Stack>
+            </div>
+          </div>
+
+          <TextField
+            label="Diễn giải"
+            multiline
+            rows={3}
+            resizable={false}
+            value={props.createExpl}
+            onChange={(_, v) => props.onExplChange(v || '')}
+            placeholder="Mô tả ngắn nội dung đề nghị thanh toán"
+            disabled={props.busy}
+            styles={createMultilineStyles}
+          />
+        </Stack>
+
+        {/* 2. Đối tượng — phụ sau identity */}
+        <Stack tokens={{ childrenGap: formFieldGap }} styles={cardStack}>
+          <Text variant="mediumPlus" styles={sectionTitle}>
+            2. Đối tượng thanh toán
+          </Text>
+          <PartyBizFields
+            value={props.createPartyBiz}
+            disabled={props.busy}
+            onChange={props.onPartyBizChange}
+          />
+        </Stack>
+
+        {/* 3. Loại & phòng — lưới cột đều */}
+        <Stack tokens={{ childrenGap: formFieldGap }} styles={cardStack}>
+          <Text variant="mediumPlus" styles={sectionTitle}>
+            3. Loại hồ sơ & phòng nhận
+          </Text>
+
+          <SearchableSelect
+            label="Loại hồ sơ"
+            required
+            options={typeOptions}
+            value={props.selectedType}
+            disabled={props.busy}
+            placeholder="Gõ để tìm loại hồ sơ…"
+            emptyText="Không tìm thấy loại hồ sơ"
+            onChange={props.onTypeChange}
+          />
+
           <Stack tokens={{ childrenGap: 8 }}>
-            <Text variant="small" styles={{ root: { fontWeight: 600 } }}>
+            <Text variant="small" styles={groupLabel}>
               Phòng nhận kiểm tra
             </Text>
-            <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
+            <div className={formGrid2Class}>
               {props.routeStepsUi.map((rs) => {
                 const opts = props.stepRecipients.filter((r) => r.stepKey === rs.key);
                 const selected =
@@ -247,14 +246,9 @@ const CreateRequestPage: React.FC<ICreateRequestPageProps> = (props) => {
                   };
                 });
                 return (
-                  <Stack key={rs.key} styles={{ root: { minWidth: 160, flex: '1 1 160px' } }}>
-                    <Text
-                      variant="small"
-                      styles={{ root: { color: '#4b5563', marginBottom: 4 } }}
-                    >
-                      {rs.label}
-                    </Text>
+                  <div key={rs.key} className={formCellClass}>
                     <SearchableSelect
+                      label={rs.label}
                       options={options}
                       value={selected}
                       disabled={props.busy}
@@ -262,63 +256,131 @@ const CreateRequestPage: React.FC<ICreateRequestPageProps> = (props) => {
                       emptyText="Không có phòng"
                       onChange={(v) => props.onRouteChange(rs.key, v)}
                     />
-                  </Stack>
+                  </div>
                 );
               })}
-            </Stack>
-            <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
-              TCKT / CT.HĐQT lấy mặc định từ cấu hình.
+            </div>
+            <Text variant="small" styles={hintText}>
+              TCKT / CT.HĐQT lấy mặc định từ cấu hình StepRecipients.
             </Text>
           </Stack>
-          <TextField
-            label="Diễn giải"
-            multiline
-            rows={2}
-            value={props.createExpl}
-            onChange={(_, v) => props.onExplChange(v || '')}
-            placeholder="Mô tả ngắn nội dung đề nghị thanh toán"
-            disabled={props.busy}
-          />
         </Stack>
 
-        <Stack tokens={{ childrenGap: 10 }} styles={cardStack}>
-          <Stack horizontal horizontalAlign="space-between" verticalAlign="center" wrap>
-            <Text variant="large" styles={{ root: { fontWeight: 600 } }}>
-              Checklist sẽ yêu cầu
+        <Stack tokens={{ childrenGap: formFieldGap }} styles={cardStack}>
+          <Stack
+            horizontal
+            horizontalAlign="space-between"
+            verticalAlign="center"
+            wrap
+            tokens={{ childrenGap: 8 }}
+          >
+            <Text variant="mediumPlus" styles={sectionTitle}>
+              4. Checklist sẽ yêu cầu
             </Text>
             <Text
               variant="small"
               styles={{
                 root: {
-                  fontWeight: '600',
-                  color: badgeColor('info'),
-                  background: badgeBg('info'),
+                  fontWeight: 600,
+                  color: payTokens.brandDark,
+                  background: payTokens.brandSoft,
                   borderRadius: 4,
-                  padding: '2px 8px'
+                  padding: '3px 10px'
                 }
               }}
             >
               {totalTplCount} mục · {requiredTplCount} bắt buộc
             </Text>
           </Stack>
-          {sortedTemplates.length === 0 ? (
-            <Text styles={{ root: { color: '#4b5563' } }}>
+
+          {!props.selectedType ? (
+            <MessageBar messageBarType={MessageBarType.info}>
+              Chọn loại hồ sơ để xem checklist mẫu.
+            </MessageBar>
+          ) : sortedTemplates.length === 0 ? (
+            <MessageBar messageBarType={MessageBarType.warning}>
               Chưa có mẫu checklist cho loại này.
-            </Text>
+            </MessageBar>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <DetailsList
-                items={sortedTemplates}
-                columns={tplColumns}
-                selectionMode={SelectionMode.none}
-                layoutMode={DetailsListLayoutMode.justified}
-                compact={true}
-              />
-            </div>
+            <Stack tokens={{ childrenGap: 0 }}>
+              {sortedTemplates.map((t, idx) => (
+                <Stack
+                  key={t.itemCode || String(idx)}
+                  horizontal
+                  verticalAlign="center"
+                  tokens={{ childrenGap: formFieldGap }}
+                  styles={{
+                    root: {
+                      padding: '10px 0',
+                      borderBottom:
+                        idx < sortedTemplates.length - 1
+                          ? `1px solid ${payTokens.line}`
+                          : undefined
+                    }
+                  }}
+                >
+                  <Text
+                    variant="small"
+                    styles={{
+                      root: {
+                        width: 28,
+                        color: payTokens.muted,
+                        fontWeight: 600,
+                        flexShrink: 0
+                      }
+                    }}
+                  >
+                    {idx + 1}
+                  </Text>
+                  <Stack grow tokens={{ childrenGap: 2 }} styles={{ root: { minWidth: 0 } }}>
+                    <Text styles={{ root: { fontWeight: 600 } }}>{t.itemLabel}</Text>
+                    <Text variant="small" styles={hintText}>
+                      {t.isRequired || t.minFileCount > 0
+                        ? `Tối thiểu ${t.minFileCount || 1} tệp`
+                        : 'Không bắt buộc tệp'}
+                    </Text>
+                  </Stack>
+                  <Text
+                    variant="small"
+                    styles={{
+                      root: {
+                        flexShrink: 0,
+                        fontWeight: 600,
+                        color: t.isRequired ? payTokens.warn : payTokens.muted,
+                        background: t.isRequired ? payTokens.warnSoft : payTokens.surface,
+                        borderRadius: 4,
+                        padding: '2px 8px'
+                      }
+                    }}
+                  >
+                    {t.isRequired ? 'Bắt buộc' : 'Tuỳ chọn'}
+                  </Text>
+                </Stack>
+              ))}
+            </Stack>
           )}
         </Stack>
 
-        <Stack horizontal tokens={{ childrenGap: 8 }}>
+        <Stack
+          horizontal
+          horizontalAlign="end"
+          tokens={{ childrenGap: 8 }}
+          wrap
+          styles={{
+            root: {
+              position: 'sticky',
+              bottom: 0,
+              padding: '12px 0 4px',
+              background: `linear-gradient(180deg, transparent, ${payTokens.surface} 28%)`
+            }
+          }}
+        >
+          <DefaultButton
+            text="Huỷ"
+            disabled={props.busy}
+            onClick={props.onBack}
+            styles={actionBtnStyles}
+          />
           <PrimaryButton
             text="Tạo hồ sơ"
             disabled={!canSubmit}

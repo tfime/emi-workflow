@@ -116,7 +116,7 @@ const InboxPage: React.FC<IInboxPageProps> = (props) => {
   const inProgressCount = countByStatus(statsScope, isInProgressStatus);
 
   const secondTitle =
-    props.inboxFilter === 'mine' ? 'Hồ sơ của tôi' : 'Hồ sơ liên quan';
+    props.inboxFilter === 'mine' ? 'Hồ sơ của tôi' : 'Đang theo dõi';
   const secondSource =
     props.inboxFilter === 'mine' ? props.mineRows : props.relatedRows;
 

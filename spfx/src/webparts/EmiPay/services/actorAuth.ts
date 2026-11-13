@@ -134,11 +134,14 @@ export function staffOf(actor: ICommandActor, ouCode: string): boolean {
   );
 }
 
-/** Sau ACCEPT: Member/Manager phòng bước được đánh giá checklist / ghi chú / đính kèm. */
+/**
+ * Sau ACCEPT: TP phòng bước được đánh giá (tự xử lý).
+ * Member chờ Assignments — không mở review chỉ vì cùng phòng.
+ */
 export function canReviewAtStep(actor: ICommandActor, master: IRequestMaster): boolean {
   const step = master.currentStepKey || '';
   if (['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK'].indexOf(step) < 0) return false;
-  return staffOf(actor, master.currentOUCode);
+  return managerOf(actor, master.currentOUCode);
 }
 
 /**
@@ -227,15 +230,17 @@ export function isRequestCreator(actor: ICommandActor, master: IRequestMaster): 
   return sameUpn(actor.upn, master.creatorUPN);
 }
 
-/** Inbox: SYSADM thấy mọi hồ sơ. Member/Manager thấy hồ sơ mình tạo hoặc phòng đang/đã liên quan. */
+/**
+ * Inbox / dashboard: SYSADM thấy mọi hồ sơ.
+ * Còn lại chỉ thấy hồ sơ mình tạo hoặc đang phải xử lý (todo).
+ * Cùng phòng nhưng không phải việc của mình / chưa phân công → không thấy.
+ * (Assignments Core chưa live — Member không được mở rộng theo currentOU.)
+ */
 export function requestVisibleTo(actor: ICommandActor, item: IRequestMaster): boolean {
   if (actor.memberRole === 'SysAdmin') return true;
   if (!actor.known) return false;
   if (sameUpn(actor.upn, item.creatorUPN)) return true;
-  if (staffOf(actor, item.createdOUCode) || staffOf(actor, item.currentOUCode)) {
-    return true;
-  }
-  return false;
+  return isActorTodo(actor, item);
 }
 
 export function isActorTodo(actor: ICommandActor, item: IRequestMaster): boolean {
@@ -255,7 +260,7 @@ export function isActorTodo(actor: ICommandActor, item: IRequestMaster): boolean
   ) {
     return true;
   }
-  // Manager: việc phòng đang giữ (tiếp nhận / chốt).
+  // Manager: việc phòng đang giữ (tiếp nhận / chốt) — trách nhiệm bước, không phải «cùng phòng xem».
   if (
     managerOf(actor, item.currentOUCode) &&
     item.currentStepKey !== 'BPCM1_PREPARE' &&
@@ -263,14 +268,6 @@ export function isActorTodo(actor: ICommandActor, item: IRequestMaster): boolean
   ) {
     return true;
   }
-  // Member: hồ sơ đang ở phòng mình (làm checklist sau khi TP đã ACCEPT — UI còn gate riêng).
-  if (
-    actor.memberRole === 'Member' &&
-    staffOf(actor, item.currentOUCode) &&
-    ACCEPT_STEPS.indexOf(item.currentStepKey) >= 0 &&
-    TERMINAL.indexOf(item.status) < 0
-  ) {
-    return true;
-  }
+  // Member: chờ Assignments Core — không tự thấy mọi hồ sơ phòng đang giữ.
   return false;
 }

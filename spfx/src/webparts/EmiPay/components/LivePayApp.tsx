@@ -72,7 +72,13 @@ import {
   applyPayHash,
   samePayRoute,
   IPayRoute,
-  PayInboxFilter
+  PayInboxFilter,
+  emptyPartyBiz,
+  IPartyBizInfo,
+  parsePartyBizFromRouteJson,
+  partyBizDenial,
+  partyKindLabel,
+  withPartyBizOnRoute
 } from '../services';
 import { perfLog, perfNow } from '../services/perfMark';
 import { payThemeStyle } from '../theme/payTokens';
@@ -148,6 +154,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const [createAmount, setCreateAmount] = React.useState(() => formatAmountFromNumber(1000000));
   const [createExpl, setCreateExpl] = React.useState('');
   const [createOu, setCreateOu] = React.useState('OU_TONGHOP');
+  const [createPartyBiz, setCreatePartyBiz] = React.useState<IPartyBizInfo>(() =>
+    emptyPartyBiz('CBNV')
+  );
   const [orgUnits, setOrgUnits] = React.useState<IOrgUnit[]>([]);
   const [stepRecipients, setStepRecipients] = React.useState<IStepRecipient[]>([]);
   const [routePlan, setRoutePlan] = React.useState<Record<string, string>>({});
@@ -157,6 +166,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const [editAmount, setEditAmount] = React.useState('');
   const [editExpl, setEditExpl] = React.useState('');
   const [editOu, setEditOu] = React.useState('');
+  const [editPartyBiz, setEditPartyBiz] = React.useState<IPartyBizInfo>(() => emptyPartyBiz());
   const [editRoutePlan, setEditRoutePlan] = React.useState<Record<string, string>>({});
 
   const [requestKey, setRequestKey] = React.useState(bootRoute.requestKey || '');
@@ -276,6 +286,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     }
     // RoutePlanJson thiếu / rỗng → điền mặc định IsDefault (tránh select value="" hiện option đầu nhưng state vẫn trống).
     setEditRoutePlan(fillRoutePlanGaps(plan, recipients));
+    setEditPartyBiz(parsePartyBizFromRouteJson(m.routePlanJson));
   };
 
   const loadDetail = async (
@@ -285,6 +296,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     const t0 = perfNow();
     const m = await getRequestByKey(props.sp, key);
     if (!m) throw new Error(`Không tìm thấy hồ sơ ${key}`);
+    if (!requestVisibleTo(actor, m)) {
+      throw new Error(
+        'Bạn không có quyền xem hồ sơ này (chưa được phân công / không phải việc đang xử lý).'
+      );
+    }
     perfLog('loadDetail.master', t0, { key });
     let items = await listChecklistItems(props.sp, key);
     perfLog('loadDetail.checklist', t0, { key, n: items.length });
@@ -372,7 +388,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     }
     void run(
       async () => {
-        const fullRoute = fillRoutePlanGaps({ ...editRoutePlan }, stepRecipients);
+        const partyDeny = partyBizDenial(editPartyBiz);
+        if (partyDeny) throw new Error(partyDeny);
+        const fullRoute = withPartyBizOnRoute(
+          fillRoutePlanGaps({ ...editRoutePlan }, stepRecipients),
+          editPartyBiz
+        );
         const missingUi = ROUTE_STEPS_UI.filter((rs) => !fullRoute[rs.key]);
         if (missingUi.length) {
           throw new Error(
@@ -622,6 +643,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       showNotice('warning', amountParsed.error || 'Số tiền đề nghị không hợp lệ');
       return;
     }
+    const partyDeny = partyBizDenial(createPartyBiz);
+    if (partyDeny) {
+      showNotice('warning', partyDeny);
+      return;
+    }
     const createOuCode = actor.ouCode || createOu;
     const createDeny = commandDenial(actor, 'CREATE_REQUEST', undefined, createOuCode);
     if (createDeny) {
@@ -647,7 +673,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         if (missingUi.length) {
           throw new Error(`Chọn phòng: ${missingUi.map((r) => r.label).join(', ')}`);
         }
-        const routePlanJson = JSON.stringify(fullRoute);
+        const routeWithBiz = withPartyBizOnRoute(fullRoute, createPartyBiz);
+        const routePlanJson = JSON.stringify(routeWithBiz);
         const pt = paymentTypes.filter((t) => t.code === selectedType)[0];
         setBusyMessage('Đang tạo hồ sơ cho bạn…');
         const tCreate = perfNow();
@@ -662,7 +689,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             checklistVersion: pt?.checklistVersion || 1,
             amount,
             explanation,
-            routePlan: fullRoute,
+            routePlan: routeWithBiz,
             routePlanJson
           },
           { orchestratorUrl: props.orchestratorUrl }
@@ -673,6 +700,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           state: cmdDone.state
         });
         // Core 1.0.0.14+: CREATE ghi đủ field + checklist từ template — không patch/reconcile UI.
+        setCreatePartyBiz(emptyPartyBiz('CBNV'));
         setRequestKey(createdKey);
         setView('detail');
       },
@@ -1207,6 +1235,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const mineRows = visibleInbox.filter(
     (item) => sameUpn(item.creatorUPN, actor.upn)
   );
+  // Không thuộc «Cần xử lý»: hồ sơ mình tạo đang theo dõi (+ sau này Assignment không phải todo).
   const relatedRows = visibleInbox.filter((item) => !isActorTodo(actor, item));
   const checklistDocs = docs.filter((d) => isChecklistDocClass(d.docClass));
   const supportingDocs = docs.filter((d) => isSupportingDoc(d));
@@ -1317,6 +1346,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               createAmount={createAmount}
               createExpl={createExpl}
               createOu={createOu}
+              createPartyBiz={createPartyBiz}
               actorOuCode={actor.ouCode || ''}
               selectedType={selectedType}
               paymentTypes={paymentTypes}
@@ -1330,6 +1360,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               onAmountChange={setCreateAmount}
               onExplChange={setCreateExpl}
               onOuChange={setCreateOu}
+              onPartyBizChange={setCreatePartyBiz}
               onTypeChange={setSelectedType}
               onRouteChange={(stepKey, ouCode) =>
                 setRoutePlan((prev) => ({ ...prev, [stepKey]: ouCode }))
@@ -1364,6 +1395,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               editAmount={editAmount}
               editExpl={editExpl}
               editOu={editOu}
+              editPartyBiz={editPartyBiz}
               editRoutePlan={editRoutePlan}
               orgUnits={orgUnits}
               stepRecipients={stepRecipients}
@@ -1377,6 +1409,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               onEditAmountChange={setEditAmount}
               onEditExplChange={setEditExpl}
               onEditOuChange={setEditOu}
+              onEditPartyBizChange={setEditPartyBiz}
               onEditRouteChange={(stepKey, ouCode) =>
                 setEditRoutePlan((prev) => ({ ...prev, [stepKey]: ouCode }))
               }
@@ -1435,6 +1468,19 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                   amountDisplay={moneyVi(parseAmountInput(createAmount).value)}
                   ouCode={actor.ouCode || createOu}
                   actorUPN={actorUPN}
+                  partyKindLabel={partyKindLabel(createPartyBiz.partyKind)}
+                  nccSummary={
+                    createPartyBiz.partyKind === 'NCC'
+                      ? [
+                          createPartyBiz.project,
+                          createPartyBiz.contractNo,
+                          createPartyBiz.currency,
+                          createPartyBiz.paymentTimes
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')
+                      : undefined
+                  }
                   templateCount={templates.length}
                   requiredCount={requiredTplCount}
                 />
