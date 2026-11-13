@@ -1,19 +1,11 @@
-import { IPayAction, PayPersona } from '../components/types';
+import { IPayAction } from '../components/types';
+import { CommandKind, ICommandActor, commandDenial } from './actorAuth';
 import {
   IChecklistItemRow,
   checklistHasFail,
   requiredChecklistReady
 } from './ChecklistService';
 import { IRequestMaster, IWorkItemRow, isWorkItemAccepted } from './RequestService';
-
-const STEP_PERSONAS: Record<string, PayPersona[]> = {
-  BPCM1_PREPARE: ['creator', 'manager'],
-  BPCM2_TECH: ['bpcm2', 'manager'],
-  BPCM3_PRICE: ['bpcm3', 'manager'],
-  TCKT_CHECK: ['tckt_check', 'manager'],
-  CHAIR_APPROVE: ['chair'],
-  TCKT_PAY: ['tckt_pay', 'manager']
-};
 
 /** Bước bắt buộc ACCEPT (+DueAt) trước DECIDE / đánh giá / ghi chú. */
 export const ACCEPT_STEPS = ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK', 'TCKT_PAY'];
@@ -71,36 +63,31 @@ export function isChairDossierApproved(
   );
 }
 
-/** Actions allowed by Core Flow — BA: AwaitingManager + RoutePlan + ACCEPT/DueAt. */
+/** Nút theo bước Flow, rồi lọc bằng quyền OrgMembers của actor hiệu lực. */
 export function liveActionsFor(
   master: IRequestMaster,
   checklist: IChecklistItemRow[],
   hasUnc: boolean,
-  persona?: PayPersona,
+  actor: ICommandActor,
   currentWi?: IWorkItemRow,
   workItems?: IWorkItemRow[]
 ): IPayAction[] {
   const step = master.currentStepKey;
   const status = master.status;
 
-  if (persona === 'procadm' || persona === 'audit') {
-    return [];
-  }
+  const allow = (actions: IPayAction[]): IPayAction[] =>
+    actions.filter((a) => {
+      if (!a.command) {
+        return (
+          actor.memberRole === 'Manager' &&
+          (actor.ouCode || '').toLowerCase() === (master.currentOUCode || '').toLowerCase()
+        );
+      }
+      return commandDenial(actor, a.command as CommandKind, master) === '';
+    });
 
-  const normalized: PayPersona | undefined =
-    persona === 'assignee'
-      ? 'bpcm2'
-      : persona === 'tckt'
-        ? 'tckt_check'
-        : persona;
-
-  // TP phòng tạo duyệt trình gửi
-  if (
-    step === 'BPCM1_PREPARE' &&
-    status === 'AwaitingManager' &&
-    (normalized === 'manager' || !normalized)
-  ) {
-    return [
+  if (step === 'BPCM1_PREPARE' && status === 'AwaitingManager') {
+    return allow([
       {
         id: 'mgrApprove',
         label: 'Duyệt gửi sang BPCM2',
@@ -115,20 +102,12 @@ export function liveActionsFor(
         command: 'DECIDE',
         dialog: 'return'
       }
-    ];
-  }
-
-  if (
-    normalized &&
-    STEP_PERSONAS[step] &&
-    STEP_PERSONAS[step].indexOf(normalized) < 0
-  ) {
-    return [];
+    ]);
   }
 
   if (step === 'BPCM1_PREPARE' && (status === 'Draft' || status === 'Returned')) {
     const actions: IPayAction[] = [];
-    if (requiredChecklistReady(checklist) && normalized !== 'manager') {
+    if (requiredChecklistReady(checklist)) {
       actions.push({
         id: 'submit',
         label: status === 'Returned' ? 'Trình lại trưởng phòng' : 'Trình trưởng phòng',
@@ -137,13 +116,13 @@ export function liveActionsFor(
         dialog: 'submit'
       });
     }
-    return actions;
+    return allow(actions);
   }
 
   // BPCM2/3/TCKT: phải ACCEPT (+DueAt) trước DECIDE / CONFIRM
   if (ACCEPT_STEPS.indexOf(step) >= 0) {
     if (!isWorkItemAccepted(currentWi)) {
-      return [
+      return allow([
         {
           id: 'accept',
           label: 'Tiếp nhận và đặt hạn',
@@ -151,7 +130,7 @@ export function liveActionsFor(
           command: 'ACCEPT',
           dialog: 'accept'
         }
-      ];
+      ]);
     }
   }
 
@@ -175,13 +154,13 @@ export function liveActionsFor(
       command: 'DECIDE',
       dialog: 'return'
     });
-    return actions;
+    return allow(actions);
   }
 
   if (step === 'CHAIR_APPROVE') {
     const dossierDone = isChairDossierApproved(master, workItems || []);
     if (dossierDone) {
-      return [
+      return allow([
         {
           id: 'approvePay',
           label: 'Duyệt thanh toán',
@@ -196,9 +175,9 @@ export function liveActionsFor(
           command: 'DECIDE',
           dialog: 'reject'
         }
-      ];
+      ]);
     }
-    return [
+    return allow([
       {
         id: 'approve',
         label: 'Phê duyệt hồ sơ',
@@ -213,7 +192,7 @@ export function liveActionsFor(
         command: 'DECIDE',
         dialog: 'reject'
       }
-    ];
+    ]);
   }
 
   if (step === 'TCKT_PAY') {
@@ -235,7 +214,7 @@ export function liveActionsFor(
         dialog: 'confirmPay'
       });
     }
-    return actions;
+    return allow(actions);
   }
 
   return [];

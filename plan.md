@@ -30,6 +30,6 @@
 - Draft/Returned (BPCM1): form **Sửa thông tin hồ sơ** (title/amount/explanation/OU/RoutePlan) qua `patchRequestBusinessFields`
 
 ### Việc tiếp
-- Chạy Dyn ACL `-Mode Apply` trên hồ sơ UAT; gắn hook sau Core Succeeded (child Flow / runbook)
-- Seed ManagerUPN / OrgMembers thật → UAT UI persona trên EMI-Pay.aspx
-- Trusted caller / dedupe (PHASE2_BACKLOG #6, #10); DocsInternal + Archive ACL (Dyn V1.1)
+- Chạy seed `01_Seed_Config.ps1 -Mode Apply` để nạp 6 UPN tạm + ManagerUPN (đóng vai trên EMI-Pay)
+- Cổng lệnh OrgMembers trong Flow (trước khi user thường ghi Commands); Dyn ACL khi UPN tồn tại trên Entra
+- Dedupe (PHASE2_BACKLOG #6); DocsInternal + Archive ACL (Dyn V1.1)

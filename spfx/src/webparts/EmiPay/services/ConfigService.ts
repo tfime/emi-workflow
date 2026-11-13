@@ -114,6 +114,37 @@ export async function listChecklistTemplates(
     .sort((a, b) => a.displayOrder - b.displayOrder);
 }
 
+export interface IOrgMember {
+  id: number;
+  ouCode: string;
+  memberUPN: string;
+  displayName: string;
+  memberRole: 'Manager' | 'Member';
+  isActive: boolean;
+}
+
+export async function listOrgMembers(ctx: ISpRestContext): Promise<IOrgMember[]> {
+  const rows = await getItems<Record<string, unknown>>(
+    ctx,
+    PAY_LISTS.OrgMembers,
+    `$select=Id,Title,OUCode,MemberUPN,MemberRole,IsActive&$top=500`
+  );
+  return rows
+    .map((r) => {
+      const role = choiceVal(r.MemberRole);
+      return {
+        id: Number(r.Id),
+        ouCode: String(r.OUCode || ''),
+        memberUPN: String(r.MemberUPN || ''),
+        displayName: String(r.Title || r.MemberUPN || ''),
+        memberRole: (role === 'Manager' ? 'Manager' : 'Member') as 'Manager' | 'Member',
+        isActive: r.IsActive !== false
+      };
+    })
+    .filter((r) => r.isActive && !!r.memberUPN && !!r.ouCode)
+    .sort((a, b) => a.ouCode.localeCompare(b.ouCode) || a.memberRole.localeCompare(b.memberRole));
+}
+
 export async function listOrgUnits(ctx: ISpRestContext): Promise<IOrgUnit[]> {
   const rows = await getItems<Record<string, unknown>>(
     ctx,

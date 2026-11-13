@@ -11,9 +11,36 @@ export function statusVi(status: string): string {
     PendingPayment: 'Chờ thanh toán',
     Archiving: 'Chờ lưu trữ',
     Completed: 'Hoàn tất',
+    Paid: 'Đã thanh toán',
     Cancelled: 'Đã hủy'
   };
   return map[status] || status || '—';
+}
+
+/** Badge tone cho Status hồ sơ (map → class badge* trong SCSS). */
+export function statusBadgeKind(
+  status: string
+): 'mute' | 'warn' | 'info' | 'ok' | 'danger' {
+  switch (status) {
+    case 'Draft':
+      return 'mute';
+    case 'Returned':
+      return 'warn';
+    case 'WaitingAcceptance':
+    case 'AwaitingManager':
+    case 'AwaitManager':
+    case 'PendingPayment':
+    case 'InReview':
+    case 'Archiving':
+      return 'info';
+    case 'Completed':
+    case 'Paid':
+      return 'ok';
+    case 'Cancelled':
+      return 'danger';
+    default:
+      return 'mute';
+  }
 }
 
 /** Nhãn chi tiết khi CHAIR đã duyệt hồ sơ nhưng chưa duyệt thanh toán. */

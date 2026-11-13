@@ -20,6 +20,8 @@ import {
   listPaymentTypes,
   listChecklistTemplates,
   listOrgUnits,
+  listOrgMembers,
+  IOrgMember,
   listStepRecipients,
   IStepRecipient,
   listRecentRequests,
@@ -62,22 +64,41 @@ import {
   addUserNote,
   needsAcceptFirst,
   canAddUserNote,
+  SYSADM_UPN,
+  commandDenial,
+  resolveActor,
+  readActAsKey,
+  writeActAsKey,
+  memberKey,
+  actorLabel,
+  canCreateInOu,
+  isRequestCreator,
+  requestVisibleTo,
+  isActorTodo,
+  sameUpn,
+  isSysAdmin,
   IActivityPublicRow,
   IStepReviewRow,
   INoteListItem,
-  statusVi,
   chairStatusDetailVi,
   stepShortVi,
   checklistStatusVi,
   moneyVi,
-  shortFileName
+  shortFileName,
+  parsePayHash,
+  applyPayHash,
+  samePayRoute,
+  IPayRoute,
+  PayInboxFilter
 } from '../services';
 import { payThemeStyle } from '../theme/payTokens';
-import { DialogKind, IPayAction, PayPersona, PayView } from './types';
+import { DialogKind, IPayAction, PayView } from './types';
 import BusyDialog from './BusyDialog';
 import PayNoticeBar, { IPayNotice } from './PayNotice';
 import FilePreviewDrawer from './FilePreviewDrawer';
 import ApprovalFlow from './detail/ApprovalFlow';
+import InboxPage from './inbox/InboxPage';
+import InboxTable from './inbox/InboxTable';
 
 initializeIcons(undefined, { disableWarnings: true });
 
@@ -143,7 +164,6 @@ const dialogTitleVi = (kind: DialogKind): string => {
 };
 
 const REVIEW_STEPS = ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK'];
-const REVIEW_PERSONAS: PayPersona[] = ['bpcm2', 'bpcm3', 'tckt_check', 'tckt', 'manager', 'assignee'];
 
 /** UI chỉ chọn BPCM2/BPCM3; TCKT/CHAIR/Archive auto từ StepRecipients default. */
 const ROUTE_STEPS_UI: { key: string; label: string }[] = [
@@ -153,10 +173,19 @@ const ROUTE_STEPS_UI: { key: string; label: string }[] = [
 const ROUTE_STEPS_AUTO = ['TCKT_CHECK', 'CHAIR_APPROVE', 'TCKT_PAY', 'SYSTEM_ARCHIVE'];
 
 const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
-  const actorUPN = upnFromLogin(props.userLoginName);
-  const [view, setView] = React.useState<PayView>('inbox');
-  const [persona, setPersona] = React.useState<PayPersona>('creator');
-  const [inboxFilter, setInboxFilter] = React.useState<'all' | 'todo' | 'mine'>('all');
+  const bootRoute = React.useMemo(
+    () => parsePayHash(typeof window !== 'undefined' ? window.location.hash : ''),
+    []
+  );
+  const signedInUPN = upnFromLogin(props.userLoginName);
+  const [orgMembers, setOrgMembers] = React.useState<IOrgMember[]>([]);
+  const [actAsKey, setActAsKey] = React.useState(readActAsKey);
+  const actor = resolveActor(signedInUPN, orgMembers, actAsKey);
+  const actorUPN = actor.upn;
+  const [view, setView] = React.useState<PayView>(bootRoute.view);
+  const [inboxFilter, setInboxFilter] = React.useState<PayInboxFilter>(
+    bootRoute.inboxFilter
+  );
   const [docsTab, setDocsTab] = React.useState<'checklist' | 'files'>('checklist');
   const [activityTab, setActivityTab] = React.useState<'timeline' | 'comment'>('timeline');
   const [commentDraft, setCommentDraft] = React.useState('');
@@ -183,8 +212,10 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const [editOu, setEditOu] = React.useState('');
   const [editRoutePlan, setEditRoutePlan] = React.useState<Record<string, string>>({});
 
-  const [requestKey, setRequestKey] = React.useState('');
+  const [requestKey, setRequestKey] = React.useState(bootRoute.requestKey || '');
   const [master, setMaster] = React.useState<IRequestMaster | undefined>(undefined);
+  const routePrevRef = React.useRef<IPayRoute>(bootRoute);
+  const routeHashReadyRef = React.useRef(false);
   const [checklist, setChecklist] = React.useState<IChecklistItemRow[]>([]);
   const [workItems, setWorkItems] = React.useState<IWorkItemRow[]>([]);
   const [activities, setActivities] = React.useState<IActivityPublicRow[]>([]);
@@ -316,6 +347,10 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   const onSaveBusinessFields = (): void => {
     if (!master) return;
+    if (!isRequestCreator(actor, master)) {
+      showNotice('warning', 'Chỉ người tạo hồ sơ được sửa thông tin khi nháp hoặc bị trả.');
+      return;
+    }
     void run(
       async () => {
         const fullRoute = fillRoutePlanGaps({ ...editRoutePlan }, stepRecipients);
@@ -363,6 +398,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       setSelectedType(types[0].code);
       const ous = await listOrgUnits(props.sp);
       setOrgUnits(ous);
+      const members = await listOrgMembers(props.sp);
+      setOrgMembers(members);
       if (ous[0]) setCreateOu(ous[0].ouCode);
       const srs = await listStepRecipients(props.sp);
       setStepRecipients(srs);
@@ -374,9 +411,94 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       });
       setRoutePlan(defaults);
       await refreshInbox();
+      if (bootRoute.view === 'detail' && bootRoute.requestKey) {
+        try {
+          setBusyMessage('Đang mở hồ sơ từ liên kết…');
+          await loadDetail(bootRoute.requestKey);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          showNotice('error', msg || `Không mở được hồ sơ ${bootRoute.requestKey}`);
+          setView('inbox');
+          setInboxFilter('all');
+          applyPayHash({ view: 'inbox', inboxFilter: 'all' }, 'replace');
+          routePrevRef.current = { view: 'inbox', inboxFilter: 'all' };
+        }
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** Đồng bộ #emi/... khi đổi màn / hồ sơ (F5 giữ đúng chỗ). */
+  React.useEffect(() => {
+    const next: IPayRoute = {
+      view,
+      inboxFilter,
+      requestKey: view === 'detail' ? requestKey || undefined : undefined
+    };
+    const prev = routePrevRef.current;
+    const onlyInboxFilter =
+      prev.view === 'inbox' &&
+      next.view === 'inbox' &&
+      prev.inboxFilter !== next.inboxFilter;
+    const mode: 'push' | 'replace' =
+      !routeHashReadyRef.current || onlyInboxFilter ? 'replace' : 'push';
+    applyPayHash(next, mode);
+    routeHashReadyRef.current = true;
+    routePrevRef.current = next;
+  }, [view, inboxFilter, requestKey]);
+
+  /** Back/Forward hoặc sửa hash tay. */
+  React.useEffect(() => {
+    const onLocationRoute = (): void => {
+      const route = parsePayHash(window.location.hash);
+      if (samePayRoute(route, routePrevRef.current)) {
+        return;
+      }
+      routePrevRef.current = route;
+      setView(route.view);
+      setInboxFilter(route.inboxFilter);
+      if (route.view === 'detail' && route.requestKey) {
+        void run(
+          async () => {
+            try {
+              await loadDetail(route.requestKey as string);
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : String(e);
+              showNotice(
+                'error',
+                msg || `Không mở được hồ sơ ${route.requestKey}`
+              );
+              setView('inbox');
+              setInboxFilter('all');
+              applyPayHash({ view: 'inbox', inboxFilter: 'all' }, 'replace');
+              routePrevRef.current = { view: 'inbox', inboxFilter: 'all' };
+            }
+          },
+          { waiting: 'Đang mở hồ sơ…' }
+        );
+      }
+    };
+    window.addEventListener('popstate', onLocationRoute);
+    window.addEventListener('hashchange', onLocationRoute);
+    return () => {
+      window.removeEventListener('popstate', onLocationRoute);
+      window.removeEventListener('hashchange', onLocationRoute);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  React.useEffect(() => {
+    if (actor.ouCode) setCreateOu(actor.ouCode);
+  }, [actor.ouCode]);
+
+  React.useEffect(() => {
+    if (!actAsKey || !orgMembers.length) return;
+    const still = orgMembers.some((m) => memberKey(m) === actAsKey);
+    if (!still) {
+      writeActAsKey('');
+      setActAsKey('');
+    }
+  }, [orgMembers, actAsKey]);
 
   React.useEffect(() => {
     if (!selectedType) {
@@ -427,6 +549,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   }, [selectedType, paymentTypes]);
 
   const openLiveDetail = (key: string): void => {
+    setRequestKey(key);
     setView('detail');
     void run(
       async () => {
@@ -439,6 +562,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const onCreate = (): void => {
     if (!selectedType) {
       showNotice('warning', 'Vui lòng chọn loại hồ sơ');
+      return;
+    }
+    const createOuCode = actor.ouCode || createOu;
+    const createDeny = commandDenial(actor, 'CREATE_REQUEST', undefined, createOuCode);
+    if (createDeny) {
+      showNotice('warning', createDeny);
       return;
     }
     void run(
@@ -466,7 +595,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           'CREATE_REQUEST',
           {
             title,
-            createdOUCode: createOu || 'OU_TONGHOP',
+            createdOUCode: createOuCode,
             creatorUPN: actorUPN,
             paymentTypeCode: selectedType,
             amount,
@@ -509,8 +638,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const activeWi = master
     ? currentWorkItem(workItems, master.currentStepInstanceKey)
     : undefined;
+  const bpcm1Ous = stepRecipients
+    .filter((r) => r.stepKey === 'BPCM1_PREPARE')
+    .map((r) => r.ouCode);
+  const mayCreate = canCreateInOu(actor, bpcm1Ous);
   const actions = master
-    ? liveActionsFor(master, checklist, uncDocs.length > 0, persona, activeWi, workItems)
+    ? liveActionsFor(master, checklist, uncDocs.length > 0, actor, activeWi, workItems)
     : [];
 
   const acceptBlocked = needsAcceptFirst(master, activeWi, workItems);
@@ -518,8 +651,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   const canReviewDocs = !!(
     master &&
+    actor.memberRole === 'Manager' &&
+    actor.ouCode.toLowerCase() === (master.currentOUCode || '').toLowerCase() &&
     REVIEW_STEPS.indexOf(master.currentStepKey) >= 0 &&
-    REVIEW_PERSONAS.indexOf(persona) >= 0 &&
     isWorkItemAccepted(activeWi) &&
     !acceptBlocked
   );
@@ -554,6 +688,13 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       showNotice('warning', 'Hồ sơ đã đóng — không gửi thêm ghi chú.');
       return;
     }
+    if (
+      actor.memberRole === 'SysAdmin' ||
+      (!isRequestCreator(actor, master) && !isActorTodo(actor, master))
+    ) {
+      showNotice('warning', 'Nhân sự đang đóng vai không ghi chú trên hồ sơ này.');
+      return;
+    }
     void run(
       async () => {
         await addUserNote(props.sp, {
@@ -573,6 +714,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   const isBpcm1Adjusting = !!(
     master &&
+    isRequestCreator(actor, master) &&
     master.currentStepKey === 'BPCM1_PREPARE' &&
     (master.status === 'Draft' || master.status === 'Returned')
   );
@@ -637,20 +779,6 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     );
   };
 
-  const personaMeta: Record<PayPersona, { name: string; meta: string }> = {
-    creator: { name: props.userDisplayName || 'Người tạo', meta: 'R01 · BPCM1 Người tạo' },
-    bpcm2: { name: 'BPCM2', meta: 'R02 · BPCM2 KT kỹ thuật' },
-    bpcm3: { name: 'BPCM3', meta: 'R03 · BPCM3 KT giá' },
-    tckt_check: { name: 'TCKT Kiểm tra', meta: 'R04 · TCKT Kiểm tra' },
-    chair: { name: 'CT.HĐQT', meta: 'R05 · CT.HĐQT' },
-    tckt_pay: { name: 'TCKT Thanh toán', meta: 'R06 · TCKT Thanh toán' },
-    procadm: { name: 'Quản trị quy trình', meta: 'R08 · PROCADM' },
-    audit: { name: 'Kiểm toán', meta: 'R10 · AUDIT' },
-    manager: { name: 'Trưởng phòng', meta: 'Legacy · manager' },
-    assignee: { name: 'Nhân sự', meta: 'Legacy · assignee' },
-    tckt: { name: 'TCKT', meta: 'Legacy · tckt' }
-  };
-
   const onAction = (a: IPayAction): void => {
     setReason('');
     if (a.dialog === 'accept') {
@@ -692,6 +820,29 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const confirmDialog = (): void => {
     if (!master) return;
     const kind = dialog;
+    const commandKind =
+      kind === 'submit'
+        ? 'SUBMIT'
+        : kind === 'accept'
+          ? 'ACCEPT'
+          : kind === 'confirmPay'
+            ? 'CONFIRM_PAYMENT'
+            : kind === 'mgrApprove' ||
+                kind === 'forward' ||
+                kind === 'approve' ||
+                kind === 'approvePay' ||
+                kind === 'return' ||
+                kind === 'reject'
+              ? 'DECIDE'
+              : undefined;
+    if (commandKind) {
+      const deny = commandDenial(actor, commandKind, master);
+      if (deny) {
+        setDialog(undefined);
+        showNotice('warning', deny);
+        return;
+      }
+    }
     setDialog(undefined);
 
     if (kind === 'submit') {
@@ -979,27 +1130,17 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     .join('')
     .toUpperCase() || 'U';
 
-  const goInbox = (filter: 'all' | 'todo' | 'mine' = 'all'): void => {
+  const goInbox = (filter: PayInboxFilter = 'all'): void => {
     setInboxFilter(filter);
     setView('inbox');
   };
 
-  const isTodoItem = (item: IRequestMaster): boolean => {
-    const s = (item.status || '').toLowerCase();
-    return s === 'draft' || s === 'returned' || s === 'inprogress' || s === 'in progress';
-  };
-
-  const filteredInbox = inbox.filter((item) => {
-    if (inboxFilter === 'mine') {
-      return (item.creatorUPN || '').toLowerCase() === actorUPN.toLowerCase();
-    }
-    if (inboxFilter === 'todo') {
-      return isTodoItem(item);
-    }
-    return true;
-  });
-  const todoRows = filteredInbox.filter(isTodoItem);
-  const relatedRows = filteredInbox.filter((item) => !isTodoItem(item));
+  const visibleInbox = inbox.filter((item) => requestVisibleTo(actor, item));
+  const todoRows = visibleInbox.filter((item) => isActorTodo(actor, item));
+  const mineRows = visibleInbox.filter(
+    (item) => actor.memberRole !== 'SysAdmin' && sameUpn(item.creatorUPN, actor.upn)
+  );
+  const relatedRows = visibleInbox.filter((item) => !isActorTodo(actor, item));
   const checklistDocs = docs.filter((d) => isChecklistDocClass(d.docClass));
   const supportingDocs = docs.filter((d) => isSupportingDoc(d));
 
@@ -1015,54 +1156,6 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     });
   };
 
-  const renderInboxTable = (rows: IRequestMaster[]): React.ReactNode => {
-    if (!rows.length) {
-      return <p className={styles.empty}>Không có hồ sơ.</p>;
-    }
-    return (
-      <table className={styles.dataTable}>
-        <thead>
-          <tr>
-            <th>Mã hồ sơ</th>
-            <th>Tiêu đề</th>
-            <th>Bước</th>
-            <th>Số tiền</th>
-            <th>Trạng thái</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((item) => (
-            <tr
-              key={item.requestKey}
-              style={{ cursor: 'pointer' }}
-              onClick={() => openLiveDetail(item.requestKey)}
-            >
-              <td>
-                <strong>{item.requestCode || item.requestKey}</strong>
-              </td>
-              <td>{displayRequestTitle(item)}</td>
-              <td>{stepShortVi(item.currentStepKey)}</td>
-              <td>{moneyVi(item.amount)}</td>
-              <td>
-                <span
-                  className={badgeClass(
-                    item.status === 'Returned'
-                      ? 'warn'
-                      : item.status === 'Paid' || item.status === 'Completed'
-                        ? 'ok'
-                        : 'info'
-                  )}
-                >
-                  {statusVi(item.status)}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    );
-  };
-
   return (
     <div className={styles.app} style={payThemeStyle}>
       <header className={styles.top}>
@@ -1074,29 +1167,39 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           </div>
         </div>
         <div className={styles.topActions}>
-          <label className={styles.meta} htmlFor="emiPayPersona">
-            Vai trò xem UI
-          </label>
-          <select
-            id="emiPayPersona"
-            className={styles.personaSelect}
-            value={persona}
-            onChange={(e) => {
-              const next = e.target.value as PayPersona;
-              setPersona(next);
-              if (next === 'audit') setView('audit');
-              else if (view === 'audit') setView('inbox');
-            }}
-          >
-            <option value="creator">R01 · BPCM1 Người tạo</option>
-            <option value="manager">R01b · Trưởng phòng phòng tạo</option>
-            <option value="bpcm2">R02 · BPCM2 KT kỹ thuật</option>
-            <option value="bpcm3">R03 · BPCM3 KT giá</option>
-            <option value="tckt_check">R04 · TCKT Kiểm tra</option>
-            <option value="chair">R05 · CT.HĐQT</option>
-            <option value="tckt_pay">R06 · TCKT Thanh toán</option>
-            <option value="audit">R10 · Kiểm toán</option>
-          </select>
+          {isSysAdmin(signedInUPN) && (
+            <>
+              <label className={styles.meta} htmlFor="emiPayActAs">
+                Đóng vai
+              </label>
+              <select
+                id="emiPayActAs"
+                className={styles.personaSelect}
+                value={actor.acting ? memberKey({
+                  memberUPN: actor.upn,
+                  ouCode: actor.ouCode,
+                  memberRole: actor.memberRole === 'Manager' ? 'Manager' : 'Member'
+                }) : ''}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  writeActAsKey(next);
+                  setActAsKey(next);
+                  if (view === 'audit' || view === 'create') setView('inbox');
+                }}
+              >
+                <option value="">Quản trị ({SYSADM_UPN}) — không thao tác hồ sơ</option>
+                {orgMembers.map((m) => {
+                  const ou = orgUnits.filter((u) => u.ouCode === m.ouCode)[0];
+                  const role = m.memberRole === 'Manager' ? 'Trưởng phòng' : 'Thành viên';
+                  return (
+                    <option key={memberKey(m)} value={memberKey(m)}>
+                      {m.displayName} · {role} · {ou ? ou.ouName : m.ouCode}
+                    </option>
+                  );
+                })}
+              </select>
+            </>
+          )}
           <div className={styles.avatar} aria-hidden="true">
             {avatarLetters}
           </div>
@@ -1119,7 +1222,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             type="button"
             className={`${styles.navBtn} ${view === 'create' ? styles.navBtnActive : ''}`}
             onClick={() => setView('create')}
-            disabled={persona !== 'creator'}
+            disabled={!mayCreate}
           >
             Tạo hồ sơ
           </button>
@@ -1156,22 +1259,31 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           <button
             type="button"
             className={`${styles.navBtn} ${view === 'audit' ? styles.navBtnActive : ''}`}
-            disabled={persona !== 'audit'}
+            disabled={actor.acting || !isSysAdmin(signedInUPN)}
             onClick={() => setView('audit')}
           >
             Nhật ký nội bộ
           </button>
 
           <p className={styles.navNote}>
-            UI theo ma trận vai trò — chỉ enqueue Commands Core, không viết lại Flow.
+            {actor.acting
+              ? 'Đang đóng vai nhân sự tạm. Nút và người ghi trên lệnh theo người này. User thật sau chỉ đổi UPN trong OrgMembers.'
+              : isSysAdmin(signedInUPN)
+                ? 'Quản trị thấy dữ liệu, không chốt nghiệp vụ. Chọn «Đóng vai» để thao tác hồ sơ.'
+                : 'Quyền theo phòng và chức danh trong OrgMembers.'}
           </p>
           <div className={styles.navProfile}>
             <div className={styles.avatar} style={{ width: 32, height: 32, fontSize: 10 }}>
               {avatarLetters}
             </div>
             <div>
-              <strong>{personaMeta[persona].name}</strong>
-              <span>{personaMeta[persona].meta}</span>
+              <strong>{actor.displayName}</strong>
+              <span>
+                {actorLabel(
+                  actor,
+                  orgUnits.filter((u) => u.ouCode === actor.ouCode)[0]?.ouName
+                )}
+              </span>
             </div>
           </div>
         </nav>
@@ -1183,65 +1295,24 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             <PayNoticeBar notice={notice} onDismiss={() => setNotice(undefined)} />
 
           {view === 'inbox' && (
-            <>
-              <div className={styles.pageHead}>
-                <div>
-                  <h2>Việc của tôi</h2>
-                </div>
-                <div className={styles.actions}>
-                  <button
-                    type="button"
-                    className={`${styles.btn} ${styles.btnOutline}`}
-                    disabled={busy}
-                    onClick={() => {
-                      void run(refreshInbox, {
-                        waiting: 'Đang làm mới danh sách hồ sơ…',
-                        success: 'Đã làm mới danh sách.'
-                      });
-                    }}
-                  >
-                    Làm mới
-                  </button>
-                  {persona === 'creator' && (
-                    <button
-                      type="button"
-                      className={`${styles.btn} ${styles.btnPrimary}`}
-                      onClick={() => setView('create')}
-                    >
-                      Tạo hồ sơ mới
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {(inboxFilter === 'all' || inboxFilter === 'todo') && (
-                <section className={styles.card}>
-                  <div className={styles.cardH}>
-                    <h3>Cần tôi xử lý</h3>
-                    <span className={badgeClass('mute')}>{todoRows.length}</span>
-                  </div>
-                  <div className={styles.cardB} style={{ padding: 0 }}>
-                    {renderInboxTable(todoRows)}
-                  </div>
-                </section>
-              )}
-
-              {(inboxFilter === 'all' || inboxFilter === 'mine') && (
-                <section className={styles.card}>
-                  <div className={styles.cardH}>
-                    <h3>{inboxFilter === 'mine' ? 'Hồ sơ của tôi' : 'Hồ sơ liên quan'}</h3>
-                    <span className={badgeClass('mute')}>
-                      {inboxFilter === 'mine' ? filteredInbox.length : relatedRows.length}
-                    </span>
-                  </div>
-                  <div className={styles.cardB} style={{ padding: 0 }}>
-                    {renderInboxTable(
-                      inboxFilter === 'mine' ? filteredInbox : relatedRows
-                    )}
-                  </div>
-                </section>
-              )}
-            </>
+            <InboxPage
+              todoRows={todoRows}
+              mineRows={mineRows}
+              relatedRows={relatedRows}
+              inboxFilter={inboxFilter}
+              orgUnits={orgUnits}
+              orgMembers={orgMembers}
+              busy={busy}
+              mayCreate={mayCreate}
+              onOpen={openLiveDetail}
+              onRefresh={() => {
+                void run(refreshInbox, {
+                  waiting: 'Đang làm mới danh sách hồ sơ…',
+                  success: 'Đã làm mới danh sách.'
+                });
+              }}
+              onCreate={() => setView('create')}
+            />
           )}
 
           {view === 'create' && (
@@ -1285,11 +1356,18 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                     </label>
                     <label className={styles.field}>
                       Đơn vị khởi tạo
-                      <select value={createOu} onChange={(e) => setCreateOu(e.target.value)}>
+                      <select
+                        value={actor.ouCode || createOu}
+                        disabled={!!actor.ouCode}
+                        onChange={(e) => setCreateOu(e.target.value)}
+                      >
                         {orgUnits.length === 0 && (
-                          <option value="OU_TONGHOP">OU_TONGHOP</option>
+                          <option value={actor.ouCode || 'OU_TONGHOP'}>{actor.ouCode || 'OU_TONGHOP'}</option>
                         )}
-                        {orgUnits.map((o) => (
+                        {(actor.ouCode
+                          ? orgUnits.filter((o) => o.ouCode === actor.ouCode)
+                          : orgUnits
+                        ).map((o) => (
                           <option key={o.id} value={o.ouCode}>
                             {o.ouName}
                           </option>
@@ -1487,7 +1565,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                 </div>
               )}
 
-              {canEditRequestBusinessFields(master) && (
+              {canEditRequestBusinessFields(master) && isRequestCreator(actor, master) && (
                 <section className={styles.card}>
                   <div className={styles.cardH}>
                     <h3>Sửa thông tin hồ sơ</h3>
@@ -1515,7 +1593,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                       </label>
                       <label className={styles.field}>
                         Đơn vị khởi tạo
-                        <select value={editOu} onChange={(e) => setEditOu(e.target.value)}>
+                        <select
+                          value={editOu}
+                          disabled={!!actor.ouCode}
+                          onChange={(e) => setEditOu(e.target.value)}
+                        >
                           {orgUnits.length === 0 && (
                             <option value={editOu || 'OU_TONGHOP'}>
                               {editOu || 'OU_TONGHOP'}
@@ -2109,7 +2191,14 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                   <h3>Hồ sơ gần đây (đối chiếu)</h3>
                 </div>
                 <div className={styles.cardB} style={{ padding: 0 }}>
-                  {renderInboxTable(inbox)}
+                  <InboxTable
+                    rows={inbox}
+                    searchQuery=""
+                    orgMembers={orgMembers}
+                    orgUnits={orgUnits}
+                    onOpen={openLiveDetail}
+                    resetToken="audit"
+                  />
                 </div>
               </section>
             </>

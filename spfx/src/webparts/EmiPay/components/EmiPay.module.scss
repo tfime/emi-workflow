@@ -290,6 +290,99 @@
   color: var(--emi-text);
 }
 
+.inboxSearch {
+  margin: 14px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 420px;
+}
+
+.inboxSearchLabel {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--emi-muted);
+}
+
+.inboxSearchInput {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--emi-line);
+  border-radius: var(--emi-radius);
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--emi-text);
+  background: var(--emi-card);
+}
+
+.inboxSearchInput:focus {
+  outline: 2px solid var(--emi-brand-soft);
+  border-color: var(--emi-brand);
+}
+
+.inboxPager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--emi-line);
+}
+
+.inboxPagerMeta {
+  font-size: 12px;
+  color: var(--emi-muted);
+}
+
+.inboxPagerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.inboxTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px 0;
+  border-bottom: 1px solid var(--emi-line);
+}
+
+.inboxTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--emi-radius);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--emi-muted);
+  cursor: pointer;
+}
+
+.inboxTab:hover {
+  background: #f3f4f6;
+  color: var(--emi-text);
+}
+
+.inboxTabActive {
+  background: var(--emi-brand-soft);
+  border-color: var(--emi-brand);
+  color: var(--emi-brand-dark);
+}
+
+.inboxSectionHint {
+  margin: 0;
+  padding: 10px 12px 0;
+  font-size: 12px;
+  color: var(--emi-warn);
+  font-weight: 650;
+}
+
 .dataTable {
   width: 100%;
   border-collapse: collapse;
@@ -533,9 +626,15 @@
 
 .heroStats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 14px;
+  margin: 14px 0 0;
+}
+
+@media (max-width: 1100px) {
+  .heroStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .stat {

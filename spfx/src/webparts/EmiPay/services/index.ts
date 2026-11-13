@@ -7,6 +7,8 @@ export * from './ChecklistService';
 export * from './UploadService';
 export * from './DocPreview';
 export * from './liveActions';
+export * from './actorAuth';
 export * from './ActivityService';
 export * from './flowFacts';
 export * from './viLabels';
+export * from './payRoute';
