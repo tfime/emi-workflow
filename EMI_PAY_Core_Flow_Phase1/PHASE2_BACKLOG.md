@@ -36,7 +36,7 @@ Không làm trong Phase 1. Làm lần lượt khi Flow CREATE→CONFIRM đã ổ
 9. **ActivityPublic / ActivityInternal** — **DONE trong 1.0.0.11** (`ActivityKey={CommandKey}|{EventType}`)
 9b. **`ACCEPT` + DueAt** — **DONE trong 1.0.0.11** (gate DECIDE/CONFIRM khi chưa `AcceptedAt`)
 9c. **CHAIR hai bước** — **DONE trong 1.0.0.12** (duyệt hồ sơ giữ CHAIR → duyệt TT + `paymentDueAt` → TCKT_PAY)
-10. **Trusted caller** — pilot allowlist theo Author email; không tin `ActorUPN` payload
+10. **Trusted caller / OrgMembers gate** — spec `AUTH_ORGMEMBERS_GATE.md` (1.0.0.13). Allowlist `tinh.pt@emi.com.vn` + đóng vai; Manager mới ACCEPT/DECIDE/CONFIRM. SPFx đã mirror; Flow chưa.
 11. **Concurrency = 1** trên trigger; xác nhận trên designer sau Import
 12. ~~**Đọc StepRecipients / WorkflowSteps**~~ — DONE trong Build Phase1 (SUBMIT/DECIDE đọc list; CREATE dùng `createdOUCode`)
 

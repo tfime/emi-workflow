@@ -72,6 +72,7 @@ import {
   memberKey,
   actorLabel,
   canCreateInOu,
+  canReviewAtStep,
   isRequestCreator,
   requestVisibleTo,
   isActorTodo,
@@ -169,8 +170,6 @@ const dialogTitleVi = (kind: DialogKind): string => {
       return 'Xác nhận';
   }
 };
-
-const REVIEW_STEPS = ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK'];
 
 /** UI chỉ chọn BPCM2/BPCM3; TCKT/CHAIR/Archive auto từ StepRecipients default. */
 const ROUTE_STEPS_UI: { key: string; label: string }[] = [
@@ -705,9 +704,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   const canReviewDocs = !!(
     master &&
-    actor.memberRole === 'Manager' &&
-    actor.ouCode.toLowerCase() === (master.currentOUCode || '').toLowerCase() &&
-    REVIEW_STEPS.indexOf(master.currentStepKey) >= 0 &&
+    canReviewAtStep(actor, master) &&
     isWorkItemAccepted(activeWi) &&
     !acceptBlocked
   );

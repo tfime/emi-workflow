@@ -125,6 +125,22 @@ function managerOf(actor: ICommandActor, ouCode: string): boolean {
   return actor.memberRole === 'Manager' && !!ouCode && sameOu(actor.ouCode, ouCode);
 }
 
+/** Nhân sự thuộc phòng (Member hoặc Manager) — làm việc kiểm tra, không mặc nhiên chốt. */
+export function staffOf(actor: ICommandActor, ouCode: string): boolean {
+  return (
+    (actor.memberRole === 'Member' || actor.memberRole === 'Manager') &&
+    !!ouCode &&
+    sameOu(actor.ouCode, ouCode)
+  );
+}
+
+/** Sau ACCEPT: Member/Manager phòng bước được đánh giá checklist / ghi chú / đính kèm. */
+export function canReviewAtStep(actor: ICommandActor, master: IRequestMaster): boolean {
+  const step = master.currentStepKey || '';
+  if (['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK'].indexOf(step) < 0) return false;
+  return staffOf(actor, master.currentOUCode);
+}
+
 /**
  * Rỗng = được enqueue. Có chữ = lý do chặn.
  * CREATE/SUBMIT: mọi nhân sự (kể cả SysAdmin) — vai trò chỉ siết ACCEPT/DECIDE/CONFIRM.
@@ -211,13 +227,13 @@ export function isRequestCreator(actor: ICommandActor, master: IRequestMaster): 
   return sameUpn(actor.upn, master.creatorUPN);
 }
 
-/** Inbox: SYSADM thấy mọi hồ sơ (Full Control). Vai trò chỉ thấy hồ sơ phòng mình / hồ sơ mình tạo. */
+/** Inbox: SYSADM thấy mọi hồ sơ. Member/Manager thấy hồ sơ mình tạo hoặc phòng đang/đã liên quan. */
 export function requestVisibleTo(actor: ICommandActor, item: IRequestMaster): boolean {
   if (actor.memberRole === 'SysAdmin') return true;
   if (!actor.known) return false;
   if (sameUpn(actor.upn, item.creatorUPN)) return true;
-  if (actor.memberRole === 'Manager') {
-    return sameOu(actor.ouCode, item.createdOUCode) || sameOu(actor.ouCode, item.currentOUCode);
+  if (staffOf(actor, item.createdOUCode) || staffOf(actor, item.currentOUCode)) {
+    return true;
   }
   return false;
 }
@@ -239,9 +255,19 @@ export function isActorTodo(actor: ICommandActor, item: IRequestMaster): boolean
   ) {
     return true;
   }
+  // Manager: việc phòng đang giữ (tiếp nhận / chốt).
   if (
     managerOf(actor, item.currentOUCode) &&
     item.currentStepKey !== 'BPCM1_PREPARE' &&
+    TERMINAL.indexOf(item.status) < 0
+  ) {
+    return true;
+  }
+  // Member: hồ sơ đang ở phòng mình (làm checklist sau khi TP đã ACCEPT — UI còn gate riêng).
+  if (
+    actor.memberRole === 'Member' &&
+    staffOf(actor, item.currentOUCode) &&
+    ACCEPT_STEPS.indexOf(item.currentStepKey) >= 0 &&
     TERMINAL.indexOf(item.status) < 0
   ) {
     return true;

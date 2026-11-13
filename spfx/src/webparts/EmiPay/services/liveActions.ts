@@ -1,5 +1,5 @@
 import { IPayAction } from '../components/types';
-import { CommandKind, ICommandActor, commandDenial } from './actorAuth';
+import { CommandKind, ICommandActor, commandDenial, staffOf } from './actorAuth';
 import {
   IChecklistItemRow,
   checklistHasFail,
@@ -78,10 +78,8 @@ export function liveActionsFor(
   const allow = (actions: IPayAction[]): IPayAction[] =>
     actions.filter((a) => {
       if (!a.command) {
-        return (
-          actor.memberRole === 'Manager' &&
-          (actor.ouCode || '').toLowerCase() === (master.currentOUCode || '').toLowerCase()
-        );
+        // UNC / đính kèm hỗ trợ: Member hoặc Manager phòng bước hiện tại.
+        return staffOf(actor, master.currentOUCode);
       }
       return commandDenial(actor, a.command as CommandKind, master) === '';
     });

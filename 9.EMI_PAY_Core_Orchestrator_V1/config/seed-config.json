@@ -72,6 +72,13 @@
     },
     {
       "OUCode": "OU_KYTHUAT",
+      "MemberUPN": "nv.kythuat@emi.com.vn",
+      "MemberRole": "Member",
+      "Title": "Thành viên Kỹ thuật (tạm)",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_KYTHUAT",
       "MemberUPN": "tp.kythuat@emi.com.vn",
       "MemberRole": "Manager",
       "Title": "Trưởng phòng Kỹ thuật (tạm)",
@@ -79,9 +86,23 @@
     },
     {
       "OUCode": "OU_KINHTE",
+      "MemberUPN": "nv.kinhte@emi.com.vn",
+      "MemberRole": "Member",
+      "Title": "Thành viên Kinh tế (tạm)",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_KINHTE",
       "MemberUPN": "tp.kinhte@emi.com.vn",
       "MemberRole": "Manager",
       "Title": "Trưởng phòng Kinh tế (tạm)",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_TCKT",
+      "MemberUPN": "nv.tckt@emi.com.vn",
+      "MemberRole": "Member",
+      "Title": "Thành viên TCKT (tạm)",
       "IsActive": true
     },
     {

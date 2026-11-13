@@ -30,6 +30,7 @@
 - Draft/Returned (BPCM1): form **Sửa thông tin hồ sơ** (title/amount/explanation/OU/RoutePlan) qua `patchRequestBusinessFields`
 
 ### Việc tiếp
-- Chạy seed `01_Seed_Config.ps1 -Mode Apply` để nạp 6 UPN tạm + ManagerUPN (đóng vai trên EMI-Pay)
-- Cổng lệnh OrgMembers trong Flow (trước khi user thường ghi Commands); Dyn ACL khi UPN tồn tại trên Entra
-- Dedupe (PHASE2_BACKLOG #6); DocsInternal + Archive ACL (Dyn V1.1)
+- ~~Seed OrgMembers + Đóng vai~~; ~~Admin tạo/trình trực tiếp~~; ~~Member phòng kiểm tra (xem/review, không DECIDE)~~
+- Cổng OrgMembers trong Core **1.0.0.13** — spec: `EMI_PAY_Core_Flow_Phase1/AUTH_ORGMEMBERS_GATE.md`
+- Dyn ACL hook sau Core Succeeded khi UPN Entra có thật; DocsInternal/Archive ACL (Dyn V1.1)
+- Dedupe (PHASE2_BACKLOG #6); Assignments (phân công nhiều người) sau
