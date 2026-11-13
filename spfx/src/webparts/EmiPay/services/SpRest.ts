@@ -30,6 +30,31 @@ async function readJson<T>(res: SPHttpClientResponse): Promise<T> {
   return (await res.json()) as T;
 }
 
+/**
+ * Chạy tác vụ bất đồng bộ với giới hạn song song (tránh throttle SharePoint khi nhiều user).
+ * Mặc định 4 — đủ nhanh, không đốt hết connection pool trình duyệt.
+ */
+export async function mapPool<T>(
+  items: readonly T[],
+  worker: (item: T, index: number) => Promise<void>,
+  concurrency: number = 4
+): Promise<void> {
+  if (!items.length) return;
+  const limit = Math.max(1, Math.min(concurrency, items.length));
+  let next = 0;
+  const runOne = async (): Promise<void> => {
+    while (next < items.length) {
+      const i = next++;
+      await worker(items[i], i);
+    }
+  };
+  const runners: Promise<void>[] = [];
+  for (let r = 0; r < limit; r++) {
+    runners.push(runOne());
+  }
+  await Promise.all(runners);
+}
+
 function siteRootFromWebUrl(webUrl: string): string {
   // https://tenant.sharepoint.com/sites/cecm -> /sites/cecm
   const m = webUrl.match(/https?:\/\/[^/]+(\/sites\/[^/]+)/i);

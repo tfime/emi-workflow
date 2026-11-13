@@ -1,4 +1,4 @@
-# Cổng OrgMembers (Core 1.0.0.13 — chưa gắn Flow 1.0.0.12)
+# Cổng OrgMembers (Core **1.0.0.13** — đã gắn trong `Build-Phase1Solution.ps1`)
 
 Cùng quy tắc với SPFx `actorAuth.ts`. UI chỉ hỗ trợ UX; **Flow phải reject** lệnh sai vai trước khi đổi Master.
 
@@ -30,5 +30,5 @@ Member **không** ACCEPT / DECIDE / CONFIRM (chỉ làm checklist/ghi chú/đín
 ## Triển khai
 
 1. SPFx + seed Member tạm — **đã làm** (dev).
-2. Patch `Build-Phase1Solution.ps1` → ZIP `1.0.0.13` → Import Solution → UAT: Member DECIDE → Rejected; Manager DECIDE → Succeeded.
-3. UAT script: enqueue với Author SYSADM + actorUPN sai phòng → Rejected.
+2. ~~Patch Build~~ → `EMI_PAY_CORE_V1_1_0_0_13.zip` → Import Solution → Flow On.
+3. UAT: đóng vai Member → DECIDE Rejected (`AUTH: not Manager…`); đóng vai Manager đúng OU → Succeeded.

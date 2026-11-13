@@ -1,6 +1,16 @@
 import { IChecklistTemplate } from './ConfigService';
 import { PAY_LISTS, escapeOData } from './PayLists';
-import { ISpRestContext, createItem, deleteItem, getItems, mergeItem } from './SpRest';
+import {
+  ISpRestContext,
+  createItem,
+  deleteItem,
+  getItems,
+  mapPool,
+  mergeItem
+} from './SpRest';
+
+/** Giới hạn ghi song song ChecklistItems (nhiều user / nhiều mục). */
+const CHECKLIST_WRITE_CONCURRENCY = 4;
 
 export interface IChecklistItemRow {
   id: number;
@@ -51,6 +61,43 @@ export async function listChecklistItems(
 }
 
 /**
+ * true nếu ChecklistItems đã khớp template (không cần create/merge/delete).
+ * Tránh reconcile lặp khi mở Draft nhiều lần / sau CREATE vừa sync.
+ */
+export function checklistMatchesTemplates(
+  items: IChecklistItemRow[],
+  templates: IChecklistTemplate[]
+): boolean {
+  if (!templates.length) return true;
+  const byCode: Record<string, IChecklistItemRow> = {};
+  items.forEach((e) => {
+    byCode[e.itemCode] = e;
+  });
+  const templateCodes: Record<string, true> = {};
+  for (let i = 0; i < templates.length; i++) {
+    const t = templates[i];
+    templateCodes[t.itemCode] = true;
+    const row = byCode[t.itemCode];
+    if (!row) return false;
+    if (row.uploadedCount > 0 || row.isLocked) continue;
+    if (
+      row.itemLabel !== t.itemLabel ||
+      row.isRequired !== t.isRequired ||
+      row.minFileCount !== t.minFileCount
+    ) {
+      return false;
+    }
+  }
+  for (let i = 0; i < items.length; i++) {
+    const e = items[i];
+    if (templateCodes[e.itemCode]) continue;
+    if (e.uploadedCount > 0 || e.isLocked) continue;
+    return false;
+  }
+  return true;
+}
+
+/**
  * Đồng bộ ChecklistItems theo template loại hồ sơ.
  * Flow CREATE còn hardcode DOC_REQUEST/DOC_INVOICE (nhãn ASCII) — bước này
  * bổ sung mục thiếu, cập nhật nhãn từ template, và xóa mục thừa (chưa tải tệp).
@@ -61,16 +108,42 @@ export async function reconcileChecklistFromTemplates(
   templates: IChecklistTemplate[]
 ): Promise<IChecklistItemRow[]> {
   const existing = await listChecklistItems(ctx, requestKey);
+  if (checklistMatchesTemplates(existing, templates)) {
+    return existing;
+  }
+
   const byCode: Record<string, IChecklistItemRow> = {};
   existing.forEach((e) => {
     byCode[e.itemCode] = e;
   });
 
   const templateCodes: Record<string, true> = {};
-  for (const t of templates) {
+  const toCreate: IChecklistTemplate[] = [];
+  const toPatch: { id: number; t: IChecklistTemplate }[] = [];
+
+  for (let i = 0; i < templates.length; i++) {
+    const t = templates[i];
     templateCodes[t.itemCode] = true;
     const row = byCode[t.itemCode];
     if (!row) {
+      toCreate.push(t);
+      continue;
+    }
+    if (row.uploadedCount > 0 || row.isLocked) continue;
+    const needPatch =
+      row.itemLabel !== t.itemLabel ||
+      row.isRequired !== t.isRequired ||
+      row.minFileCount !== t.minFileCount;
+    if (needPatch) toPatch.push({ id: row.id, t });
+  }
+
+  const toDelete = existing.filter(
+    (e) => !templateCodes[e.itemCode] && e.uploadedCount <= 0 && !e.isLocked
+  );
+
+  await mapPool(
+    toCreate,
+    async (t) => {
       await createItem(ctx, PAY_LISTS.ChecklistItems, {
         Title: `${requestKey}-${t.itemCode}`,
         RequestKey: requestKey,
@@ -83,28 +156,29 @@ export async function reconcileChecklistFromTemplates(
         ItemStatus: 'Missing',
         IsLocked: false
       });
-      continue;
-    }
-    // Cùng ItemCode (vd Flow stub DOC_REQUEST) → căn nhãn/required theo template nếu chưa có tệp.
-    if (row.uploadedCount > 0 || row.isLocked) continue;
-    const needPatch =
-      row.itemLabel !== t.itemLabel ||
-      row.isRequired !== t.isRequired ||
-      row.minFileCount !== t.minFileCount;
-    if (!needPatch) continue;
-    await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, {
-      ItemLabel: t.itemLabel,
-      IsRequired: t.isRequired,
-      MinFileCount: t.minFileCount
-    });
-  }
+    },
+    CHECKLIST_WRITE_CONCURRENCY
+  );
 
-  // Xóa stub Flow / mục không thuộc loại hồ sơ (chỉ khi chưa tải tệp, chưa khóa).
-  for (const e of existing) {
-    if (templateCodes[e.itemCode]) continue;
-    if (e.uploadedCount > 0 || e.isLocked) continue;
-    await deleteItem(ctx, PAY_LISTS.ChecklistItems, e.id);
-  }
+  await mapPool(
+    toPatch,
+    async (p) => {
+      await mergeItem(ctx, PAY_LISTS.ChecklistItems, p.id, {
+        ItemLabel: p.t.itemLabel,
+        IsRequired: p.t.isRequired,
+        MinFileCount: p.t.minFileCount
+      });
+    },
+    CHECKLIST_WRITE_CONCURRENCY
+  );
+
+  await mapPool(
+    toDelete,
+    async (e) => {
+      await deleteItem(ctx, PAY_LISTS.ChecklistItems, e.id);
+    },
+    CHECKLIST_WRITE_CONCURRENCY
+  );
 
   return listChecklistItems(ctx, requestKey);
 }
@@ -184,11 +258,14 @@ export async function lockChecklistItems(
   ctx: ISpRestContext,
   items: IChecklistItemRow[]
 ): Promise<void> {
-  for (let i = 0; i < items.length; i++) {
-    const row = items[i];
-    if (row.isLocked) continue;
-    await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, { IsLocked: true });
-  }
+  const targets = items.filter((row) => !row.isLocked);
+  await mapPool(
+    targets,
+    async (row) => {
+      await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, { IsLocked: true });
+    },
+    CHECKLIST_WRITE_CONCURRENCY
+  );
 }
 
 /**
@@ -199,12 +276,17 @@ export async function lockReviewedItems(
   ctx: ISpRestContext,
   items: IChecklistItemRow[]
 ): Promise<void> {
-  for (let i = 0; i < items.length; i++) {
-    const row = items[i];
-    if (row.isLocked) continue;
-    if (row.itemStatus !== 'Pass' && row.itemStatus !== 'Fail') continue;
-    await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, { IsLocked: true });
-  }
+  const targets = items.filter(
+    (row) =>
+      !row.isLocked && (row.itemStatus === 'Pass' || row.itemStatus === 'Fail')
+  );
+  await mapPool(
+    targets,
+    async (row) => {
+      await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, { IsLocked: true });
+    },
+    CHECKLIST_WRITE_CONCURRENCY
+  );
 }
 
 /**
@@ -215,11 +297,14 @@ export async function unlockChecklistItems(
   ctx: ISpRestContext,
   items: IChecklistItemRow[]
 ): Promise<void> {
-  for (let i = 0; i < items.length; i++) {
-    const row = items[i];
-    if (!row.isLocked) continue;
-    await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, { IsLocked: false });
-  }
+  const targets = items.filter((row) => row.isLocked);
+  await mapPool(
+    targets,
+    async (row) => {
+      await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, { IsLocked: false });
+    },
+    CHECKLIST_WRITE_CONCURRENCY
+  );
 }
 
 /** Reset đếm tệp / trạng thái sau khi xóa hồ sơ mục (tải lên mới). */

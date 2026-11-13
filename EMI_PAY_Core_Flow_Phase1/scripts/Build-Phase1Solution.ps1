@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) {
 $phaseRoot = Split-Path $PSScriptRoot -Parent
 $repoRoot = Split-Path $phaseRoot -Parent
 if ([string]::IsNullOrWhiteSpace($OutZip)) {
-    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_12.zip'
+    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_15.zip'
 }
 $staging = Join-Path $phaseRoot '_staging_solution'
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
@@ -22,11 +22,76 @@ $guidCommands = 'e16b76dc-7686-43e9-b232-18c80e2b31d2'
 $guidRequests = '12b3051d-7642-4f90-a39d-5364df561fbf'
 $guidWorkItems = 'e21ef6e7-ee31-466a-be3b-65ae30ca7722'
 $guidChecklist = 'd02c6a03-9561-4d90-b5d5-ad30a2fef88b'
+$guidChecklistTemplates = '81b94541-2e8e-4457-af28-e47f4d284477'
 $guidDocIndex = 'a45c74cd-1f21-454c-9fcc-6812692b801b'
 $guidStepRecipients = '7ebac733-193d-4216-bf63-785c6a5f06a2'
 $guidWorkflowSteps    = '0135b54a-f4a3-4edc-a738-a64e12feb9ad'
 $guidActivityPublic   = '84b57c9e-6b90-4a6b-a200-b3afb4499895'
 $guidActivityInternal = 'b8ceb7ed-3925-4292-af35-4027f41c9d6a'
+$guidOrgMembers       = '58db4d66-1299-4edb-893e-50c8fe459253'
+$sysadmUpn            = 'tinh.pt@emi.com.vn'
+
+# CREATE Master: Title/Explanation/Amount/RoutePlanJson từ payload (Perf Gói 2).
+# Title/Explanation: thay " → ' . RoutePlanJson: escape " → \" để nhúng trong JSON string.
+$createMasterBody = @'
+@json(concat('{"Title":"', replace(string(coalesce(variables('Payload')?['title'], variables('RequestKey'))), '"', ''''), '","RequestKey":"', variables('RequestKey'), '","CreatedOUCode":"', coalesce(variables('Payload')?['createdOUCode'],''), '","CreatorUPN":"', coalesce(variables('Payload')?['creatorUPN'],'admin@local'), '","PaymentTypeCode":"', coalesce(variables('Payload')?['paymentTypeCode'],'SPV_PAYMENT'), '","WorkflowCode":"EMI_PAY_SPV","WorkflowVersion":1,"ChecklistVersion":', string(int(coalesce(variables('Payload')?['checklistVersion'], 1))), ',"ReviewRound":1,"CurrentStepKey":"BPCM1_PREPARE","CurrentStepInstanceKey":"', variables('StepInstanceKey'), '","CurrentOUCode":"', coalesce(variables('Payload')?['createdOUCode'],''), '","Status":"Draft","IsLocked":false,"ArchiveStatus":"NotStarted","Explanation":"', replace(string(coalesce(variables('Payload')?['explanation'], '')), '"', ''''), '","Amount":', string(coalesce(variables('Payload')?['amount'], 0)), ',"RoutePlanJson":"', replace(string(coalesce(variables('Payload')?['routePlanJson'], '{}')), '"', '\"'), '"}'))
+'@.Trim()
+
+function New-SpHttpGet([string]$UriExpr) {
+    return [ordered]@{
+        type   = 'OpenApiConnection'
+        inputs = [ordered]@{
+            host           = [ordered]@{
+                connectionName = 'shared_sharepointonline'
+                operationId    = 'HttpRequest'
+                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+            }
+            parameters     = [ordered]@{
+                dataset             = $site
+                'parameters/method'  = 'GET'
+                'parameters/uri'     = $UriExpr
+                'parameters/headers' = [ordered]@{ Accept = 'application/json;odata=nometadata' }
+            }
+            authentication = "@parameters('`$authentication')"
+        }
+    }
+}
+
+function New-SpHttpMerge([string]$UriExpr, [string]$BodyExpr) {
+    return [ordered]@{
+        type   = 'OpenApiConnection'
+        inputs = [ordered]@{
+            host           = [ordered]@{
+                connectionName = 'shared_sharepointonline'
+                operationId    = 'HttpRequest'
+                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+            }
+            parameters     = [ordered]@{
+                dataset             = $site
+                'parameters/method'  = 'POST'
+                'parameters/uri'     = $UriExpr
+                'parameters/headers' = [ordered]@{
+                    Accept          = 'application/json;odata=nometadata'
+                    'Content-Type'  = 'application/json;odata=nometadata'
+                    'IF-MATCH'      = '*'
+                    'X-HTTP-Method' = 'MERGE'
+                }
+                'parameters/body'    = $BodyExpr
+            }
+            authentication = "@parameters('`$authentication')"
+        }
+    }
+}
+
+function New-SetVar([string]$Name, [string]$Type, $Value) {
+    return [ordered]@{
+        type   = 'SetVariable'
+        inputs = [ordered]@{
+            name  = $Name
+            value = $Value
+        }
+    }
+}
 $workflowId = '1703d2f2-46de-f111-84ea-000d3aa191f1'
 $workflowFile = "EMI_PAY_CORE_Orchestrator_V1-$($workflowId.ToUpper()).json" -replace '[{}]', ''
 
@@ -80,7 +145,7 @@ $definition = [ordered]@{
                 parameters     = [ordered]@{
                     dataset             = $site
                     'parameters/method'  = 'GET'
-                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')?`$select=Id,CommandKey,CommandType,RequestKey,PayloadJson,State,ErrorMessage,StepInstanceKey')"
+                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')?`$select=Id,CommandKey,CommandType,RequestKey,PayloadJson,State,ErrorMessage,StepInstanceKey,Author/EMail,Author/Email&`$expand=Author')"
                     'parameters/headers' = [ordered]@{
                         Accept = 'application/json;odata=nometadata'
                     }
@@ -217,10 +282,35 @@ $definition = [ordered]@{
             }
             runAfter = @{ INIT_ReviewRound = @('Succeeded') }
         }
+        INIT_AuthorEmail = [ordered]@{
+            type     = 'InitializeVariable'
+            inputs   = [ordered]@{
+                variables = @(@{
+                        name  = 'AuthorEmail'
+                        type  = 'string'
+                        value = "@toLower(trim(coalesce(body('HTTP_LoadCommand')?['Author']?['EMail'], body('HTTP_LoadCommand')?['Author']?['Email'], body('HTTP_LoadCommand')?['Author']?['Email'], '')))"
+                    })
+            }
+            runAfter = @{ INIT_Error = @('Succeeded') }
+        }
+        INIT_EffectiveActor = [ordered]@{
+            type     = 'InitializeVariable'
+            inputs   = [ordered]@{
+                variables = @(@{ name = 'EffectiveActorUPN'; type = 'string'; value = '' })
+            }
+            runAfter = @{ INIT_AuthorEmail = @('Succeeded') }
+        }
+        INIT_AuthError = [ordered]@{
+            type     = 'InitializeVariable'
+            inputs   = [ordered]@{
+                variables = @(@{ name = 'AuthError'; type = 'string'; value = '' })
+            }
+            runAfter = @{ INIT_EffectiveActor = @('Succeeded') }
+        }
 
         IF_AlreadyDone = [ordered]@{
             type       = 'If'
-            runAfter   = @{ INIT_Error = @('Succeeded') }
+            runAfter   = @{ INIT_AuthError = @('Succeeded') }
             expression = [ordered]@{
                 and = @(
                     [ordered]@{
@@ -319,7 +409,7 @@ $definition = [ordered]@{
                                                     Accept         = 'application/json;odata=nometadata'
                                                     'Content-Type' = 'application/json;odata=nometadata'
                                                 }
-                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '"",""RequestKey"":""', variables('RequestKey'), '"",""CreatedOUCode"":""', coalesce(variables('Payload')?['createdOUCode'],''), '"",""CreatorUPN"":""', coalesce(variables('Payload')?['creatorUPN'],'admin@local'), '"",""PaymentTypeCode"":""', coalesce(variables('Payload')?['paymentTypeCode'],'SPV_PAYMENT'), '"",""WorkflowCode"":""EMI_PAY_SPV"",""WorkflowVersion"":1,""ChecklistVersion"":1,""ReviewRound"":1,""CurrentStepKey"":""BPCM1_PREPARE"",""CurrentStepInstanceKey"":""', variables('StepInstanceKey'), '"",""CurrentOUCode"":""', coalesce(variables('Payload')?['createdOUCode'],''), '"",""Status"":""Draft"",""IsLocked"":false,""ArchiveStatus"":""NotStarted"",""Explanation"":""Phase1 CREATE""}'))"
+                                                'parameters/body'    = $createMasterBody
                                             }
                                             authentication = "@parameters('`$authentication')"
                                         }
@@ -346,7 +436,8 @@ $definition = [ordered]@{
                                             authentication = "@parameters('`$authentication')"
                                         }
                                     }
-                                    HTTP_CreateChecklist_DOC_REQUEST = [ordered]@{
+                                    # Seed checklist từ EMI_PAY_ChecklistTemplates; fallback 2 stub nếu thiếu seed.
+                                    HTTP_GetChecklistTemplates_Create = [ordered]@{
                                         type     = 'OpenApiConnection'
                                         runAfter = @{ HTTP_CreateWorkItem = @('Succeeded') }
                                         inputs   = [ordered]@{
@@ -357,42 +448,107 @@ $definition = [ordered]@{
                                             }
                                             parameters     = [ordered]@{
                                                 dataset             = $site
-                                                'parameters/method'  = 'POST'
-                                                'parameters/uri'     = "_api/web/lists(guid'$guidChecklist')/items"
+                                                'parameters/method'  = 'GET'
+                                                'parameters/uri'     = "@concat('_api/web/lists(guid''$guidChecklistTemplates'')/items?`$filter=PaymentTypeCode eq ''', replace(string(coalesce(variables('Payload')?['paymentTypeCode'],'SPV_PAYMENT')),'''',''''''), ''' and VersionNo eq ', string(int(coalesce(variables('Payload')?['checklistVersion'], 1))), '&`$select=ItemCode,ItemLabel,IsRequired,MinFileCount,DisplayOrder&`$orderby=DisplayOrder&`$top=50')"
                                                 'parameters/headers' = [ordered]@{
-                                                    Accept         = 'application/json;odata=nometadata'
-                                                    'Content-Type' = 'application/json;odata=nometadata'
+                                                    Accept = 'application/json;odata=nometadata'
                                                 }
-                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '-DOC_REQUEST"",""RequestKey"":""', variables('RequestKey'), '"",""ChecklistItemKey"":""', variables('RequestKey'), '|DOC_REQUEST"",""ItemCode"":""DOC_REQUEST"",""ItemLabel"":""De nghi thanh toan"",""IsRequired"":true,""MinFileCount"":1,""UploadedCount"":0,""ItemStatus"":""Missing"",""IsLocked"":false}'))"
                                             }
                                             authentication = "@parameters('`$authentication')"
                                         }
                                     }
-                                    HTTP_CreateChecklist_DOC_INVOICE = [ordered]@{
-                                        type     = 'OpenApiConnection'
-                                        runAfter = @{ HTTP_CreateChecklist_DOC_REQUEST = @('Succeeded') }
-                                        inputs   = [ordered]@{
-                                            host           = [ordered]@{
-                                                connectionName = 'shared_sharepointonline'
-                                                operationId    = 'HttpRequest'
-                                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
-                                            }
-                                            parameters     = [ordered]@{
-                                                dataset             = $site
-                                                'parameters/method'  = 'POST'
-                                                'parameters/uri'     = "_api/web/lists(guid'$guidChecklist')/items"
-                                                'parameters/headers' = [ordered]@{
-                                                    Accept         = 'application/json;odata=nometadata'
-                                                    'Content-Type' = 'application/json;odata=nometadata'
+                                    IF_CreateChecklistFromTemplates = [ordered]@{
+                                        type       = 'If'
+                                        runAfter   = @{ HTTP_GetChecklistTemplates_Create = @('Succeeded') }
+                                        expression = [ordered]@{
+                                            greater = @(
+                                                "@length(body('HTTP_GetChecklistTemplates_Create')?['value'])"
+                                                0
+                                            )
+                                        }
+                                        actions    = [ordered]@{
+                                            FOREACH_CreateChecklist = [ordered]@{
+                                                type                  = 'Foreach'
+                                                foreach               = "@body('HTTP_GetChecklistTemplates_Create')?['value']"
+                                                runtimeConfiguration  = [ordered]@{
+                                                    concurrency = [ordered]@{ repetitions = 4 }
                                                 }
-                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '-DOC_INVOICE"",""RequestKey"":""', variables('RequestKey'), '"",""ChecklistItemKey"":""', variables('RequestKey'), '|DOC_INVOICE"",""ItemCode"":""DOC_INVOICE"",""ItemLabel"":""Hoa don / chung tu"",""IsRequired"":true,""MinFileCount"":1,""UploadedCount"":0,""ItemStatus"":""Missing"",""IsLocked"":false}'))"
+                                                actions               = [ordered]@{
+                                                    HTTP_CreateChecklistFromTpl = [ordered]@{
+                                                        type   = 'OpenApiConnection'
+                                                        inputs = [ordered]@{
+                                                            host           = [ordered]@{
+                                                                connectionName = 'shared_sharepointonline'
+                                                                operationId    = 'HttpRequest'
+                                                                apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                            }
+                                                            parameters     = [ordered]@{
+                                                                dataset             = $site
+                                                                'parameters/method'  = 'POST'
+                                                                'parameters/uri'     = "_api/web/lists(guid'$guidChecklist')/items"
+                                                                'parameters/headers' = [ordered]@{
+                                                                    Accept         = 'application/json;odata=nometadata'
+                                                                    'Content-Type' = 'application/json;odata=nometadata'
+                                                                }
+                                                                'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '-', replace(string(items('FOREACH_CreateChecklist')?['ItemCode']), '""', ''''), '"",""RequestKey"":""', variables('RequestKey'), '"",""ChecklistItemKey"":""', variables('RequestKey'), '|', replace(string(items('FOREACH_CreateChecklist')?['ItemCode']), '""', ''''), '"",""ItemCode"":""', replace(string(items('FOREACH_CreateChecklist')?['ItemCode']), '""', ''''), '"",""ItemLabel"":""', replace(string(coalesce(items('FOREACH_CreateChecklist')?['ItemLabel'], items('FOREACH_CreateChecklist')?['ItemCode'])), '""', ''''), '"",""IsRequired"":', if(equals(items('FOREACH_CreateChecklist')?['IsRequired'], true), 'true', 'false'), ',""MinFileCount"":', string(int(coalesce(items('FOREACH_CreateChecklist')?['MinFileCount'], 0))), ',""UploadedCount"":0,""ItemStatus"":""Missing"",""IsLocked"":false}'))"
+                                                            }
+                                                            authentication = "@parameters('`$authentication')"
+                                                        }
+                                                    }
+                                                }
                                             }
-                                            authentication = "@parameters('`$authentication')"
+                                        }
+                                        else       = [ordered]@{
+                                            actions = [ordered]@{
+                                                HTTP_CreateChecklist_DOC_REQUEST = [ordered]@{
+                                                    type   = 'OpenApiConnection'
+                                                    inputs = [ordered]@{
+                                                        host           = [ordered]@{
+                                                            connectionName = 'shared_sharepointonline'
+                                                            operationId    = 'HttpRequest'
+                                                            apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                        }
+                                                        parameters     = [ordered]@{
+                                                            dataset             = $site
+                                                            'parameters/method'  = 'POST'
+                                                            'parameters/uri'     = "_api/web/lists(guid'$guidChecklist')/items"
+                                                            'parameters/headers' = [ordered]@{
+                                                                Accept         = 'application/json;odata=nometadata'
+                                                                'Content-Type' = 'application/json;odata=nometadata'
+                                                            }
+                                                            'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '-DOC_REQUEST"",""RequestKey"":""', variables('RequestKey'), '"",""ChecklistItemKey"":""', variables('RequestKey'), '|DOC_REQUEST"",""ItemCode"":""DOC_REQUEST"",""ItemLabel"":""De nghi thanh toan"",""IsRequired"":true,""MinFileCount"":1,""UploadedCount"":0,""ItemStatus"":""Missing"",""IsLocked"":false}'))"
+                                                        }
+                                                        authentication = "@parameters('`$authentication')"
+                                                    }
+                                                }
+                                                HTTP_CreateChecklist_DOC_INVOICE = [ordered]@{
+                                                    type     = 'OpenApiConnection'
+                                                    runAfter = @{ HTTP_CreateChecklist_DOC_REQUEST = @('Succeeded') }
+                                                    inputs   = [ordered]@{
+                                                        host           = [ordered]@{
+                                                            connectionName = 'shared_sharepointonline'
+                                                            operationId    = 'HttpRequest'
+                                                            apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                                                        }
+                                                        parameters     = [ordered]@{
+                                                            dataset             = $site
+                                                            'parameters/method'  = 'POST'
+                                                            'parameters/uri'     = "_api/web/lists(guid'$guidChecklist')/items"
+                                                            'parameters/headers' = [ordered]@{
+                                                                Accept         = 'application/json;odata=nometadata'
+                                                                'Content-Type' = 'application/json;odata=nometadata'
+                                                            }
+                                                            'parameters/body'    = "@json(concat('{""Title"":""', variables('RequestKey'), '-DOC_INVOICE"",""RequestKey"":""', variables('RequestKey'), '"",""ChecklistItemKey"":""', variables('RequestKey'), '|DOC_INVOICE"",""ItemCode"":""DOC_INVOICE"",""ItemLabel"":""Hoa don / chung tu"",""IsRequired"":true,""MinFileCount"":1,""UploadedCount"":0,""ItemStatus"":""Missing"",""IsLocked"":false}'))"
+                                                        }
+                                                        authentication = "@parameters('`$authentication')"
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                     HTTP_MarkSucceeded_Create = [ordered]@{
                                         type     = 'OpenApiConnection'
-                                        runAfter = @{ HTTP_CreateChecklist_DOC_INVOICE = @('Succeeded') }
+                                        runAfter = @{ IF_CreateChecklistFromTemplates = @('Succeeded') }
                                         inputs   = [ordered]@{
                                             host           = [ordered]@{
                                                 connectionName = 'shared_sharepointonline'
@@ -2044,6 +2200,329 @@ $definition = [ordered]@{
     }
 }
 
+# --- Wire OrgMembers AUTH gate (1.0.0.13): Claim → Auth → IF_AuthOk → SW_CommandType → GetFinal ---
+$elseActions = $definition.actions.IF_AlreadyDone.else.actions
+$swCommand = $elseActions['SW_CommandType']
+$httpGetFinal = $elseActions['HTTP_GetFinal']
+$ifWriteInternal = $elseActions['IF_WriteActivityInternal']
+$respApi = $elseActions['RESP_Api']
+$claim = $elseActions['HTTP_ClaimProcessing']
+
+$newElse = [ordered]@{}
+$newElse['HTTP_ClaimProcessing'] = $claim
+
+$newElse['SET_AuthorEmail'] = New-SetVar 'AuthorEmail' 'string' "@toLower(trim(coalesce(body('HTTP_LoadCommand')?['Author']?['EMail'], body('HTTP_LoadCommand')?['Author']?['Email'], '')))"
+$newElse['SET_AuthorEmail'].runAfter = @{ HTTP_ClaimProcessing = @('Succeeded') }
+
+$newElse['SET_EffectiveActor'] = New-SetVar 'EffectiveActorUPN' 'string' "@toLower(trim(if(equals(variables('AuthorEmail'),'$sysadmUpn'), coalesce(variables('Payload')?['actorUPN'], variables('Payload')?['creatorUPN'], variables('AuthorEmail')), variables('AuthorEmail'))))"
+$newElse['SET_EffectiveActor'].runAfter = @{ SET_AuthorEmail = @('Succeeded') }
+
+# Designer mới bắt buộc Value — dùng expression chuỗi rỗng, không dùng "".
+$newElse['SET_AuthError_Clear'] = New-SetVar 'AuthError' 'string' "@string('')"
+$newElse['SET_AuthError_Clear'].runAfter = @{ SET_EffectiveActor = @('Succeeded') }
+
+$newElse['IF_AuthPayloadMismatch'] = [ordered]@{
+    type       = 'If'
+    runAfter   = @{ SET_AuthError_Clear = @('Succeeded') }
+    expression = [ordered]@{
+        and = @(
+            [ordered]@{ not = [ordered]@{ equals = @("@variables('AuthorEmail')", $sysadmUpn) } }
+            [ordered]@{
+                or = @(
+                    [ordered]@{
+                        and = @(
+                            [ordered]@{ not = [ordered]@{ empty = @("@coalesce(variables('Payload')?['actorUPN'],'')") } }
+                            [ordered]@{ not = [ordered]@{ equals = @("@toLower(trim(string(variables('Payload')?['actorUPN'])))", "@variables('AuthorEmail')") } }
+                        )
+                    }
+                    [ordered]@{
+                        and = @(
+                            [ordered]@{ not = [ordered]@{ empty = @("@coalesce(variables('Payload')?['creatorUPN'],'')") } }
+                            [ordered]@{ not = [ordered]@{ equals = @("@toLower(trim(string(variables('Payload')?['creatorUPN'])))", "@variables('AuthorEmail')") } }
+                        )
+                    }
+                )
+            }
+        )
+    }
+    actions    = [ordered]@{
+        SET_AuthError_Mismatch = New-SetVar 'AuthError' 'string' 'AUTH: payload UPN mismatch'
+    }
+    else       = [ordered]@{ actions = [ordered]@{} }
+}
+
+$orgFilterMgr = "@concat('_api/web/lists(guid''$guidOrgMembers'')/items?`$filter=MemberUPN eq ''', replace(variables('EffectiveActorUPN'),'''',''''''), ''' and OUCode eq ''', replace(variables('NextOU'),'''',''''''), ''' and IsActive eq 1&`$select=Id,MemberUPN,OUCode,MemberRole,IsActive&`$top=5')"
+$orgFilterAny = "@concat('_api/web/lists(guid''$guidOrgMembers'')/items?`$filter=MemberUPN eq ''', replace(variables('EffectiveActorUPN'),'''',''''''), ''' and OUCode eq ''', replace(string(variables('Payload')?['createdOUCode']),'''',''''''), ''' and IsActive eq 1&`$select=Id,MemberUPN,OUCode,MemberRole,IsActive&`$top=5')"
+$masterFilter = "@concat('_api/web/lists(guid''$guidRequests'')/items?`$filter=RequestKey eq ''', replace(variables('RequestKey'),'''',''''''), '''&`$select=Id,RequestKey,Status,CurrentStepKey,CurrentOUCode,CreatedOUCode,CreatorUPN&`$top=2')"
+
+$swAuth = [ordered]@{
+    type       = 'Switch'
+    expression = "@variables('CommandType')"
+    runAfter   = @{ IF_AuthPayloadMismatch = @('Succeeded', 'Failed', 'Skipped') }
+    cases      = [ordered]@{
+        Case_AUTH_CREATE = [ordered]@{
+            case    = 'CREATE_REQUEST'
+            actions = [ordered]@{
+                IF_AUTH_CREATE_OU = [ordered]@{
+                    type       = 'If'
+                    expression = [ordered]@{ empty = @("@coalesce(variables('Payload')?['createdOUCode'],'')") }
+                    actions    = [ordered]@{
+                        SET_AuthError_CREATE_OU = New-SetVar 'AuthError' 'string' 'AUTH: createdOUCode required'
+                    }
+                    else       = [ordered]@{
+                        actions = [ordered]@{
+                            IF_AUTH_CREATE_SYS = [ordered]@{
+                                type       = 'If'
+                                expression = [ordered]@{ equals = @("@variables('AuthorEmail')", $sysadmUpn) }
+                                actions    = [ordered]@{}
+                                else       = [ordered]@{
+                                    actions = [ordered]@{
+                                        HTTP_Auth_Org_CREATE = New-SpHttpGet $orgFilterAny
+                                        IF_AUTH_CREATE_MEM = [ordered]@{
+                                            type       = 'If'
+                                            runAfter   = @{ HTTP_Auth_Org_CREATE = @('Succeeded') }
+                                            expression = [ordered]@{ equals = @("@length(body('HTTP_Auth_Org_CREATE')?['value'])", 0) }
+                                            actions    = [ordered]@{
+                                                SET_AuthError_CREATE_MEM = New-SetVar 'AuthError' 'string' 'AUTH: not OrgMember of createdOU'
+                                            }
+                                            else       = [ordered]@{ actions = [ordered]@{} }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Case_AUTH_SUBMIT = [ordered]@{
+            case    = 'SUBMIT'
+            actions = [ordered]@{
+                HTTP_Auth_Master_SUBMIT = New-SpHttpGet $masterFilter
+                IF_AUTH_SUBMIT = [ordered]@{
+                    type       = 'If'
+                    runAfter   = @{ HTTP_Auth_Master_SUBMIT = @('Succeeded') }
+                    expression = [ordered]@{
+                        and = @(
+                            [ordered]@{ equals = @("@length(body('HTTP_Auth_Master_SUBMIT')?['value'])", 1) }
+                            [ordered]@{ equals = @("@toLower(trim(string(coalesce(first(body('HTTP_Auth_Master_SUBMIT')?['value'])?['CreatorUPN'],''))))", "@variables('EffectiveActorUPN')") }
+                            [ordered]@{ equals = @("@coalesce(first(body('HTTP_Auth_Master_SUBMIT')?['value'])?['CurrentStepKey'],'')", 'BPCM1_PREPARE') }
+                            [ordered]@{
+                                or = @(
+                                    [ordered]@{ equals = @("@coalesce(first(body('HTTP_Auth_Master_SUBMIT')?['value'])?['Status'],'')", 'Draft') }
+                                    [ordered]@{ equals = @("@coalesce(first(body('HTTP_Auth_Master_SUBMIT')?['value'])?['Status'],'')", 'Returned') }
+                                )
+                            }
+                        )
+                    }
+                    actions    = [ordered]@{}
+                    else       = [ordered]@{
+                        actions = [ordered]@{
+                            SET_AuthError_SUBMIT = New-SetVar 'AuthError' 'string' 'AUTH: SUBMIT not allowed for actor'
+                        }
+                    }
+                }
+            }
+        }
+        Case_AUTH_ACCEPT = [ordered]@{
+            case    = 'ACCEPT'
+            actions = [ordered]@{
+                HTTP_Auth_Master_ACCEPT = New-SpHttpGet $masterFilter
+                IF_AUTH_ACCEPT_STEP = [ordered]@{
+                    type       = 'If'
+                    runAfter   = @{ HTTP_Auth_Master_ACCEPT = @('Succeeded') }
+                    expression = [ordered]@{
+                        and = @(
+                            [ordered]@{ equals = @("@length(body('HTTP_Auth_Master_ACCEPT')?['value'])", 1) }
+                            [ordered]@{
+                                or = @(
+                                    [ordered]@{ equals = @("@coalesce(first(body('HTTP_Auth_Master_ACCEPT')?['value'])?['CurrentStepKey'],'')", 'BPCM2_TECH') }
+                                    [ordered]@{ equals = @("@coalesce(first(body('HTTP_Auth_Master_ACCEPT')?['value'])?['CurrentStepKey'],'')", 'BPCM3_PRICE') }
+                                    [ordered]@{ equals = @("@coalesce(first(body('HTTP_Auth_Master_ACCEPT')?['value'])?['CurrentStepKey'],'')", 'TCKT_CHECK') }
+                                    [ordered]@{ equals = @("@coalesce(first(body('HTTP_Auth_Master_ACCEPT')?['value'])?['CurrentStepKey'],'')", 'TCKT_PAY') }
+                                )
+                            }
+                        )
+                    }
+                    actions    = [ordered]@{
+                        SET_OU_ACCEPT = New-SetVar 'NextOU' 'string' "@coalesce(first(body('HTTP_Auth_Master_ACCEPT')?['value'])?['CurrentOUCode'],'')"
+                        HTTP_Auth_Org_ACCEPT = New-SpHttpGet $orgFilterMgr
+                        IF_AUTH_ACCEPT_MGR = [ordered]@{
+                            type       = 'If'
+                            runAfter   = @{ HTTP_Auth_Org_ACCEPT = @('Succeeded') }
+                            expression = [ordered]@{
+                                and = @(
+                                    [ordered]@{ greater = @("@length(body('HTTP_Auth_Org_ACCEPT')?['value'])", 0) }
+                                    [ordered]@{ equals = @("@toLower(string(coalesce(first(body('HTTP_Auth_Org_ACCEPT')?['value'])?['MemberRole'], first(body('HTTP_Auth_Org_ACCEPT')?['value'])?['MemberRole']?['Value'],'')))", 'manager') }
+                                )
+                            }
+                            actions    = [ordered]@{}
+                            else       = [ordered]@{
+                                actions = [ordered]@{
+                                    SET_AuthError_ACCEPT = New-SetVar 'AuthError' 'string' 'AUTH: not Manager of CurrentOU'
+                                }
+                            }
+                        }
+                    }
+                    else       = [ordered]@{
+                        actions = [ordered]@{
+                            SET_AuthError_ACCEPT_STEP = New-SetVar 'AuthError' 'string' 'AUTH: ACCEPT step not allowed'
+                        }
+                    }
+                }
+            }
+        }
+        Case_AUTH_DECIDE = [ordered]@{
+            case    = 'DECIDE'
+            actions = [ordered]@{
+                HTTP_Auth_Master_DECIDE = New-SpHttpGet $masterFilter
+                IF_AUTH_DECIDE_MASTER = [ordered]@{
+                    type       = 'If'
+                    runAfter   = @{ HTTP_Auth_Master_DECIDE = @('Succeeded') }
+                    expression = [ordered]@{ equals = @("@length(body('HTTP_Auth_Master_DECIDE')?['value'])", 1) }
+                    actions    = [ordered]@{
+                        IF_AUTH_DECIDE_MGR_ROUTE = [ordered]@{
+                            type       = 'If'
+                            expression = [ordered]@{
+                                and = @(
+                                    [ordered]@{ equals = @("@coalesce(first(body('HTTP_Auth_Master_DECIDE')?['value'])?['Status'],'')", 'AwaitingManager') }
+                                    [ordered]@{ equals = @("@coalesce(first(body('HTTP_Auth_Master_DECIDE')?['value'])?['CurrentStepKey'],'')", 'BPCM1_PREPARE') }
+                                )
+                            }
+                            actions    = [ordered]@{
+                                SET_OU_DECIDE_CREATED = New-SetVar 'NextOU' 'string' "@coalesce(first(body('HTTP_Auth_Master_DECIDE')?['value'])?['CreatedOUCode'],'')"
+                                HTTP_Auth_Org_DECIDE = New-SpHttpGet $orgFilterMgr
+                                IF_AUTH_DECIDE_MGR = [ordered]@{
+                                    type       = 'If'
+                                    runAfter   = @{ HTTP_Auth_Org_DECIDE = @('Succeeded') }
+                                    expression = [ordered]@{
+                                        and = @(
+                                            [ordered]@{ greater = @("@length(body('HTTP_Auth_Org_DECIDE')?['value'])", 0) }
+                                            [ordered]@{ equals = @("@toLower(string(coalesce(first(body('HTTP_Auth_Org_DECIDE')?['value'])?['MemberRole'], first(body('HTTP_Auth_Org_DECIDE')?['value'])?['MemberRole']?['Value'],'')))", 'manager') }
+                                        )
+                                    }
+                                    actions    = [ordered]@{}
+                                    else       = [ordered]@{
+                                        actions = [ordered]@{
+                                            SET_AuthError_DECIDE = New-SetVar 'AuthError' 'string' 'AUTH: not Manager of CreatedOU'
+                                        }
+                                    }
+                                }
+                            }
+                            else       = [ordered]@{
+                                actions = [ordered]@{
+                                    SET_OU_DECIDE_CURRENT = New-SetVar 'NextOU' 'string' "@coalesce(first(body('HTTP_Auth_Master_DECIDE')?['value'])?['CurrentOUCode'],'')"
+                                    HTTP_Auth_Org_DECIDE2 = New-SpHttpGet $orgFilterMgr
+                                    IF_AUTH_DECIDE_MGR2 = [ordered]@{
+                                        type       = 'If'
+                                        runAfter   = @{ HTTP_Auth_Org_DECIDE2 = @('Succeeded') }
+                                        expression = [ordered]@{
+                                            and = @(
+                                                [ordered]@{ greater = @("@length(body('HTTP_Auth_Org_DECIDE2')?['value'])", 0) }
+                                                [ordered]@{ equals = @("@toLower(string(coalesce(first(body('HTTP_Auth_Org_DECIDE2')?['value'])?['MemberRole'], first(body('HTTP_Auth_Org_DECIDE2')?['value'])?['MemberRole']?['Value'],'')))", 'manager') }
+                                            )
+                                        }
+                                        actions    = [ordered]@{}
+                                        else       = [ordered]@{
+                                            actions = [ordered]@{
+                                                SET_AuthError_DECIDE2 = New-SetVar 'AuthError' 'string' 'AUTH: not Manager of CurrentOU'
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else       = [ordered]@{
+                        actions = [ordered]@{
+                            SET_AuthError_DECIDE_MASTER = New-SetVar 'AuthError' 'string' 'AUTH: request not found'
+                        }
+                    }
+                }
+            }
+        }
+        Case_AUTH_CONFIRM = [ordered]@{
+            case    = 'CONFIRM_PAYMENT'
+            actions = [ordered]@{
+                HTTP_Auth_Master_CONFIRM = New-SpHttpGet $masterFilter
+                IF_AUTH_CONFIRM = [ordered]@{
+                    type       = 'If'
+                    runAfter   = @{ HTTP_Auth_Master_CONFIRM = @('Succeeded') }
+                    expression = [ordered]@{
+                        and = @(
+                            [ordered]@{ equals = @("@length(body('HTTP_Auth_Master_CONFIRM')?['value'])", 1) }
+                            [ordered]@{ equals = @("@coalesce(first(body('HTTP_Auth_Master_CONFIRM')?['value'])?['CurrentStepKey'],'')", 'TCKT_PAY') }
+                        )
+                    }
+                    actions    = [ordered]@{
+                        SET_OU_CONFIRM = New-SetVar 'NextOU' 'string' "@coalesce(first(body('HTTP_Auth_Master_CONFIRM')?['value'])?['CurrentOUCode'],'')"
+                        HTTP_Auth_Org_CONFIRM = New-SpHttpGet $orgFilterMgr
+                        IF_AUTH_CONFIRM_MGR = [ordered]@{
+                            type       = 'If'
+                            runAfter   = @{ HTTP_Auth_Org_CONFIRM = @('Succeeded') }
+                            expression = [ordered]@{
+                                and = @(
+                                    [ordered]@{ greater = @("@length(body('HTTP_Auth_Org_CONFIRM')?['value'])", 0) }
+                                    [ordered]@{ equals = @("@toLower(string(coalesce(first(body('HTTP_Auth_Org_CONFIRM')?['value'])?['MemberRole'], first(body('HTTP_Auth_Org_CONFIRM')?['value'])?['MemberRole']?['Value'],'')))", 'manager') }
+                                )
+                            }
+                            actions    = [ordered]@{}
+                            else       = [ordered]@{
+                                actions = [ordered]@{
+                                    SET_AuthError_CONFIRM = New-SetVar 'AuthError' 'string' 'AUTH: not Manager of CurrentOU'
+                                }
+                            }
+                        }
+                    }
+                    else       = [ordered]@{
+                        actions = [ordered]@{
+                            SET_AuthError_CONFIRM_STEP = New-SetVar 'AuthError' 'string' 'AUTH: CONFIRM step not allowed'
+                        }
+                    }
+                }
+            }
+        }
+    }
+    default = [ordered]@{
+        actions = [ordered]@{
+            SET_AuthError_UNKNOWN = New-SetVar 'AuthError' 'string' "@concat('AUTH: unknown CommandType ', variables('CommandType'))"
+        }
+    }
+}
+
+# Fix ACCEPT nested runAfter for SET_OU → HTTP
+$swAuth.cases.Case_AUTH_ACCEPT.actions.IF_AUTH_ACCEPT_STEP.actions.HTTP_Auth_Org_ACCEPT.runAfter = @{ SET_OU_ACCEPT = @('Succeeded') }
+$swAuth.cases.Case_AUTH_DECIDE.actions.IF_AUTH_DECIDE_MASTER.actions.IF_AUTH_DECIDE_MGR_ROUTE.actions.HTTP_Auth_Org_DECIDE.runAfter = @{ SET_OU_DECIDE_CREATED = @('Succeeded') }
+$swAuth.cases.Case_AUTH_DECIDE.actions.IF_AUTH_DECIDE_MASTER.actions.IF_AUTH_DECIDE_MGR_ROUTE.else.actions.HTTP_Auth_Org_DECIDE2.runAfter = @{ SET_OU_DECIDE_CURRENT = @('Succeeded') }
+$swAuth.cases.Case_AUTH_CONFIRM.actions.IF_AUTH_CONFIRM.actions.HTTP_Auth_Org_CONFIRM.runAfter = @{ SET_OU_CONFIRM = @('Succeeded') }
+$swAuth.cases.Case_AUTH_CREATE.actions.IF_AUTH_CREATE_OU.else.actions.IF_AUTH_CREATE_SYS.else.actions.HTTP_Auth_Org_CREATE.runAfter = @{}
+
+$newElse['SW_AuthGate'] = $swAuth
+
+$swCommand.runAfter = @{}
+$newElse['IF_AuthOk'] = [ordered]@{
+    type       = 'If'
+    runAfter   = @{ SW_AuthGate = @('Succeeded') }
+    expression = [ordered]@{ empty = @("@variables('AuthError')") }
+    actions    = [ordered]@{
+        SW_CommandType = $swCommand
+    }
+    else       = [ordered]@{
+        actions = [ordered]@{
+            HTTP_RejectAuth = (New-SpHttpMerge `
+                "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')" `
+                "@json(concat('{""State"":""Rejected"",""ErrorMessage"":""', replace(variables('AuthError'),'""',''''), '"",""ProcessedAt"":""', utcNow(), '""}'))")
+        }
+    }
+}
+
+$httpGetFinal.runAfter = @{ IF_AuthOk = @('Succeeded') }
+$newElse['HTTP_GetFinal'] = $httpGetFinal
+$newElse['IF_WriteActivityInternal'] = $ifWriteInternal
+$newElse['RESP_Api'] = $respApi
+
+$definition.actions.IF_AlreadyDone.else.actions = $newElse
+
 $workflowDoc = [ordered]@{
     properties    = [ordered]@{
         connectionReferences = [ordered]@{
@@ -2135,9 +2614,9 @@ $solution = @"
       <LocalizedName description="EMI_PAY_CORE_V1" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
-      <Description description="Core Orchestrator HTTP API 1.0.0.12: CHAIR dossier then paymentDueAt" languagecode="1033" />
+      <Description description="Core Orchestrator HTTP API 1.0.0.15: SET AuthError clear via expression; CREATE templates; AUTH" languagecode="1033" />
     </Descriptions>
-    <Version>1.0.0.12</Version>
+    <Version>1.0.0.15</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>tfime</UniqueName>

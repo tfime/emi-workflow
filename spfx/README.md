@@ -1,6 +1,6 @@
 # EMI PAY — SPFx UI (live CECM)
 
-Solution SPFx trong `emi-workflow`. Live mode ghi `EMI_PAY_Commands` rồi **POST HTTP** Core Flow `EMI_PAY_CORE_V1` **1.0.0.11** (Activity + ACCEPT/DueAt; Response đồng bộ).
+Solution SPFx trong `emi-workflow`. Live mode ghi `EMI_PAY_Commands` rồi **POST HTTP** Core Flow `EMI_PAY_CORE_V1` **1.0.0.14** (CREATE đủ field + checklist template; AUTH; Response đồng bộ).
 
 | Mục | Giá trị |
 |---|---|
@@ -12,7 +12,7 @@ Solution SPFx trong `emi-workflow`. Live mode ghi `EMI_PAY_Commands` rồi **POS
 
 - Node **22** (`>=22.14 <23`)
 - Script: `scripts/resolve-node22.ps1`
-- Flow `EMI_PAY_CORE_Orchestrator_V1` **1.0.0.11+** **On** (HTTP trigger)
+- Flow `EMI_PAY_CORE_Orchestrator_V1` **1.0.0.14+** **On** (HTTP trigger)
 - Flow trigger: **Who can trigger the flow** = **Any user in my tenant** (không để Anyone nếu tenant bắt OAuth)
 - Web part: **Demo mode = Off** + dán **Orchestrator HTTP URL**
 - **API access**: package xin `Microsoft Flow Service` / `User` → SharePoint Admin → Advanced → API access → **Approve** (cần 1 lần sau deploy/package)
@@ -44,7 +44,7 @@ https://emicomvn.sharepoint.com/sites/cecm/_layouts/15/workbench.aspx?debug=true
 
 | Màn | Hành vi |
 |---|---|
-| Tạo hồ sơ | Đọc `PaymentTypes` + `ChecklistTemplates` theo loại → `CREATE_REQUEST` → reconcile checklist thiếu |
+| Tạo hồ sơ | `CREATE_REQUEST` (Core seed checklist từ template + Title/Amount/RoutePlan) → mở detail |
 | Sửa Draft/Returned | Form trên detail (BPCM1): title, số tiền, diễn giải, OU, RoutePlan → MERGE Requests |
 | Checklist | Upload file thật → `EMI_PAY_DocsWorking` + `DocumentIndex` + cập nhật `ChecklistItems` |
 | Gửi | `SUBMIT` (Flow chặn nếu thiếu file bắt buộc) |

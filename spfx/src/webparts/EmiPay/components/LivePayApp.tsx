@@ -26,12 +26,12 @@ import {
   IStepRecipient,
   listRecentRequests,
   getRequestByKey,
-  patchRequestAfterCreate,
   patchRequestBusinessFields,
   canEditRequestBusinessFields,
   displayRequestTitle,
   listChecklistItems,
   reconcileChecklistFromTemplates,
+  checklistMatchesTemplates,
   requiredChecklistReady,
   checklistReviewComplete,
   checklistHasFail,
@@ -252,7 +252,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   const run = async (
     fn: () => Promise<void>,
-    options?: { waiting?: string; success?: string }
+    options?: {
+      waiting?: string;
+      success?: string;
+      /** Sau khi tắt spinner — làm mới UI nền (không giữ Dialog chờ). */
+      refreshAfter?: () => Promise<void>;
+    }
   ): Promise<void> => {
     setBusy(true);
     setBusyMessage(options?.waiting || 'Đang xử lý…');
@@ -265,8 +270,19 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       showNotice('error', msg);
-    } finally {
       setBusy(false);
+      return;
+    }
+    setBusy(false);
+    if (!options?.refreshAfter) return;
+    try {
+      await options.refreshAfter();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      showNotice(
+        'error',
+        `Đã xử lý nhưng làm mới giao diện thất bại: ${msg}`
+      );
     }
   };
 
@@ -321,7 +337,10 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     setEditRoutePlan(fillRoutePlanGaps(plan, recipients));
   };
 
-  const loadDetail = async (key: string): Promise<void> => {
+  const loadDetail = async (
+    key: string,
+    opts?: { skipReconcile?: boolean }
+  ): Promise<void> => {
     const m = await getRequestByKey(props.sp, key);
     if (!m) throw new Error(`Không tìm thấy hồ sơ ${key}`);
     let items = await listChecklistItems(props.sp, key);
@@ -334,8 +353,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       await unlockChecklistItems(props.sp, items);
       items = await listChecklistItems(props.sp, key);
     }
-    // Gỡ stub Flow DOC_REQUEST/DOC_INVOICE thừa; căn checklist theo template loại hồ sơ.
+    // Gỡ stub Flow; chỉ reconcile khi lệch template (tránh ghi lại mỗi lần mở / sau CREATE).
     if (
+      !opts?.skipReconcile &&
       m.currentStepKey === 'BPCM1_PREPARE' &&
       (m.status === 'Draft' || m.status === 'Returned') &&
       m.paymentTypeCode
@@ -351,15 +371,17 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         pt.code,
         pt.checklistVersion || 1
       );
-      if (tpls.length) {
+      if (tpls.length && !checklistMatchesTemplates(items, tpls)) {
         items = await reconcileChecklistFromTemplates(props.sp, key, tpls);
       }
     }
-    const wis = await listWorkItems(props.sp, key);
-    const acts = await listActivityPublic(props.sp, key);
-    const reviews = await listStepReviews(props.sp, key);
-    const unc = await listUncDocuments(props.sp, key);
-    const allDocs = await listDocumentsForRequest(props.sp, key);
+    const [wis, acts, reviews, unc, allDocs] = await Promise.all([
+      listWorkItems(props.sp, key),
+      listActivityPublic(props.sp, key),
+      listStepReviews(props.sp, key),
+      listUncDocuments(props.sp, key),
+      listDocumentsForRequest(props.sp, key)
+    ]);
     setMaster(m);
     syncEditForm(m, stepRecipients);
     setChecklist(items);
@@ -372,6 +394,13 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     setRequestKey(key);
     setDocsTab('checklist');
     setActivityTab('timeline');
+  };
+
+  const refreshDetailAndInbox = async (
+    key: string,
+    opts?: { skipReconcile?: boolean }
+  ): Promise<void> => {
+    await Promise.all([loadDetail(key, opts), refreshInbox()]);
   };
 
   const onSaveBusinessFields = (): void => {
@@ -406,15 +435,24 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           createdOUCode: editOu || master.createdOUCode,
           routePlanJson: JSON.stringify(fullRoute)
         });
-        await loadDetail(master.requestKey);
       },
-      { waiting: 'Đang lưu thông tin…', success: 'Đã lưu thông tin hồ sơ.' }
+      {
+        waiting: 'Đang lưu thông tin…',
+        success: 'Đã lưu thông tin hồ sơ.',
+        refreshAfter: () => loadDetail(master.requestKey)
+      }
     );
   };
 
   React.useEffect(() => {
     void run(async () => {
-      let types = await listPaymentTypes(props.sp);
+      const [typesRaw, ous, members, srs] = await Promise.all([
+        listPaymentTypes(props.sp),
+        listOrgUnits(props.sp),
+        listOrgMembers(props.sp),
+        listStepRecipients(props.sp)
+      ]);
+      let types = typesRaw;
       if (!types.length) {
         types = [
           {
@@ -429,12 +467,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       }
       setPaymentTypes(types);
       setSelectedType(types[0].code);
-      const ous = await listOrgUnits(props.sp);
       setOrgUnits(ous);
-      const members = await listOrgMembers(props.sp);
       setOrgMembers(members);
       if (ous[0]) setCreateOu(ous[0].ouCode);
-      const srs = await listStepRecipients(props.sp);
       setStepRecipients(srs);
       const defaults: Record<string, string> = {};
       [...ROUTE_STEPS_UI.map((r) => r.key), ...ROUTE_STEPS_AUTO].forEach((key) => {
@@ -620,6 +655,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       showNotice('warning', createDeny);
       return;
     }
+    let createdKey = '';
     void run(
       async () => {
         const title = (createTitle || '').trim();
@@ -627,11 +663,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         const amount = amountParsed.value;
         const explanation = createExpl || 'Tạo từ giao diện EMI PAY';
         const fullRoute: Record<string, string> = { ...routePlan };
-        ROUTE_STEPS_AUTO.forEach((key) => {
-          if (!fullRoute[key]) {
-            const rows = stepRecipients.filter((r) => r.stepKey === key);
+        ROUTE_STEPS_AUTO.forEach((sk) => {
+          if (!fullRoute[sk]) {
+            const rows = stepRecipients.filter((r) => r.stepKey === sk);
             const def = rows.filter((r) => r.isDefault)[0] || rows[0];
-            if (def) fullRoute[key] = def.ouCode;
+            if (def) fullRoute[sk] = def.ouCode;
           }
         });
         const missingUi = ROUTE_STEPS_UI.filter((rs) => !fullRoute[rs.key]);
@@ -639,6 +675,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           throw new Error(`Chọn phòng: ${missingUi.map((r) => r.label).join(', ')}`);
         }
         const routePlanJson = JSON.stringify(fullRoute);
+        const pt = paymentTypes.filter((t) => t.code === selectedType)[0];
         setBusyMessage('Đang tạo hồ sơ cho bạn…');
         const cmdDone = await enqueueAndRun(
           props.sp,
@@ -648,37 +685,25 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             createdOUCode: createOuCode,
             creatorUPN: actorUPN,
             paymentTypeCode: selectedType,
+            checklistVersion: pt?.checklistVersion || 1,
             amount,
             explanation,
-            routePlan: fullRoute
+            routePlan: fullRoute,
+            routePlanJson
           },
           { orchestratorUrl: props.orchestratorUrl }
         );
-        const key = cmdDone.requestKey;
-        setBusyMessage('Đang cập nhật thông tin hồ sơ + RoutePlan…');
-        await patchRequestAfterCreate(props.sp, key, {
-          title,
-          amount,
-          explanation,
-          routePlanJson
-        });
-        const pt = paymentTypes.filter((t) => t.code === selectedType)[0];
-        if (pt) {
-          const tpls =
-            templates.length > 0
-              ? templates
-              : await listChecklistTemplates(props.sp, pt.code, pt.checklistVersion);
-          setBusyMessage('Đang đồng bộ checklist theo loại hồ sơ…');
-          await reconcileChecklistFromTemplates(props.sp, key, tpls.length ? tpls : templates);
-        }
-        await refreshInbox();
-        await loadDetail(key);
+        createdKey = cmdDone.requestKey;
+        // Core 1.0.0.14+: CREATE ghi đủ field + checklist từ template — không patch/reconcile UI.
+        setRequestKey(createdKey);
         setView('detail');
       },
       {
         waiting: 'Đang tạo hồ sơ…',
         success:
-          'Đã tạo hồ sơ. Tải checklist rồi bấm «Trình trưởng phòng» (chưa sang BPCM2).'
+          'Đã tạo hồ sơ. Tải checklist rồi bấm «Trình trưởng phòng» (chưa sang BPCM2).',
+        refreshAfter: () =>
+          refreshDetailAndInbox(createdKey, { skipReconcile: true })
       }
     );
   };
@@ -754,9 +779,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           documentKey
         });
         setActivityTab('comment');
-        await loadDetail(master.requestKey);
       },
-      { waiting: 'Đang gửi ghi chú…', success: 'Đã gửi ghi chú.' }
+      {
+        waiting: 'Đang gửi ghi chú…',
+        success: 'Đã gửi ghi chú.',
+        refreshAfter: () => loadDetail(master.requestKey)
+      }
     );
   };
 
@@ -800,11 +828,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           uploadedByUPN: actorUPN
         });
         input.value = '';
-        await loadDetail(master.requestKey);
       },
       {
         waiting: `Đang tải tệp «${file.name}»…`,
-        success: `Đã tải «${file.name}» vào mục ${item.itemLabel}`
+        success: `Đã tải «${file.name}» vào mục ${item.itemLabel}`,
+        refreshAfter: () => loadDetail(master.requestKey)
       }
     );
   };
@@ -821,9 +849,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     void run(
       async () => {
         await clearChecklistItemFiles(props.sp, item);
-        await loadDetail(master.requestKey);
       },
-      { waiting: 'Đang xóa hồ sơ mục…', success: `Đã xóa tệp mục «${item.itemLabel}».` }
+      {
+        waiting: 'Đang xóa hồ sơ mục…',
+        success: `Đã xóa tệp mục «${item.itemLabel}».`,
+        refreshAfter: () => loadDetail(master.requestKey)
+      }
     );
   };
 
@@ -913,10 +944,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               orchestratorUrl: props.orchestratorUrl
             }
           );
-          await loadDetail(master.requestKey);
-          await refreshInbox();
         },
-        { waiting: 'Đang gửi hồ sơ…', success: 'Đã gửi hồ sơ thành công.' }
+        {
+          waiting: 'Đang gửi hồ sơ…',
+          success: 'Đã gửi hồ sơ thành công.',
+          refreshAfter: () => refreshDetailAndInbox(master.requestKey)
+        }
       );
       return;
     }
@@ -942,10 +975,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               orchestratorUrl: props.orchestratorUrl
             }
           );
-          await loadDetail(master.requestKey);
-          await refreshInbox();
         },
-        { waiting: 'Đang tiếp nhận…', success: 'Đã tiếp nhận và đặt hạn xử lý.' }
+        {
+          waiting: 'Đang tiếp nhận…',
+          success: 'Đã tiếp nhận và đặt hạn xử lý.',
+          refreshAfter: () => refreshDetailAndInbox(master.requestKey)
+        }
       );
       return;
     }
@@ -997,8 +1032,6 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           if (kind === 'forward' || kind === 'approvePay') {
             await lockReviewedItems(props.sp, checklist);
           }
-          await loadDetail(master.requestKey);
-          await refreshInbox();
         },
         {
           waiting:
@@ -1016,7 +1049,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                 ? 'Đã phê duyệt hồ sơ (chưa duyệt thanh toán).'
                 : kind === 'mgrApprove'
                   ? 'Đã duyệt gửi sang BPCM2.'
-                  : 'Đã chuyển bước tiếp theo.'
+                  : 'Đã chuyển bước tiếp theo.',
+          refreshAfter: () => refreshDetailAndInbox(master.requestKey)
         }
       );
       return;
@@ -1046,10 +1080,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             }
           );
           // Không khóa toàn bộ checklist khi trả — BPCM1 cần sửa/tải lại mục Fail.
-          await loadDetail(master.requestKey);
-          await refreshInbox();
         },
-        { waiting: 'Đang trả hồ sơ…', success: 'Đã trả hồ sơ về người tạo.' }
+        {
+          waiting: 'Đang trả hồ sơ…',
+          success: 'Đã trả hồ sơ về người tạo.',
+          refreshAfter: () => refreshDetailAndInbox(master.requestKey)
+        }
       );
       return;
     }
@@ -1074,10 +1110,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               orchestratorUrl: props.orchestratorUrl
             }
           );
-          await loadDetail(master.requestKey);
-          await refreshInbox();
         },
-        { waiting: 'Đang xác nhận thanh toán…', success: 'Đã xác nhận thanh toán.' }
+        {
+          waiting: 'Đang xác nhận thanh toán…',
+          success: 'Đã xác nhận thanh toán.',
+          refreshAfter: () => refreshDetailAndInbox(master.requestKey)
+        }
       );
       return;
     }
@@ -1104,14 +1142,14 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             reviewedByUPN: actorUPN
           });
           await setChecklistItemReview(props.sp, item, reviewResult);
-          await loadDetail(master.requestKey);
         },
         {
           waiting: 'Đang lưu đánh giá…',
           success:
             reviewResult === 'Pass'
               ? `Đã đánh giá Đạt: ${reviewItemCode}`
-              : `Đã đánh giá Không đạt: ${reviewItemCode}`
+              : `Đã đánh giá Không đạt: ${reviewItemCode}`,
+          refreshAfter: () => loadDetail(master.requestKey)
         }
       );
       return;
@@ -1158,11 +1196,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             showNotice('success', `Đã tải «${file.name}» vào mục ${item.itemLabel}`);
           }
           if (input) input.value = '';
-          await loadDetail(master.requestKey);
         },
         {
           waiting:
-            kind === 'unc' ? 'Đang tải ủy nhiệm chi…' : `Đang tải tệp «${file.name}»…`
+            kind === 'unc' ? 'Đang tải ủy nhiệm chi…' : `Đang tải tệp «${file.name}»…`,
+          refreshAfter: () => loadDetail(master.requestKey)
         }
       );
       return;

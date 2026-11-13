@@ -1,9 +1,12 @@
 # EMI PAY Core Orchestrator — Runbook
 
-**Solution:** `EMI_PAY_CORE_V1` v`1.0.0.12`  
+**Solution:** `EMI_PAY_CORE_V1` v`1.0.0.15`  
 **Flow:** `EMI_PAY_CORE_Orchestrator_V1`  
-**ZIP:** `EMI_PAY_CORE_V1_1_0_0_12.zip`  
+**ZIP:** `EMI_PAY_CORE_V1_1_0_0_15.zip`  
 **Trigger:** HTTP `POST { "commandId": <int> }` → sync JSON Response (CORS `*`)
+
+**1.0.0.14:** CREATE ghi Title/Amount/Explanation/RoutePlanJson; seed ChecklistTemplates.  
+**1.0.0.15:** `SET_AuthError_Clear` dùng `@string('')` (designer mới không nhận Value rỗng).
 
 ## API (SPFx / UAT)
 
@@ -44,9 +47,12 @@ Rejected/Failed → `EMI_PAY_ActivityInternal` (`COMMAND_REJECTED` / `COMMAND_FA
 
 ## Import
 
-1. Import `EMI_PAY_CORE_V1_1_0_0_12.zip` → connection CECM → Flow **On**.
-2. Copy HTTP POST URL → cấu hình SPFx.
-3. UAT: enqueue Command rồi `Invoke-RestMethod` (list trigger đã bỏ — chỉ HTTP).
+1. Import `EMI_PAY_CORE_V1_1_0_0_15.zip` (hoặc bản mới hơn).
+2. **Fix connection** (bắt buộc sau Import nếu báo *broken connection for HTTP_LoadCommand*):
+   - Solutions → `EMI_PAY_CORE_V1` → **Connection references** → `tfime_sharedsharepointonline_5e343` → gắn connection SharePoint (account Full Control trên site CECM).
+   - Hoặc Edit Flow → action `HTTP_LoadCommand` → Change connection → Save.
+3. Flow **On**. Copy HTTP POST URL → property SPFx **Orchestrator HTTP URL**.
+4. UAT: enqueue Command rồi `Invoke-RestMethod` (list trigger đã bỏ — chỉ HTTP).
 
 ## UAT
 

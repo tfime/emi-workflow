@@ -159,8 +159,8 @@ export function displayRequestTitle(master: IRequestMaster): string {
 }
 
 /**
- * Flow CREATE ghi Title=RequestKey, Explanation cứng, không ghi Amount.
- * SPFx bổ sung sau Command Succeeded — không đổi Core Flow.
+ * @deprecated Core 1.0.0.14+ CREATE ghi đủ Title/Amount/Explanation/RoutePlanJson.
+ * Giữ helper cho hồ sơ cũ / fallback nếu Flow chưa import bản mới.
  */
 export async function patchRequestAfterCreate(
   ctx: ISpRestContext,

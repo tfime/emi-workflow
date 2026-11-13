@@ -1,12 +1,12 @@
 # EMI PAY Core Flow — Phase 1
 
-Cloud Flow Solution `EMI_PAY_CORE_V1` (version **1.0.0.12** — CHAIR duyệt hồ sơ rồi duyệt thanh toán + Activity/ACCEPT).
+Cloud Flow Solution `EMI_PAY_CORE_V1` (version **1.0.0.14** — CREATE đủ field + checklist template; OrgMembers AUTH + CHAIR hai bước).
 
 ## File chính
 
 | Path | Mục đích |
 |---|---|
-| `../EMI_PAY_CORE_V1_1_0_0_12.zip` | Solution import (Unmanaged) |
+| `../EMI_PAY_CORE_V1_1_0_0_13.zip` | Solution import (Unmanaged) |
 | `EMI_PAY_CORE_Orchestrator_V1.definition.json` | Definition đầy đủ (đối chiếu / rebuild) |
 | `transitions.phase1.json` | Bảng bước + choice map + 5 lệnh |
 | `00_RUNBOOK_PHASE1.md` | Import, gắn connection, UAT |
