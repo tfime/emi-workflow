@@ -15,7 +15,7 @@ const STEP_PERSONAS: Record<string, PayPersona[]> = {
   TCKT_PAY: ['tckt_pay', 'manager']
 };
 
-/** Bước bắt buộc ACCEPT (+DueAt) trước DECIDE / đánh giá checklist. */
+/** Bước bắt buộc ACCEPT (+DueAt) trước DECIDE / đánh giá / ghi chú. */
 export const ACCEPT_STEPS = ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK', 'TCKT_PAY'];
 
 export function needsAcceptFirst(
@@ -25,26 +25,34 @@ export function needsAcceptFirst(
 ): boolean {
   if (!master) return false;
   if (ACCEPT_STEPS.indexOf(master.currentStepKey) < 0) return false;
-  if (isWorkItemAccepted(currentWi)) return false;
-  // Fallback: WI cùng bước đã có AcceptedAt (tránh lệch CurrentStepInstanceKey).
-  if (workItems && workItems.length) {
-    const hit = workItems.some(
-      (w) =>
-        w.stepKey === master.currentStepKey &&
-        !!(w.acceptedAt && String(w.acceptedAt).trim())
-    );
-    if (hit) return false;
+  // Chỉ tin WI đúng CurrentStepInstanceKey — không lấy AcceptedAt từ lượt/WI cũ cùng StepKey.
+  let wi = currentWi;
+  if (!wi && workItems && master.currentStepInstanceKey) {
+    for (let i = 0; i < workItems.length; i++) {
+      if (workItems[i].stepInstanceKey === master.currentStepInstanceKey) {
+        wi = workItems[i];
+        break;
+      }
+    }
   }
-  return true;
+  return !isWorkItemAccepted(wi);
 }
 
-/** Ghi chú tự do: chặn khi hồ sơ đã hoàn tất / hủy. */
-export function canAddUserNote(master: IRequestMaster | undefined): boolean {
+/**
+ * Gửi ghi chú: chặn hồ sơ đóng; tại BPCM2/3/TCKT phải đã ACCEPT.
+ * BPCM1 / AwaitingManager / CHAIR: được ghi chú (nếu chưa đóng).
+ */
+export function canAddUserNote(
+  master: IRequestMaster | undefined,
+  currentWi?: IWorkItemRow,
+  workItems?: IWorkItemRow[]
+): boolean {
   if (!master) return false;
   const st = master.status || '';
   if (st === 'Completed' || st === 'Cancelled' || st === 'CancellationArchiving') {
     return false;
   }
+  if (needsAcceptFirst(master, currentWi, workItems)) return false;
   return true;
 }
 

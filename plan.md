@@ -22,7 +22,7 @@
 ### SPFx (Demo Off) gần đây
 - Nhật ký Activity: mới nhất trước, badge/tiêu đề tiếng Việt; tab **Nhật ký / Ghi chú** có badge đỏ đếm
 - Tab Ghi chú: list Note/Reason; gửi StepReviews (`USER_NOTE` trong ChecklistItemKey; Dyn ListContribute StepReviews theo UPN)
-- Chưa ACCEPT: khoá **đánh giá checklist**; ghi chú tự do vẫn gửi được (trừ hồ sơ đã đóng)
+- Chưa ACCEPT (BPCM2/3/TCKT): khoá **đánh giá checklist** và **gửi ghi chú** (tab + preview tệp); chỉ tin AcceptedAt của WI đúng CurrentStepInstanceKey
 - Banner Returned hiện lý do REJECT
 - Tab Tài liệu hỗ trợ: tải `DocClass=StepAttachment`
 - CT.HĐQT: «Phê duyệt hồ sơ» rồi «Duyệt thanh toán» (dialog hạn chỉ ở bước 2)

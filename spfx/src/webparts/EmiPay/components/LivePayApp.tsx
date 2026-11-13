@@ -514,12 +514,13 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     : [];
 
   const acceptBlocked = needsAcceptFirst(master, activeWi, workItems);
-  const notesAllowed = canAddUserNote(master);
+  const notesAllowed = canAddUserNote(master, activeWi, workItems);
 
   const canReviewDocs = !!(
     master &&
     REVIEW_STEPS.indexOf(master.currentStepKey) >= 0 &&
     REVIEW_PERSONAS.indexOf(persona) >= 0 &&
+    isWorkItemAccepted(activeWi) &&
     !acceptBlocked
   );
 
@@ -542,6 +543,13 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   const sendUserNote = (text: string, documentKey?: string): void => {
     if (!master) return;
+    if (acceptBlocked) {
+      showNotice(
+        'warning',
+        'Cần «Tiếp nhận và đặt hạn» trước khi gửi ghi chú.'
+      );
+      return;
+    }
     if (!notesAllowed) {
       showNotice('warning', 'Hồ sơ đã đóng — không gửi thêm ghi chú.');
       return;
@@ -2028,7 +2036,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                         </div>
                       );
                     })}
-                    {!notesAllowed ? (
+                    {acceptBlocked ? (
+                      <p className={styles.hint} style={{ marginTop: 12 }}>
+                        Cần «Tiếp nhận và đặt hạn» trước khi đánh giá checklist hoặc gửi ghi chú.
+                      </p>
+                    ) : !notesAllowed ? (
                       <p className={styles.hint} style={{ marginTop: 12 }}>
                         Hồ sơ đã đóng — không gửi thêm ghi chú.
                       </p>
@@ -2416,8 +2428,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           doc={drawerDoc}
           comment={docComment}
           onCommentChange={setDocComment}
-          commentsEnabled={notesAllowed}
-          commentsDisabledHint="Hồ sơ đã đóng — không gửi thêm ghi chú."
+          commentsEnabled={notesAllowed && !acceptBlocked}
+          commentsDisabledHint={
+            acceptBlocked
+              ? 'Cần «Tiếp nhận và đặt hạn» trước khi ghi chú trên tài liệu.'
+              : 'Hồ sơ đã đóng — không gửi thêm ghi chú.'
+          }
           docNotes={notesForDocument(noteList, drawerDoc.documentKey)}
           onClose={() => {
             setDrawerDoc(undefined);
