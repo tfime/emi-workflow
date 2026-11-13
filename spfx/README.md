@@ -73,12 +73,13 @@ https://emicomvn.sharepoint.com/sites/cecm/_layouts/15/workbench.aspx?debug=true
 4. BPCM3 đánh giá mục còn mở → PASS; TCKT_CHECK tương tự.
 5. Có mục **Không đạt** chưa khóa → chỉ «Trả về người tạo», ẩn/chặn chuyển bước.
 
-## Full-bleed (như emi-uikit)
+## Full-bleed / full-height
 
 - Manifest: `supportsFullBleed` + `SharePointFullPage`.
-- Trang: section **Full-width**, một web part.
-- Runtime: `expandCanvasParents` (0 / 100 / 400 ms) + shell `calc(100vh - 48px)`.
-- Feedback: Fluent **Dialog + Spinner** khi chờ; **MessageBar** khi xong/lỗi — không toast debug.
+- Trang: section **Full-width**, **một** web part (tắt Comments nếu có).
+- Runtime `expandCanvasParents`: `position: fixed` đúng `contentScrollRegion` + khóa overflow SP; trong app **một** thanh cuộn ở `.workspace` (rail sticky).
+- `releaseCanvasParents` khi dispose webpart.
+- Feedback: Fluent **Dialog + Spinner** khi chờ; **MessageBar** khi xong/lỗi.
 
 ## Ghi chú
 

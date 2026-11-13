@@ -1,5 +1,6 @@
 import * as React from 'react';
-import styles from '../EmiPay.module.scss';
+import { Stack, Text } from '@fluentui/react';
+import { cardStack } from '../detail/detailStyles';
 
 export interface IDashBarChartItem {
   id: string;
@@ -15,46 +16,81 @@ export interface IDashBarChartProps {
   accent?: 'brand' | 'warn' | 'ok';
 }
 
+function fillColor(accent?: 'brand' | 'warn' | 'ok'): string {
+  if (accent === 'warn') return '#d97706';
+  if (accent === 'ok') return '#16a34a';
+  return '#0f766e';
+}
+
 const DashBarChart: React.FC<IDashBarChartProps> = (props) => {
   const max = props.items.reduce((m, it) => (it.value > m ? it.value : m), 0);
-  const fillClass =
-    props.accent === 'warn'
-      ? `${styles.dashChartFill} ${styles.dashChartFillWarn}`
-      : props.accent === 'ok'
-        ? `${styles.dashChartFill} ${styles.dashChartFillOk}`
-        : styles.dashChartFill;
+  const color = fillColor(props.accent);
 
   return (
-    <section className={styles.card}>
-      <div className={styles.cardH}>
-        <h3>{props.title}</h3>
-      </div>
-      <div className={styles.cardB}>
-        {props.items.length === 0 ? (
-          <p className={styles.empty}>{props.emptyText}</p>
-        ) : (
-          <div className={styles.dashChart}>
-            {props.items.map((it) => {
-              const pct = max > 0 ? Math.max(4, Math.round((it.value / max) * 100)) : 0;
-              return (
-                <div key={it.id} className={styles.dashChartRow}>
-                  <div className={styles.dashChartLabel} title={it.hint || it.label}>
-                    {it.label}
-                  </div>
-                  <div className={styles.dashChartTrack}>
-                    <div
-                      className={fillClass}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <div className={styles.dashChartValue}>{it.value}</div>
+    <Stack tokens={{ childrenGap: 10 }} styles={cardStack}>
+      <Text variant="large" styles={{ root: { fontWeight: 600 } }}>
+        {props.title}
+      </Text>
+      {props.items.length === 0 ? (
+        <Text styles={{ root: { color: '#4b5563' } }}>{props.emptyText}</Text>
+      ) : (
+        <Stack tokens={{ childrenGap: 8 }}>
+          {props.items.map((it) => {
+            const pct = max > 0 ? Math.max(4, Math.round((it.value / max) * 100)) : 0;
+            return (
+              <Stack
+                key={it.id}
+                horizontal
+                verticalAlign="center"
+                tokens={{ childrenGap: 8 }}
+              >
+                <Text
+                  variant="small"
+                  title={it.hint || it.label}
+                  styles={{
+                    root: {
+                      width: 96,
+                      flexShrink: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: '#4b5563'
+                    }
+                  }}
+                >
+                  {it.label}
+                </Text>
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    height: 10,
+                    borderRadius: 4,
+                    background: '#f3f4f6',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${pct}%`,
+                      height: '100%',
+                      borderRadius: 4,
+                      background: color
+                    }}
+                  />
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </section>
+                <Text
+                  variant="small"
+                  styles={{ root: { width: 28, textAlign: 'right', fontWeight: 600 } }}
+                >
+                  {it.value}
+                </Text>
+              </Stack>
+            );
+          })}
+        </Stack>
+      )}
+    </Stack>
   );
 };
 

@@ -1,3 +1,10 @@
+/**
+ * EMI PAY — phủ đúng vùng nhìn thấy của SharePoint, khóa cuộn trang.
+ *
+ * Cách làm chắc: `position: fixed` theo `contentScrollRegion` (không phụ thuộc
+ * chuỗi flex ancestor / bản xem trước). Cuộn chỉ còn trong app.
+ */
+
 function classNameOf(node: HTMLElement): string {
   const raw: string | SVGAnimatedString | undefined = node.className as
     | string
@@ -9,27 +16,27 @@ function classNameOf(node: HTMLElement): string {
   return node.getAttribute('class') || '';
 }
 
-function isCanvasChrome(node: HTMLElement): boolean {
-  const id: string = node.id || '';
-  const cls: string = classNameOf(node);
-  const autoId: string = node.getAttribute('data-automation-id') || '';
-  return (
-    id === 'workbenchPageContent' ||
-    id === 'spPageCanvasContent' ||
-    cls.indexOf('SPCanvas') >= 0 ||
-    cls.indexOf('CanvasComponent') >= 0 ||
-    cls.indexOf('CanvasZone') >= 0 ||
-    cls.indexOf('CanvasSection') >= 0 ||
-    cls.indexOf('ControlZone') >= 0 ||
-    autoId === 'CanvasZone' ||
-    autoId === 'CanvasSection' ||
-    autoId === 'CanvasControl' ||
-    autoId === 'contentScrollRegion' ||
-    autoId.indexOf('CanvasZone') === 0
-  );
+function findContentScrollRegion(from: HTMLElement): HTMLElement | undefined {
+  const byAttr = document.querySelector(
+    '[data-automation-id="contentScrollRegion"]'
+  ) as HTMLElement | null;
+  if (byAttr) return byAttr;
+
+  let node: HTMLElement | null = from;
+  while (node && node !== document.body) {
+    const autoId = node.getAttribute('data-automation-id') || '';
+    const cls = classNameOf(node);
+    if (autoId === 'contentScrollRegion' || cls.indexOf('scrollRegion') >= 0) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return undefined;
 }
 
 const FULL_BLEED_STYLE_ID: string = 'emi-pay-full-bleed-style';
+const BODY_LOCK_CLASS: string = 'emi-pay-viewport-lock';
+const SPACER_ATTR: string = 'data-emi-pay-spacer';
 
 function ensureFullBleedStyles(): void {
   if (typeof document === 'undefined' || document.getElementById(FULL_BLEED_STYLE_ID)) {
@@ -38,84 +45,205 @@ function ensureFullBleedStyles(): void {
   const style: HTMLStyleElement = document.createElement('style');
   style.id = FULL_BLEED_STYLE_ID;
   style.textContent = `
-    #workbenchPageContent,
-    #spPageCanvasContent,
-    .SPCanvas,
-    .CanvasComponent,
-    .CanvasZone,
-    .CanvasSection,
-    .ControlZone,
-    .ControlZone--clean,
-    [data-automation-id="CanvasZone"],
-    [data-automation-id="CanvasSection"],
-    [data-automation-id="CanvasControl"],
-    [data-automation-id="contentScrollRegion"],
-    [data-automation-id^="CanvasZone"] {
-      max-width: none !important;
+    body.${BODY_LOCK_CLASS} [data-automation-id="contentScrollRegion"],
+    body.${BODY_LOCK_CLASS} [class*="scrollRegion_"] {
+      overflow: hidden !important;
+      overflow-x: hidden !important;
+      overflow-y: hidden !important;
+    }
+
+    body.${BODY_LOCK_CLASS} [data-automation-id="pageHeader"],
+    body.${BODY_LOCK_CLASS} [data-automation-id="titleRegion"],
+    body.${BODY_LOCK_CLASS} [data-automation-id="CanvasControl"] > div[class*="comments"],
+    body.${BODY_LOCK_CLASS} div[class*="commentsWrapper"],
+    body.${BODY_LOCK_CLASS} div[class*="CommentsWrapper"] {
+      display: none !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+
+    body.${BODY_LOCK_CLASS} #workbenchPageContent,
+    body.${BODY_LOCK_CLASS} #spPageCanvasContent,
+    body.${BODY_LOCK_CLASS} .CanvasZone,
+    body.${BODY_LOCK_CLASS} .CanvasSection,
+    body.${BODY_LOCK_CLASS} .ControlZone,
+    body.${BODY_LOCK_CLASS} [data-automation-id="CanvasZone"],
+    body.${BODY_LOCK_CLASS} [data-automation-id="CanvasSection"],
+    body.${BODY_LOCK_CLASS} [data-automation-id="CanvasControl"] {
+      max-width: 100% !important;
       width: 100% !important;
-      margin-left: 0 !important;
-      margin-right: 0 !important;
-      padding-left: 0 !important;
-      padding-right: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
       box-sizing: border-box !important;
+    }
+
+    .emiPayHost {
+      display: flex !important;
+      flex-direction: column !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+      background: #f3f4f6;
+    }
+
+    .emiPayHost > div {
+      flex: 1 1 auto !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      max-height: 100% !important;
+      box-sizing: border-box !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
     }
   `;
   document.head.appendChild(style);
 }
 
-function flushToFrame(domElement: HTMLElement, section: HTMLElement | undefined): void {
-  const frame: HTMLElement = section || domElement.parentElement || domElement;
-  const hostRect: DOMRect = domElement.getBoundingClientRect();
-  const frameRect: DOMRect = frame.getBoundingClientRect();
-  const leftGap: number = Math.round(hostRect.left - frameRect.left);
+function ensureSpacer(domElement: HTMLElement): HTMLElement {
+  const parent = domElement.parentElement;
+  if (!parent) {
+    const fake = document.createElement('div');
+    return fake;
+  }
+  let spacer = parent.querySelector(`[${SPACER_ATTR}]`) as HTMLElement | null;
+  if (!spacer) {
+    spacer = document.createElement('div');
+    spacer.setAttribute(SPACER_ATTR, '1');
+    spacer.style.cssText =
+      'width:100%;margin:0;padding:0;border:0;pointer-events:none;visibility:hidden;';
+    parent.insertBefore(spacer, domElement);
+  }
+  return spacer;
+}
 
-  if (leftGap > 0) {
-    domElement.style.marginLeft = `-${leftGap}px`;
-    domElement.style.width = `calc(100% + ${leftGap}px)`;
-    domElement.style.maxWidth = 'none';
-  } else {
-    domElement.style.marginLeft = '0';
-    domElement.style.width = '100%';
-    domElement.style.maxWidth = 'none';
+function pinHostToRegion(domElement: HTMLElement, region: HTMLElement): void {
+  domElement.classList.add('emiPayHost');
+
+  const rect = region.getBoundingClientRect();
+  const top = Math.max(0, Math.round(rect.top));
+  const left = Math.max(0, Math.round(rect.left));
+  const width = Math.max(320, Math.round(rect.width));
+  const height = Math.max(280, Math.round(Math.min(rect.bottom, window.innerHeight) - top));
+
+  const spacer = ensureSpacer(domElement);
+  spacer.style.height = `${height}px`;
+
+  domElement.style.setProperty('position', 'fixed', 'important');
+  domElement.style.setProperty('top', `${top}px`, 'important');
+  domElement.style.setProperty('left', `${left}px`, 'important');
+  domElement.style.setProperty('right', 'auto', 'important');
+  domElement.style.setProperty('bottom', 'auto', 'important');
+  domElement.style.setProperty('width', `${width}px`, 'important');
+  domElement.style.setProperty('height', `${height}px`, 'important');
+  domElement.style.setProperty('max-width', `${width}px`, 'important');
+  domElement.style.setProperty('max-height', `${height}px`, 'important');
+  domElement.style.setProperty('min-height', `${height}px`, 'important');
+  domElement.style.setProperty('margin', '0', 'important');
+  domElement.style.setProperty('z-index', '3', 'important');
+  domElement.style.setProperty('overflow', 'hidden', 'important');
+  domElement.style.setProperty('--emi-sp-top', `${top}px`);
+
+  const app = domElement.querySelector(
+    '[class*="app_"], [class^="app"], [class*=" app"]'
+  ) as HTMLElement | null;
+  const first = (app || domElement.firstElementChild) as HTMLElement | null;
+  if (first) {
+    first.style.setProperty('height', '100%', 'important');
+    first.style.setProperty('min-height', '0', 'important');
+    first.style.setProperty('max-height', '100%', 'important');
+    first.style.setProperty('width', '100%', 'important');
+    first.style.setProperty('overflow', 'hidden', 'important');
   }
 }
 
-/** Stretch SharePoint canvas so EMI PAY uses full section width (same as emi-uikit). */
-export function expandCanvasParents(domElement: HTMLElement): void {
-  ensureFullBleedStyles();
+function lockRegion(region: HTMLElement): void {
+  region.style.setProperty('overflow', 'hidden', 'important');
+  region.style.setProperty('overflow-x', 'hidden', 'important');
+  region.style.setProperty('overflow-y', 'hidden', 'important');
+  region.scrollTop = 0;
+}
 
-  domElement.style.marginLeft = '0';
-  domElement.style.marginRight = '0';
-  domElement.style.width = '100%';
-  domElement.style.maxWidth = 'none';
-  domElement.style.boxSizing = 'border-box';
+let resizeObserver: ResizeObserver | undefined;
+let pinnedHost: HTMLElement | undefined;
 
-  let section: HTMLElement | undefined = undefined;
-  let node: HTMLElement | undefined = domElement.parentElement || undefined;
-  while (node && node !== document.body) {
-    if (isCanvasChrome(node)) {
-      node.style.setProperty('padding-left', '0', 'important');
-      node.style.setProperty('padding-right', '0', 'important');
-      node.style.setProperty('margin-left', '0', 'important');
-      node.style.setProperty('margin-right', '0', 'important');
-      node.style.setProperty('max-width', 'none', 'important');
-      node.style.setProperty('width', '100%', 'important');
-      section = node;
-    }
-    if (
-      classNameOf(node).indexOf('CanvasZone') >= 0 ||
-      node.id === 'workbenchPageContent' ||
-      node.id === 'spPageCanvasContent'
-    ) {
-      section = node;
-      break;
-    }
-    node = node.parentElement || undefined;
+function observeAndPin(region: HTMLElement, host: HTMLElement): void {
+  const apply = (): void => {
+    lockRegion(region);
+    pinHostToRegion(host, region);
+  };
+
+  if (typeof ResizeObserver !== 'undefined') {
+    if (resizeObserver) resizeObserver.disconnect();
+    resizeObserver = new ResizeObserver(() => apply());
+    resizeObserver.observe(region);
+    resizeObserver.observe(document.documentElement);
   }
 
   window.requestAnimationFrame(() => {
-    flushToFrame(domElement, section);
-    window.setTimeout(() => flushToFrame(domElement, section), 50);
-    window.setTimeout(() => flushToFrame(domElement, section), 250);
+    apply();
+    window.setTimeout(apply, 50);
+    window.setTimeout(apply, 250);
+    window.setTimeout(apply, 800);
   });
+}
+
+/** Phủ full vùng cuộn SP + khóa scroll trang. */
+export function expandCanvasParents(domElement: HTMLElement): void {
+  ensureFullBleedStyles();
+  document.body.classList.add(BODY_LOCK_CLASS);
+  pinnedHost = domElement;
+
+  const region = findContentScrollRegion(domElement);
+  if (!region) {
+    // Fallback: fill tới đáy viewport
+    const top = Math.max(0, Math.round(domElement.getBoundingClientRect().top));
+    const h = Math.max(280, Math.round(window.innerHeight - top));
+    domElement.classList.add('emiPayHost');
+    domElement.style.setProperty('height', `${h}px`, 'important');
+    domElement.style.setProperty('max-height', `${h}px`, 'important');
+    domElement.style.setProperty('overflow', 'hidden', 'important');
+    return;
+  }
+
+  lockRegion(region);
+  observeAndPin(region, domElement);
+}
+
+/** Gỡ khi dispose webpart. */
+export function releaseCanvasParents(): void {
+  if (typeof document === 'undefined') return;
+  document.body.classList.remove(BODY_LOCK_CLASS);
+
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = undefined;
+  }
+
+  if (pinnedHost) {
+    const parent = pinnedHost.parentElement;
+    if (parent) {
+      const spacer = parent.querySelector(`[${SPACER_ATTR}]`);
+      if (spacer && spacer.parentElement) {
+        spacer.parentElement.removeChild(spacer);
+      }
+    }
+    pinnedHost.classList.remove('emiPayHost');
+    pinnedHost.style.removeProperty('position');
+    pinnedHost.style.removeProperty('top');
+    pinnedHost.style.removeProperty('left');
+    pinnedHost.style.removeProperty('right');
+    pinnedHost.style.removeProperty('bottom');
+    pinnedHost.style.removeProperty('width');
+    pinnedHost.style.removeProperty('height');
+    pinnedHost.style.removeProperty('max-width');
+    pinnedHost.style.removeProperty('max-height');
+    pinnedHost.style.removeProperty('min-height');
+    pinnedHost.style.removeProperty('z-index');
+    pinnedHost = undefined;
+  }
 }

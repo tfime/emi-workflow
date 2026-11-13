@@ -1,12 +1,5 @@
 import * as React from 'react';
-import {
-  DefaultButton,
-  Dialog,
-  DialogFooter,
-  DialogType,
-  PrimaryButton,
-  initializeIcons
-} from '@fluentui/react';
+import { initializeIcons } from '@fluentui/react';
 import styles from './EmiPay.module.scss';
 import {
   ISpRestContext,
@@ -27,13 +20,10 @@ import {
   listRecentRequests,
   getRequestByKey,
   patchRequestBusinessFields,
-  canEditRequestBusinessFields,
-  displayRequestTitle,
   listChecklistItems,
   reconcileChecklistFromTemplates,
   checklistMatchesTemplates,
   requiredChecklistReady,
-  checklistReviewComplete,
   checklistHasFail,
   lockReviewedItems,
   unlockChecklistItems,
@@ -47,11 +37,9 @@ import {
   IDocumentIndexRow,
   isSupportingDoc,
   isChecklistDocClass,
-  docClassVi,
   setChecklistItemReview,
   saveStepReview,
   liveActionsFor,
-  isChairDossierApproved,
   listWorkItems,
   currentWorkItem,
   isWorkItemAccepted,
@@ -64,13 +52,11 @@ import {
   addUserNote,
   needsAcceptFirst,
   canAddUserNote,
-  SYSADM_UPN,
   commandDenial,
   resolveActor,
   readActAsKey,
   writeActAsKey,
   memberKey,
-  actorLabel,
   canCreateInOu,
   canReviewAtStep,
   isRequestCreator,
@@ -81,30 +67,31 @@ import {
   IActivityPublicRow,
   IStepReviewRow,
   INoteListItem,
-  chairStatusDetailVi,
-  stepShortVi,
-  checklistStatusVi,
   moneyVi,
-  shortFileName,
   parsePayHash,
   applyPayHash,
   samePayRoute,
   IPayRoute,
   PayInboxFilter
 } from '../services';
+import { perfLog, perfNow } from '../services/perfMark';
 import { payThemeStyle } from '../theme/payTokens';
 import { DialogKind, IPayAction, PayView } from './types';
 import BusyDialog from './BusyDialog';
 import PayNoticeBar, { IPayNotice } from './PayNotice';
 import FilePreviewDrawer from './FilePreviewDrawer';
-import ApprovalFlow from './detail/ApprovalFlow';
+import RequestDetailPage from './detail/RequestDetailPage';
+import DetailRail from './detail/DetailRail';
 import InboxPage from './inbox/InboxPage';
-import InboxTable from './inbox/InboxTable';
 import DashboardPage from './dashboard/DashboardPage';
 import CreateRequestPage from './create/CreateRequestPage';
+import CreateRail from './create/CreateRail';
+import AuditPage from './audit/AuditPage';
+import AppHeader from './shell/AppHeader';
+import AppNav from './shell/AppNav';
+import PayActionDialog from './dialogs/PayActionDialog';
 import {
   formatAmountFromNumber,
-  formatAmountInput,
   parseAmountInput
 } from './create/amountValidate';
 
@@ -119,57 +106,11 @@ export interface ILivePayAppProps {
   orchestratorUrl?: string;
 }
 
-const badgeClass = (kind: string): string => {
-  if (kind === 'warn') return `${styles.badge} ${styles.badgeWarn}`;
-  if (kind === 'ok') return `${styles.badge} ${styles.badgeOk}`;
-  if (kind === 'info') return `${styles.badge} ${styles.badgeInfo}`;
-  if (kind === 'danger') return `${styles.badge} ${styles.badgeDanger}`;
-  return `${styles.badge} ${styles.badgeMute}`;
-};
-
-const btnClass = (action: IPayAction): string => {
-  if (action.primary) return `${styles.btn} ${styles.btnPrimary}`;
-  if (action.danger) return `${styles.btn} ${styles.btnDanger}`;
-  if (action.ghost) return `${styles.btn} ${styles.btnGhost}`;
-  return `${styles.btn} ${styles.btnOutline}`;
-};
-
 function upnFromLogin(login: string): string {
   if (!login) return 'admin@local';
   const parts = login.split('|');
   return parts[parts.length - 1] || login;
 }
-
-const dialogTitleVi = (kind: DialogKind): string => {
-  switch (kind) {
-    case 'submit':
-      return 'Trình trưởng phòng';
-    case 'mgrApprove':
-      return 'Duyệt gửi sang BPCM2';
-    case 'forward':
-      return 'Chuyển bước tiếp theo';
-    case 'return':
-      return 'Từ chối / trả hồ sơ';
-    case 'approve':
-      return 'Phê duyệt hồ sơ (CT.HĐQT)';
-    case 'approvePay':
-      return 'Duyệt thanh toán';
-    case 'reject':
-      return 'Không phê duyệt';
-    case 'attach':
-      return 'Tải tài liệu';
-    case 'unc':
-      return 'Tải ủy nhiệm chi (UNC)';
-    case 'confirmPay':
-      return 'Xác nhận đã thanh toán';
-    case 'review':
-      return 'Đánh giá mục checklist';
-    case 'accept':
-      return 'Tiếp nhận và đặt hạn xử lý';
-    default:
-      return 'Xác nhận';
-  }
-};
 
 /** UI chỉ chọn BPCM2/BPCM3; TCKT/CHAIR/Archive auto từ StepRecipients default. */
 const ROUTE_STEPS_UI: { key: string; label: string }[] = [
@@ -341,9 +282,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     key: string,
     opts?: { skipReconcile?: boolean }
   ): Promise<void> => {
+    const t0 = perfNow();
     const m = await getRequestByKey(props.sp, key);
     if (!m) throw new Error(`Không tìm thấy hồ sơ ${key}`);
+    perfLog('loadDetail.master', t0, { key });
     let items = await listChecklistItems(props.sp, key);
+    perfLog('loadDetail.checklist', t0, { key, n: items.length });
     // Đang sửa lại ở BPCM1: mở khóa — «Đã khóa» chỉ áp dụng bước kiểm tra sau khi chốt.
     if (
       m.currentStepKey === 'BPCM1_PREPARE' &&
@@ -354,6 +298,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       items = await listChecklistItems(props.sp, key);
     }
     // Gỡ stub Flow; chỉ reconcile khi lệch template (tránh ghi lại mỗi lần mở / sau CREATE).
+    let didReconcile = false;
     if (
       !opts?.skipReconcile &&
       m.currentStepKey === 'BPCM1_PREPARE' &&
@@ -372,9 +317,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         pt.checklistVersion || 1
       );
       if (tpls.length && !checklistMatchesTemplates(items, tpls)) {
+        didReconcile = true;
         items = await reconcileChecklistFromTemplates(props.sp, key, tpls);
+        perfLog('loadDetail.reconcile', t0, { key, n: items.length });
       }
     }
+    const tParallel = perfNow();
     const [wis, acts, reviews, unc, allDocs] = await Promise.all([
       listWorkItems(props.sp, key),
       listActivityPublic(props.sp, key),
@@ -382,6 +330,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       listUncDocuments(props.sp, key),
       listDocumentsForRequest(props.sp, key)
     ]);
+    perfLog('loadDetail.parallel', tParallel, {
+      key,
+      wi: wis.length,
+      acts: acts.length,
+      docs: allDocs.length
+    });
     setMaster(m);
     syncEditForm(m, stepRecipients);
     setChecklist(items);
@@ -394,6 +348,13 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     setRequestKey(key);
     setDocsTab('checklist');
     setActivityTab('timeline');
+    perfLog('loadDetail.total', t0, {
+      key,
+      skipReconcile: !!opts?.skipReconcile,
+      didReconcile,
+      step: m.currentStepKey,
+      status: m.status
+    });
   };
 
   const refreshDetailAndInbox = async (
@@ -446,12 +407,19 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   React.useEffect(() => {
     void run(async () => {
+      const tBoot = perfNow();
       const [typesRaw, ous, members, srs] = await Promise.all([
         listPaymentTypes(props.sp),
         listOrgUnits(props.sp),
         listOrgMembers(props.sp),
         listStepRecipients(props.sp)
       ]);
+      perfLog('boot.cfg', tBoot, {
+        types: typesRaw.length,
+        ous: ous.length,
+        members: members.length,
+        srs: srs.length
+      });
       let types = typesRaw;
       if (!types.length) {
         types = [
@@ -478,7 +446,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         if (def) defaults[key] = def.ouCode;
       });
       setRoutePlan(defaults);
+      const tInbox = perfNow();
       await refreshInbox();
+      perfLog('boot.inbox', tInbox, {});
       if (bootRoute.view === 'detail' && bootRoute.requestKey) {
         try {
           setBusyMessage('Đang mở hồ sơ từ liên kết…');
@@ -492,6 +462,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           routePrevRef.current = { view: 'inbox', inboxFilter: 'all' };
         }
       }
+      perfLog('boot.total', tBoot, {
+        deepLink: !!(bootRoute.view === 'detail' && bootRoute.requestKey)
+      });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -677,6 +650,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         const routePlanJson = JSON.stringify(fullRoute);
         const pt = paymentTypes.filter((t) => t.code === selectedType)[0];
         setBusyMessage('Đang tạo hồ sơ cho bạn…');
+        const tCreate = perfNow();
         const cmdDone = await enqueueAndRun(
           props.sp,
           'CREATE_REQUEST',
@@ -694,6 +668,10 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           { orchestratorUrl: props.orchestratorUrl }
         );
         createdKey = cmdDone.requestKey;
+        perfLog('ui.create.command', tCreate, {
+          requestKey: createdKey,
+          state: cmdDone.state
+        });
         // Core 1.0.0.14+: CREATE ghi đủ field + checklist từ template — không patch/reconcile UI.
         setRequestKey(createdKey);
         setView('detail');
@@ -702,8 +680,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         waiting: 'Đang tạo hồ sơ…',
         success:
           'Đã tạo hồ sơ. Tải checklist rồi bấm «Trình trưởng phòng» (chưa sang BPCM2).',
-        refreshAfter: () =>
-          refreshDetailAndInbox(createdKey, { skipReconcile: true })
+        refreshAfter: async () => {
+          const tRef = perfNow();
+          await refreshDetailAndInbox(createdKey, { skipReconcile: true });
+          perfLog('ui.create.refreshAfter', tRef, { requestKey: createdKey });
+        }
       }
     );
   };
@@ -1244,146 +1225,45 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   return (
     <div className={styles.app} style={payThemeStyle}>
-      <header className={styles.top}>
-        <div className={styles.brand}>
-          <div className={styles.mark}>PAY</div>
-          <div>
-            <h1>{props.title || 'EMI PAY'}</h1>
-            <p>Hồ sơ thanh toán</p>
-          </div>
-        </div>
-        <div className={styles.topActions}>
-          {isSysAdmin(signedInUPN) && (
-            <>
-              <label className={styles.meta} htmlFor="emiPayActAs">
-                Đóng vai
-              </label>
-              <select
-                id="emiPayActAs"
-                className={styles.personaSelect}
-                value={actor.acting ? memberKey({
-                  memberUPN: actor.upn,
-                  ouCode: actor.ouCode,
-                  memberRole: actor.memberRole === 'Manager' ? 'Manager' : 'Member'
-                }) : ''}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  writeActAsKey(next);
-                  setActAsKey(next);
-                  if (view === 'audit' || view === 'create') setView('inbox');
-                }}
-              >
-                <option value="">Quản trị ({SYSADM_UPN}) — không thao tác hồ sơ</option>
-                {orgMembers.map((m) => {
-                  const ou = orgUnits.filter((u) => u.ouCode === m.ouCode)[0];
-                  const role = m.memberRole === 'Manager' ? 'Trưởng phòng' : 'Thành viên';
-                  return (
-                    <option key={memberKey(m)} value={memberKey(m)}>
-                      {m.displayName} · {role} · {ou ? ou.ouName : m.ouCode}
-                    </option>
-                  );
-                })}
-              </select>
-            </>
-          )}
-          <div className={styles.avatar} aria-hidden="true">
-            {avatarLetters}
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        title={props.title || 'EMI PAY'}
+        userDisplayName={props.userDisplayName}
+        avatarLetters={avatarLetters}
+        isSysAdmin={isSysAdmin(signedInUPN)}
+        actAsValue={
+          actor.acting
+            ? memberKey({
+                memberUPN: actor.upn,
+                ouCode: actor.ouCode,
+                memberRole: actor.memberRole === 'Manager' ? 'Manager' : 'Member'
+              })
+            : ''
+        }
+        orgMembers={orgMembers}
+        orgUnits={orgUnits}
+        onActAsChange={(next) => {
+          writeActAsKey(next);
+          setActAsKey(next);
+          if (view === 'audit' || view === 'create') setView('inbox');
+        }}
+      />
 
       <div className={styles.shell}>
-        <nav className={styles.nav} aria-label="Điều hướng EMI PAY">
-          <div className={styles.navGroup}>Không gian làm việc</div>
-          {(actor.memberRole === 'SysAdmin' || actor.memberRole === 'Manager') && (
-            <button
-              type="button"
-              className={`${styles.navBtn} ${
-                view === 'dashboard' ? styles.navBtnActive : ''
-              }`}
-              onClick={() => setView('dashboard')}
-            >
-              Tổng quan
-            </button>
-          )}
-          <button
-            type="button"
-            className={`${styles.navBtn} ${
-              view === 'inbox' && inboxFilter === 'all' ? styles.navBtnActive : ''
-            }`}
-            onClick={() => goInbox('all')}
-          >
-            Việc của tôi
-          </button>
-          <button
-            type="button"
-            className={`${styles.navBtn} ${view === 'create' ? styles.navBtnActive : ''}`}
-            onClick={() => setView('create')}
-            disabled={!mayCreate}
-          >
-            Tạo hồ sơ
-          </button>
-          <button
-            type="button"
-            className={`${styles.navBtn} ${view === 'detail' ? styles.navBtnActive : ''}`}
-            onClick={() => setView('detail')}
-            disabled={!master}
-          >
-            Hồ sơ đang mở
-          </button>
-
-          <div className={styles.navGroup}>Theo vai trò</div>
-          <button
-            type="button"
-            className={`${styles.navBtn} ${
-              view === 'inbox' && inboxFilter === 'todo' ? styles.navBtnActive : ''
-            }`}
-            onClick={() => goInbox('todo')}
-          >
-            Cần tôi xử lý
-          </button>
-          <button
-            type="button"
-            className={`${styles.navBtn} ${
-              view === 'inbox' && inboxFilter === 'mine' ? styles.navBtnActive : ''
-            }`}
-            onClick={() => goInbox('mine')}
-          >
-            Hồ sơ của tôi
-          </button>
-
-          <div className={styles.navGroup}>Kiểm toán</div>
-          <button
-            type="button"
-            className={`${styles.navBtn} ${view === 'audit' ? styles.navBtnActive : ''}`}
-            disabled={actor.acting || !isSysAdmin(signedInUPN)}
-            onClick={() => setView('audit')}
-          >
-            Nhật ký nội bộ
-          </button>
-
-          <p className={styles.navNote}>
-            {actor.acting
-              ? 'Đang đóng vai nhân sự tạm. Nút và người ghi trên lệnh theo người này. User thật sau chỉ đổi UPN trong OrgMembers.'
-              : isSysAdmin(signedInUPN)
-                ? 'Quản trị tạo/trình hồ sơ được. Đóng vai để duyệt và xử lý theo bước.'
-                : 'Mọi nhân sự tạo được hồ sơ; duyệt/chốt theo trưởng phòng bước đó.'}
-          </p>
-          <div className={styles.navProfile}>
-            <div className={styles.avatar} style={{ width: 32, height: 32, fontSize: 10 }}>
-              {avatarLetters}
-            </div>
-            <div>
-              <strong>{actor.displayName}</strong>
-              <span>
-                {actorLabel(
-                  actor,
-                  orgUnits.filter((u) => u.ouCode === actor.ouCode)[0]?.ouName
-                )}
-              </span>
-            </div>
-          </div>
-        </nav>
+        <AppNav
+          view={view}
+          inboxFilter={inboxFilter}
+          actor={actor}
+          ouName={orgUnits.filter((u) => u.ouCode === actor.ouCode)[0]?.ouName}
+          avatarLetters={avatarLetters}
+          mayCreate={mayCreate}
+          hasMaster={!!master}
+          canAudit={!actor.acting && isSysAdmin(signedInUPN)}
+          onGoDashboard={() => setView('dashboard')}
+          onGoInbox={goInbox}
+          onGoCreate={() => setView('create')}
+          onGoDetail={() => setView('detail')}
+          onGoAudit={() => setView('audit')}
+        />
 
         <div
           className={`${styles.workspace} ${showRail ? '' : styles.workspaceNoRail}`.trim()}
@@ -1460,1027 +1340,143 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           )}
 
           {view === 'detail' && master && (
-            <>
-              <div className={styles.pageHead}>
-                <div>
-                  <h2>{displayRequestTitle(master)}</h2>
-                  <div className={styles.tags}>
-                    <span
-                      className={badgeClass(
-                        master.status === 'Returned'
-                          ? 'warn'
-                          : master.status === 'Completed' || master.status === 'Paid'
-                            ? 'ok'
-                            : isChairDossierApproved(master, workItems)
-                              ? 'ok'
-                              : 'info'
-                      )}
-                    >
-                      {chairStatusDetailVi(
-                        master.currentStepKey,
-                        master.status,
-                        master.paymentDueAt,
-                        isChairDossierApproved(master, workItems)
-                      )}
-                    </span>
-                    <span className={badgeClass('mute')}>
-                      {stepShortVi(master.currentStepKey)}
-                    </span>
-                    <span className={badgeClass('mute')}>Lượt {master.reviewRound}</span>
-                  </div>
-                </div>
-                <div className={styles.actions}>
-                  <button
-                    type="button"
-                    className={`${styles.btn} ${styles.btnOutline}`}
-                    disabled={busy}
-                    onClick={() => {
-                      void run(async () => loadDetail(master.requestKey), {
-                        waiting: 'Đang làm mới hồ sơ…'
-                      });
-                    }}
-                  >
-                    Làm mới
-                  </button>
-                  {actions.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      className={btnClass(a)}
-                      disabled={busy}
-                      onClick={() => onAction(a)}
-                    >
-                      {a.label}
-                    </button>
-                  ))}
-                  {actions.length === 0 && (
-                    <span className={badgeClass('mute')}>Không có thao tác ở bước này</span>
-                  )}
-                </div>
-              </div>
-
-              {master.status === 'Returned' && (
-                <div className={styles.panelWarn}>
-                  <h4>Hồ sơ đã được trả về</h4>
-                  <div>
-                    Chỉnh sửa thông tin / tài liệu rồi trình lại. Bước hiện tại:{' '}
-                    <b>{stepShortVi(master.currentStepKey)}</b>
-                    {rejectNote ? (
-                      <>
-                        <br />
-                        <b>Lý do:</b> {rejectNote}
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-              )}
-
-              {canEditRequestBusinessFields(master) && isRequestCreator(actor, master) && (
-                <section className={styles.card}>
-                  <div className={styles.cardH}>
-                    <h3>Sửa thông tin hồ sơ</h3>
-                    <span className={badgeClass('warn')}>
-                      {master.status === 'Returned' ? 'Đã trả về' : 'Nháp'}
-                    </span>
-                  </div>
-                  <div className={styles.cardB}>
-                    <div className={styles.form}>
-                      <label className={`${styles.field} ${styles.fieldFull}`}>
-                        Tiêu đề hồ sơ
-                        <input
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          placeholder="Ví dụ: Thanh toán công tác tháng 11…"
-                        />
-                      </label>
-                      <label className={styles.field}>
-                        Số tiền đề nghị (VND)
-                        <input
-                          value={editAmount}
-                          onChange={(e) => setEditAmount(formatAmountInput(e.target.value))}
-                          inputMode="decimal"
-                          placeholder="Ví dụ: 1.000.000,50"
-                        />
-                      </label>
-                      <label className={styles.field}>
-                        Đơn vị khởi tạo
-                        <select
-                          value={editOu}
-                          disabled={!!actor.ouCode}
-                          onChange={(e) => setEditOu(e.target.value)}
-                        >
-                          {orgUnits.length === 0 && (
-                            <option value={editOu || 'OU_TONGHOP'}>
-                              {editOu || 'OU_TONGHOP'}
-                            </option>
-                          )}
-                          {orgUnits.map((o) => (
-                            <option key={o.id} value={o.ouCode}>
-                              {o.ouName}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <div className={`${styles.field} ${styles.fieldFull}`}>
-                        <span>Phòng nhận kiểm tra</span>
-                        <div className={styles.routeRow}>
-                          {ROUTE_STEPS_UI.map((rs) => {
-                            const opts = stepRecipients.filter((r) => r.stepKey === rs.key);
-                            const selected =
-                              editRoutePlan[rs.key] || defaultOuForStep(rs.key, stepRecipients);
-                            return (
-                              <label key={rs.key} className={styles.routeChip}>
-                                <span>{rs.label}</span>
-                                <select
-                                  value={selected}
-                                  onChange={(e) =>
-                                    setEditRoutePlan((prev) => ({
-                                      ...prev,
-                                      [rs.key]: e.target.value
-                                    }))
-                                  }
-                                >
-                                  {!opts.length && <option value="">—</option>}
-                                  {opts.map((o) => {
-                                    const ou = orgUnits.filter((u) => u.ouCode === o.ouCode)[0];
-                                    return (
-                                      <option key={`edit-${rs.key}-${o.ouCode}`} value={o.ouCode}>
-                                        {ou ? ou.ouName : o.ouCode}
-                                      </option>
-                                    );
-                                  })}
-                                </select>
-                              </label>
-                            );
-                          })}
-                        </div>
-                        <p className={styles.hint}>
-                          Loại hồ sơ: {master.paymentTypeCode} (không đổi).
-                        </p>
-                      </div>
-                      <label className={`${styles.field} ${styles.fieldFull}`}>
-                        Diễn giải
-                        <textarea
-                          rows={2}
-                          value={editExpl}
-                          onChange={(e) => setEditExpl(e.target.value)}
-                        />
-                      </label>
-                    </div>
-                    <div className={styles.actions} style={{ marginTop: 10 }}>
-                      <button
-                        type="button"
-                        className={`${styles.btn} ${styles.btnPrimary}`}
-                        disabled={busy}
-                        onClick={onSaveBusinessFields}
-                      >
-                        Lưu thông tin
-                      </button>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {master.currentStepKey === 'BPCM1_PREPARE' &&
-                !requiredChecklistReady(checklist) && (
-                  <div className={styles.panelWarn}>
-                    <h4>Thiếu tài liệu bắt buộc (chặn gửi)</h4>
-                    <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
-                      {checklist
-                        .filter((c) => {
-                          if (!c.isRequired) return false;
-                          const min = c.minFileCount > 0 ? c.minFileCount : 1;
-                          return c.uploadedCount < min;
-                        })
-                        .map((c) => (
-                          <li key={c.id}>{c.itemLabel}</li>
-                        ))}
-                    </ul>
-                  </div>
-                )}
-
-              {master &&
-                ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK', 'TCKT_PAY'].indexOf(
-                  master.currentStepKey
-                ) >= 0 &&
-                !isWorkItemAccepted(activeWi) && (
-                  <div className={styles.panelWarn}>
-                    <h4>Chưa tiếp nhận bước</h4>
-                    <div>
-                      Cần «Tiếp nhận và đặt hạn» trước khi đánh giá checklist / chuyển bước /
-                      xác nhận thanh toán.
-                    </div>
-                  </div>
-                )}
-
-              {canReviewDocs && checklistHasFail(checklist) && (
-                <div className={styles.panelWarn}>
-                  <h4>Có mục Không đạt</h4>
-                  <div>
-                    Chỉ «Trả về người tạo». Phòng đánh giá các mục chưa khóa thuộc phạm vi mình;
-                    không cần Đạt hết toàn bộ checklist để chuyển bước.
-                  </div>
-                </div>
-              )}
-              {canReviewDocs && !checklistHasFail(checklist) && !checklistReviewComplete(checklist) && (
-                <div className={styles.panelWarn}>
-                  <h4>Gợi ý đánh giá checklist</h4>
-                  <div>
-                    Chủ động đánh giá các mục chưa khóa phù hợp phòng. Có thể chuyển bước khi không
-                    còn mục Không đạt; mục đã khóa chỉ xem, không đánh giá lại.
-                  </div>
-                </div>
-              )}
-
-              <section className={styles.card}>
-                <div className={styles.cardH}>
-                  <h3>Tài liệu</h3>
-                  <div className={styles.actions}>
-                    {master.currentStepKey === 'BPCM1_PREPARE' &&
-                      docsTab === 'checklist' &&
-                      (master.status === 'Draft' || master.status === 'Returned') && (
-                      <button
-                        type="button"
-                        className={`${styles.btn} ${styles.btnOutline}`}
-                        disabled={busy}
-                        onClick={() => {
-                          setUploadMode('checklist');
-                          setUploadItemCode(checklist[0] ? checklist[0].itemCode : '');
-                          setDialog('attach');
-                        }}
-                      >
-                        Tải checklist
-                      </button>
-                    )}
-                    {docsTab === 'files' &&
-                      master.currentStepKey !== 'SYSTEM_ARCHIVE' &&
-                      master.status !== 'Cancelled' &&
-                      master.status !== 'Completed' && (
-                      <button
-                        type="button"
-                        className={`${styles.btn} ${styles.btnPrimary}`}
-                        disabled={busy}
-                        onClick={() => {
-                          setUploadMode('step');
-                          setDialog('attach');
-                        }}
-                      >
-                        Tải đính kèm hỗ trợ
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className={styles.tabs}>
-                  <button
-                    type="button"
-                    className={`${styles.tab} ${docsTab === 'checklist' ? styles.tabOn : ''}`}
-                    onClick={() => setDocsTab('checklist')}
-                  >
-                    Checklist
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.tab} ${docsTab === 'files' ? styles.tabOn : ''}`}
-                    onClick={() => setDocsTab('files')}
-                  >
-                    Tài liệu hỗ trợ
-                  </button>
-                </div>
-                {docsTab === 'checklist' && (
-                  <div style={{ padding: 0 }}>
-                    {checklist.length === 0 ? (
-                      <p className={styles.empty}>Chưa có mục checklist.</p>
-                    ) : (
-                      <table className={styles.dataTable}>
-                        <thead>
-                          <tr>
-                            <th>Mục tài liệu</th>
-                            <th>Tệp</th>
-                            <th>Người tải</th>
-                            <th>Trạng thái</th>
-                            <th />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {checklist.map((c) => {
-                            const min = c.minFileCount > 0 ? c.minFileCount : 1;
-                            const missing = c.isRequired && c.uploadedCount < min;
-                            const linked = docsForChecklistItem(c.itemCode);
-                            const uploaders = linked
-                              .map((d) => d.uploadedByUPN)
-                              .filter(Boolean)
-                              .filter((u, i, arr) => arr.indexOf(u) === i);
-                            return (
-                              <tr key={c.id}>
-                                <td>
-                                  <strong>{c.itemLabel}</strong>
-                                  <span className={styles.meta}>
-                                    {/* {c.itemCode} */}
-                                    {c.isRequired ? 'Bắt buộc' : 'Tuỳ chọn'}
-                                    {` · ${c.uploadedCount}/${min} tệp`}
-                                  </span>
-                                </td>
-                                <td>
-                                  {linked.length === 0 ? (
-                                    '—'
-                                  ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                      {linked.map((d) => (
-                                        <button
-                                          key={d.id}
-                                          type="button"
-                                          className={styles.linkish}
-                                          title={d.fileName}
-                                          onClick={() => setDrawerDoc(d)}
-                                        >
-                                          {shortFileName(d.fileName || d.documentKey)}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
-                                </td>
-                                <td>
-                                  {uploaders.length
-                                    ? uploaders.map((u) => (
-                                        <span key={u} className={styles.meta} style={{ margin: 0, display: 'block' }}>
-                                          {u}
-                                        </span>
-                                      ))
-                                    : '—'}
-                                </td>
-                                <td>
-                                  <span
-                                    className={badgeClass(
-                                      c.itemStatus === 'Uploaded' || c.itemStatus === 'Pass'
-                                        ? 'ok'
-                                        : c.itemStatus === 'Fail'
-                                          ? 'danger'
-                                          : missing
-                                            ? 'warn'
-                                            : 'mute'
-                                    )}
-                                  >
-                                    {checklistStatusVi(c.itemStatus)}
-                                  </span>
-                                </td>
-                                <td>
-                                  <div className={styles.actions}>
-                                    {linked[0] && (
-                                      <button
-                                        type="button"
-                                        className={`${styles.btn} ${styles.btnOutline}`}
-                                        style={{ padding: '6px 10px', fontSize: 12 }}
-                                        onClick={() => setDrawerDoc(linked[0])}
-                                      >
-                                        Xem
-                                      </button>
-                                    )}
-                                    {canReviewDocs &&
-                                      linked.length > 0 &&
-                                      !c.isLocked && (
-                                      <button
-                                        type="button"
-                                        className={`${styles.btn} ${styles.btnOutline}`}
-                                        style={{ padding: '6px 10px', fontSize: 12 }}
-                                        disabled={busy}
-                                        onClick={() => openReview(c.itemCode)}
-                                      >
-                                        Đánh giá
-                                      </button>
-                                    )}
-                                    {/* «Đã khóa» chỉ hiện ở bước kiểm tra — không hiện khi đang sửa lại BPCM1 */}
-                                    {c.isLocked && !isBpcm1Adjusting && (
-                                      <span className={badgeClass('mute')}>Đã khóa</span>
-                                    )}
-                                    {isBpcm1Adjusting && linked.length > 0 && (
-                                      <button
-                                        type="button"
-                                        className={`${styles.btn} ${styles.btnOutline}`}
-                                        style={{ padding: '6px 10px', fontSize: 12 }}
-                                        disabled={busy}
-                                        onClick={() => onClearChecklistItem(c)}
-                                      >
-                                        Xóa hồ sơ
-                                      </button>
-                                    )}
-                                    {isBpcm1Adjusting && (
-                                      <button
-                                        type="button"
-                                        className={`${styles.btn} ${styles.btnPrimary}`}
-                                        style={{ padding: '6px 10px', fontSize: 12 }}
-                                        disabled={busy}
-                                        onClick={() => pickChecklistFile(c.itemCode)}
-                                      >
-                                        {c.uploadedCount > 0 ? 'Tải thêm' : 'Tải lên'}
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                )}
-                {docsTab === 'files' && (
-                  <div style={{ padding: 0 }}>
-                    {supportingDocs.length === 0 ? (
-                      <p className={styles.empty}>
-                        Chưa có tài liệu hỗ trợ. Dùng «Tải đính kèm hỗ trợ» để bổ sung chứng từ
-                        theo bước.
-                      </p>
-                    ) : (
-                      <table className={styles.dataTable}>
-                        <thead>
-                          <tr>
-                            <th>Loại</th>
-                            <th>Tệp</th>
-                            <th>Kho</th>
-                            <th>Người tải</th>
-                            <th>Thời gian</th>
-                            <th />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {supportingDocs.map((d) => (
-                            <tr key={d.id}>
-                              <td>
-                                <strong>{docClassVi(d.docClass)}</strong>
-                                <span className={styles.meta}>{d.documentKey}</span>
-                              </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  className={styles.linkish}
-                                  title={d.fileName}
-                                  onClick={() => setDrawerDoc(d)}
-                                >
-                                  {shortFileName(d.fileName || '—')}
-                                </button>
-                              </td>
-                              <td>
-                                <span
-                                  className={`${styles.visTag} ${
-                                    /internal/i.test(d.libraryName || d.visibility)
-                                      ? styles.visTagInternal
-                                      : ''
-                                  }`}
-                                >
-                                  {/internal/i.test(d.libraryName || '')
-                                    ? 'DocsInternal'
-                                    : 'DocsWorking'}
-                                </span>
-                              </td>
-                              <td>{d.uploadedByUPN || '—'}</td>
-                              <td>
-                                {d.uploadedAt
-                                  ? new Date(d.uploadedAt).toLocaleString('vi-VN')
-                                  : '—'}
-                              </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  className={`${styles.btn} ${styles.btnOutline}`}
-                                  style={{ padding: '6px 10px', fontSize: 12 }}
-                                  onClick={() => setDrawerDoc(d)}
-                                >
-                                  Xem
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                )}
-              </section>
-
-              <section className={styles.card}>
-                <div className={styles.cardH}>
-                  <h3>Hoạt động</h3>
-                </div>
-                <div className={styles.tabs}>
-                  <button
-                    type="button"
-                    className={`${styles.tab} ${
-                      activityTab === 'timeline' ? styles.tabOn : ''
-                    }`}
-                    onClick={() => setActivityTab('timeline')}
-                  >
-                    <span className={styles.tabLabel}>
-                      Nhật ký
-                      <span className={styles.tabCountBadge} aria-label={`${timeline.length} mục`}>
-                        {timeline.length}
-                      </span>
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.tab} ${
-                      activityTab === 'comment' ? styles.tabOn : ''
-                    }`}
-                    onClick={() => setActivityTab('comment')}
-                  >
-                    <span className={styles.tabLabel}>
-                      Ghi chú
-                      <span className={styles.tabCountBadge} aria-label={`${noteList.length} ghi chú`}>
-                        {noteList.length}
-                      </span>
-                    </span>
-                  </button>
-                </div>
-                {activityTab === 'timeline' && (
-                  <div className={styles.cardB}>
-                    {activeWi && isWorkItemAccepted(activeWi) && (
-                      <div className={styles.actRow}>
-                        <div>
-                          <strong>Hạn xử lý bước hiện tại</strong>
-                          <span className={styles.meta}>
-                            {activeWi.dueAt
-                              ? new Date(activeWi.dueAt).toLocaleString('vi-VN')
-                              : '—'}
-                            {activeWi.acceptedByUPN ? ` · ${activeWi.acceptedByUPN}` : ''}
-                          </span>
-                        </div>
-                        <span className={badgeClass('info')}>Hạn xử lý</span>
-                      </div>
-                    )}
-                    {timeline.length === 0 && (
-                      <p className={styles.empty}>
-                        Chưa có nhật ký Activity. Import Flow 1.0.0.11 rồi thao tác lại hồ sơ.
-                      </p>
-                    )}
-                    {timeline.map((row) => (
-                      <div className={styles.actRow} key={row.id}>
-                        <div>
-                          <strong>{row.title}</strong>
-                          <span className={styles.meta}>
-                            {[row.at ? new Date(row.at).toLocaleString('vi-VN') : '', row.meta]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </span>
-                        </div>
-                        <span className={badgeClass(row.kind)}>{row.badge}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {activityTab === 'comment' && (
-                  <div className={styles.cardB}>
-                    {noteList.length === 0 && (
-                      <p className={styles.empty}>Chưa có ghi chú trên hồ sơ.</p>
-                    )}
-                    {noteList.map((n) => {
-                      const linkedDoc = n.documentKey
-                        ? docs.filter(
-                            (d) =>
-                              (d.documentKey || '').replace(/\|/g, '_') === n.documentKey
-                          )[0]
-                        : undefined;
-                      return (
-                        <div className={styles.actRow} key={n.id}>
-                          <div>
-                            <strong>{n.title}</strong>
-                            <span className={styles.meta}>
-                              {[
-                                n.at ? new Date(n.at).toLocaleString('vi-VN') : '',
-                                n.actorUPN,
-                                linkedDoc
-                                  ? shortFileName(linkedDoc.fileName || linkedDoc.documentKey)
-                                  : ''
-                              ]
-                                .filter(Boolean)
-                                .join(' · ')}
-                            </span>
-                            <div style={{ marginTop: 4 }}>{n.body}</div>
-                            {linkedDoc && (
-                              <button
-                                type="button"
-                                className={styles.linkish}
-                                style={{ marginTop: 4, padding: 0, fontSize: 12 }}
-                                onClick={() => setDrawerDoc(linkedDoc)}
-                              >
-                                Mở tệp
-                              </button>
-                            )}
-                          </div>
-                          <span
-                            className={badgeClass(
-                              n.kind === 'reject'
-                                ? 'danger'
-                                : n.kind === 'user'
-                                  ? 'info'
-                                  : 'mute'
-                            )}
-                          >
-                            {n.kind === 'reject'
-                              ? 'Trả về'
-                              : n.kind === 'review'
-                                ? 'Nhận xét'
-                                : n.documentKey
-                                  ? 'Tệp'
-                                  : n.kind === 'user'
-                                    ? 'Ghi chú'
-                                    : 'Khác'}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {acceptBlocked ? (
-                      <p className={styles.hint} style={{ marginTop: 12 }}>
-                        Cần «Tiếp nhận và đặt hạn» trước khi đánh giá checklist hoặc gửi ghi chú.
-                      </p>
-                    ) : !notesAllowed ? (
-                      <p className={styles.hint} style={{ marginTop: 12 }}>
-                        Hồ sơ đã đóng — không gửi thêm ghi chú.
-                      </p>
-                    ) : (
-                      <>
-                        <label
-                          className={`${styles.field} ${styles.fieldFull}`}
-                          style={{ marginTop: noteList.length ? 12 : 0 }}
-                        >
-                          Thêm ghi chú
-                          <textarea
-                            rows={3}
-                            value={commentDraft}
-                            onChange={(e) => setCommentDraft(e.target.value)}
-                            placeholder="Thêm ghi chú…"
-                          />
-                        </label>
-                        <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
-                          <button
-                            type="button"
-                            className={`${styles.btn} ${styles.btnPrimary}`}
-                            disabled={busy}
-                            onClick={() => {
-                              if (!commentDraft.trim()) {
-                                showNotice('warning', 'Nhập nội dung ghi chú');
-                                return;
-                              }
-                              const text = commentDraft.trim();
-                              setCommentDraft('');
-                              sendUserNote(text);
-                            }}
-                          >
-                            Gửi ghi chú
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </section>
-            </>
+            <RequestDetailPage
+              master={master}
+              actor={actor}
+              busy={busy}
+              actions={actions}
+              checklist={checklist}
+              workItems={workItems}
+              timeline={timeline}
+              noteList={noteList}
+              docs={docs}
+              supportingDocs={supportingDocs}
+              activeWi={activeWi}
+              rejectNote={rejectNote}
+              canReviewDocs={canReviewDocs}
+              isBpcm1Adjusting={isBpcm1Adjusting}
+              acceptBlocked={acceptBlocked}
+              notesAllowed={notesAllowed}
+              docsTab={docsTab}
+              activityTab={activityTab}
+              commentDraft={commentDraft}
+              editTitle={editTitle}
+              editAmount={editAmount}
+              editExpl={editExpl}
+              editOu={editOu}
+              editRoutePlan={editRoutePlan}
+              orgUnits={orgUnits}
+              stepRecipients={stepRecipients}
+              routeStepsUi={ROUTE_STEPS_UI}
+              defaultOuForStep={defaultOuForStep}
+              docsForChecklistItem={docsForChecklistItem}
+              onDocsTabChange={setDocsTab}
+              onActivityTabChange={setActivityTab}
+              onCommentDraftChange={setCommentDraft}
+              onEditTitleChange={setEditTitle}
+              onEditAmountChange={setEditAmount}
+              onEditExplChange={setEditExpl}
+              onEditOuChange={setEditOu}
+              onEditRouteChange={(stepKey, ouCode) =>
+                setEditRoutePlan((prev) => ({ ...prev, [stepKey]: ouCode }))
+              }
+              onSaveBusinessFields={onSaveBusinessFields}
+              onRefresh={() => {
+                void run(async () => loadDetail(master.requestKey), {
+                  waiting: 'Đang làm mới hồ sơ…'
+                });
+              }}
+              onAction={onAction}
+              onOpenDoc={setDrawerDoc}
+              onOpenReview={openReview}
+              onClearChecklistItem={onClearChecklistItem}
+              onPickChecklistFile={pickChecklistFile}
+              onOpenAttachChecklist={() => {
+                setUploadMode('checklist');
+                setUploadItemCode(checklist[0] ? checklist[0].itemCode : '');
+                setDialog('attach');
+              }}
+              onOpenAttachStep={() => {
+                setUploadMode('step');
+                setDialog('attach');
+              }}
+              onSendNote={() => {
+                const text = commentDraft.trim();
+                setCommentDraft('');
+                sendUserNote(text);
+              }}
+              onWarn={(text) => showNotice('warning', text)}
+            />
           )}
 
           {view === 'detail' && !master && (
-            <p className={styles.empty}>
-              Chưa chọn hồ sơ. Vào «Việc của tôi» hoặc «Tạo hồ sơ». {requestKey}
-            </p>
+            <div style={{ padding: 16, color: '#4b5563', fontSize: 14 }}>
+              Chưa chọn hồ sơ. Vào «Việc của tôi» hoặc «Tạo hồ sơ».
+              {requestKey ? ` (${requestKey})` : ''}
+            </div>
           )}
 
           {view === 'audit' && (
-            <>
-              <div className={styles.pageHead}>
-                <div>
-                  <h2>Nhật ký nội bộ</h2>
-                </div>
-              </div>
-              <div className={styles.panelInfo}>
-                <h4>R10 · AUDIT</h4>
-                <p className={styles.hint} style={{ marginTop: 6 }}>
-                  Chỉ đọc ActivityInternal khi ACL cho phép. UI khung đã sẵn — nối list nhật ký
-                  ở UAT CECM.
-                </p>
-              </div>
-              <section className={styles.card}>
-                <div className={styles.cardH}>
-                  <h3>Hồ sơ gần đây (đối chiếu)</h3>
-                </div>
-                <div className={styles.cardB} style={{ padding: 0 }}>
-                  <InboxTable
-                    rows={inbox}
-                    searchQuery=""
-                    orgMembers={orgMembers}
-                    orgUnits={orgUnits}
-                    onOpen={openLiveDetail}
-                    resetToken="audit"
-                  />
-                </div>
-              </section>
-            </>
+            <AuditPage
+              inbox={inbox}
+              orgMembers={orgMembers}
+              orgUnits={orgUnits}
+              onOpen={openLiveDetail}
+            />
           )}
           </main>
 
           {showRail && (
             <aside className={styles.rail} aria-label="Thông tin phụ">
               {view === 'create' && (
-                <>
-                  <div className={styles.railCard}>
-                    <h4>Xem trước</h4>
-                    <div className={styles.kv}>
-                      <b>Loại</b>
-                      <span>{selectedTypeMeta ? selectedTypeMeta.title : '—'}</span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Tiêu đề</b>
-                      <span>{createTitle || '—'}</span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Số tiền</b>
-                      <span>{moneyVi(parseAmountInput(createAmount).value)}</span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Đơn vị</b>
-                      <span>{actor.ouCode || createOu}</span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Người tạo</b>
-                      <span>{actorUPN}</span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Checklist</b>
-                      <span>
-                        {templates.length} mục · {requiredTplCount} bắt buộc
-                      </span>
-                    </div>
-                  </div>
-                  <div className={styles.railCard}>
-                    <h4>Gợi ý</h4>
-                    <p className={styles.hint}>
-                      Sau khi tạo: tải đủ tài liệu bắt buộc rồi mới «Gửi hồ sơ».
-                    </p>
-                  </div>
-                </>
+                <CreateRail
+                  typeTitle={selectedTypeMeta ? selectedTypeMeta.title : ''}
+                  title={createTitle}
+                  amountDisplay={moneyVi(parseAmountInput(createAmount).value)}
+                  ouCode={actor.ouCode || createOu}
+                  actorUPN={actorUPN}
+                  templateCount={templates.length}
+                  requiredCount={requiredTplCount}
+                />
               )}
-              {view === 'detail' && master && (
-                <>
-                  <div className={styles.railCard}>
-                    <div className={styles.reqKey}>
-                      <span>Mã hồ sơ</span>
-                      {master.requestCode || master.requestKey}
-                    </div>
-                    <div className={styles.bigNum}>
-                      {moneyVi(master.amount)}
-                      <span>
-                        Số tiền đề nghị ·{' '}
-                        {chairStatusDetailVi(
-                          master.currentStepKey,
-                          master.status,
-                          master.paymentDueAt,
-                          isChairDossierApproved(master, workItems)
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={styles.railCard}>
-                    <h4>Tóm tắt nhanh</h4>
-                    <div className={styles.kv}>
-                      <b>Tiêu đề</b>
-                      <span>{displayRequestTitle(master)}</span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Loại</b>
-                      <span>{master.paymentTypeCode || '—'}</span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Đơn vị</b>
-                      <span>{master.currentOUCode || master.createdOUCode || '—'}</span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Người tạo</b>
-                      <span>{master.creatorUPN || '—'}</span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Trạng thái</b>
-                      <span>
-                        {chairStatusDetailVi(
-                          master.currentStepKey,
-                          master.status,
-                          master.paymentDueAt,
-                          isChairDossierApproved(master, workItems)
-                        )}
-                      </span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Bước</b>
-                      <span>{stepShortVi(master.currentStepKey)}</span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Lượt</b>
-                      <span>{master.reviewRound}</span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Checklist</b>
-                      <span>
-                        {requiredChecklistReady(checklist) ? 'Đã đủ' : 'Còn thiếu'}
-                      </span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>Thời hạn TT</b>
-                      <span>
-                        {master.paymentDueAt
-                          ? new Date(master.paymentDueAt).toLocaleDateString('vi-VN')
-                          : '—'}
-                      </span>
-                    </div>
-                    <div className={styles.kv}>
-                      <b>UNC</b>
-                      <span>{uncDocs[0] ? uncDocs[0].fileName : 'Chưa có'}</span>
-                    </div>
-                    {!!master.explanation && (
-                      <div
-                        className={styles.kv}
-                        style={{
-                          flexDirection: 'column',
-                          alignItems: 'flex-start',
-                          gap: 4
-                        }}
-                      >
-                        <b>Diễn giải</b>
-                        <span style={{ textAlign: 'left' }}>{master.explanation}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className={styles.railCard}>
-                    <h4>Luồng duyệt</h4>
-                    <ApprovalFlow
-                      currentStepKey={master.currentStepKey}
-                      workItems={workItems}
-                      activities={activities}
-                    />
-                  </div>
-                </>
-              )}
-              {view === 'detail' && !master && (
-                <div className={styles.railCard}>
-                  <h4>Hồ sơ</h4>
-                  <p className={styles.hint}>Chưa mở hồ sơ nào.</p>
-                </div>
+              {view === 'detail' && (
+                <DetailRail
+                  master={master}
+                  checklist={checklist}
+                  workItems={workItems}
+                  activities={activities}
+                  uncDocs={uncDocs}
+                />
               )}
             </aside>
           )}
         </div>
       </div>
 
-      <Dialog
-        hidden={!dialog}
-        onDismiss={busy ? undefined : () => setDialog(undefined)}
-        dialogContentProps={{
-          type: DialogType.normal,
-          title: dialog
-            ? dialog === 'attach'
-              ? uploadMode === 'step'
-                ? 'Tải tài liệu hỗ trợ'
-                : 'Tải tài liệu checklist'
-              : dialogTitleVi(dialog)
-            : ''
-        }}
-        modalProps={{ isBlocking: true, styles: { main: { maxWidth: 520 } } }}
-      >
-        <div className={styles.modalB} style={{ padding: '4px 0 8px' }}>
-          {(dialog === 'return' || dialog === 'reject') && (
-            <label className={styles.field}>
-              Lý do (bắt buộc)
-              <textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
-            </label>
-          )}
-          {dialog === 'accept' && (
-            <>
-              <p className={styles.hint}>
-                Trưởng phòng / người được giao tiếp nhận bước hiện tại và bắt buộc đặt hạn xử
-                lý. Chưa tiếp nhận thì không được chuyển bước / xác nhận thanh toán.
-              </p>
-              <label className={styles.field}>
-                Hạn xử lý (bắt buộc)
-                <input
-                  type="date"
-                  value={acceptDue}
-                  onChange={(e) => setAcceptDue(e.target.value)}
-                />
-              </label>
-            </>
-          )}
-          {dialog === 'approve' && (
-            <p className={styles.hint}>
-              Phê duyệt hồ sơ tại CT.HĐQT. Sau bước này hồ sơ vẫn ở CT.HĐQT — chưa chuyển TCKT
-              thanh toán. Dùng «Duyệt thanh toán» để đặt hạn và chuyển bước.
-            </p>
-          )}
-          {dialog === 'approvePay' && (
-            <label className={styles.field}>
-              Thời hạn thanh toán
-              <input
-                type="date"
-                value={paymentDue}
-                onChange={(e) => setPaymentDue(e.target.value)}
-              />
-            </label>
-          )}
-          {(dialog === 'attach' || dialog === 'unc') && (
-            <>
-              {dialog === 'attach' && uploadMode === 'checklist' && (
-                <label className={styles.field}>
-                  Mục checklist
-                  <select
-                    value={uploadItemCode}
-                    onChange={(e) => setUploadItemCode(e.target.value)}
-                  >
-                    {checklist.map((c) => (
-                      <option key={c.itemCode} value={c.itemCode}>
-                        {c.itemLabel}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              {dialog === 'attach' && uploadMode === 'step' && (
-                <p className={styles.hint}>
-                  Tải tài liệu hỗ trợ cho bước{' '}
-                  <b>{stepShortVi(master ? master.currentStepKey : '')}</b> (nhóm StepAttachment —
-                  không thay thế checklist bắt buộc).
-                </p>
-              )}
-              <label className={styles.field}>
-                Chọn tệp
-                <input ref={fileRef} type="file" />
-              </label>
-            </>
-          )}
-          {dialog === 'submit' && (
-            <p className={styles.hint}>
-              Bạn xác nhận hồ sơ đã đúng, đủ để trình trưởng phòng rồi?
-            </p>
-          )}
-          {dialog === 'mgrApprove' && (
-            <p className={styles.hint}>
-              Xác nhận duyệt gửi hồ sơ sang BPCM2. Không yêu cầu đánh giá Đạt hết checklist — việc
-              đó thuộc các bước kiểm tra sau.
-            </p>
-          )}
-          {dialog === 'forward' && (
-            <p className={styles.hint}>
-              Xác nhận chuyển bước. Checklist đã đánh giá Đạt hết các mục cần kiểm tra. Sau khi
-              chuyển, không được đánh giá lại.
-            </p>
-          )}
-          {dialog === 'confirmPay' && (
-            <p className={styles.hint}>
-              Xác nhận dựa trên ủy nhiệm chi:{' '}
-              {uncDocs[0] ? uncDocs[0].fileName : '(chưa có tệp)'}
-            </p>
-          )}
-          {dialog === 'review' && (
-            <>
-              <p className={styles.hint}>
-                Mục:{' '}
-                <b>
-                  {(checklist.filter((c) => c.itemCode === reviewItemCode)[0] || {}).itemLabel ||
-                    reviewItemCode}
-                </b>
-              </p>
-              <label className={styles.field}>
-                Kết quả
-                <select
-                  value={reviewResult}
-                  onChange={(e) => setReviewResult(e.target.value as 'Pass' | 'Fail')}
-                >
-                  <option value="Pass">Đạt</option>
-                  <option value="Fail">Không đạt</option>
-                </select>
-              </label>
-              <label className={styles.field}>
-                Lý do {reviewResult === 'Fail' ? '(bắt buộc)' : '(tuỳ chọn)'}
-                <textarea
-                  rows={3}
-                  value={reviewReason}
-                  onChange={(e) => setReviewReason(e.target.value)}
-                />
-              </label>
-            </>
-          )}
-        </div>
-        <DialogFooter>
-          <DefaultButton text="Hủy" onClick={() => setDialog(undefined)} disabled={busy} />
-          <PrimaryButton
-            text="Xác nhận"
-            onClick={confirmDialog}
-            disabled={busy}
-            styles={
-              dialog === 'review' && reviewResult === 'Fail'
-                ? {
-                    root: { background: '#b91c1c', borderColor: '#b91c1c' },
-                    rootHovered: { background: '#991b1b', borderColor: '#991b1b' }
-                  }
-                : undefined
-            }
-          />
-        </DialogFooter>
-      </Dialog>
+      <PayActionDialog
+        dialog={dialog}
+        busy={busy}
+        reason={reason}
+        acceptDue={acceptDue}
+        paymentDue={paymentDue}
+        uploadMode={uploadMode}
+        uploadItemCode={uploadItemCode}
+        checklist={checklist}
+        reviewItemCode={reviewItemCode}
+        reviewResult={reviewResult}
+        reviewReason={reviewReason}
+        currentStepKey={master ? master.currentStepKey : undefined}
+        uncDocs={uncDocs}
+        fileRef={fileRef}
+        onReasonChange={setReason}
+        onAcceptDueChange={setAcceptDue}
+        onPaymentDueChange={setPaymentDue}
+        onUploadItemCodeChange={setUploadItemCode}
+        onReviewResultChange={setReviewResult}
+        onReviewReasonChange={setReviewReason}
+        onDismiss={() => setDialog(undefined)}
+        onConfirm={confirmDialog}
+      />
 
       {drawerDoc && (
         <FilePreviewDrawer

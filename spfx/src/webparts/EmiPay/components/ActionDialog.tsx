@@ -1,14 +1,59 @@
 import * as React from 'react';
-import styles from './EmiPay.module.scss';
+import {
+  Checkbox,
+  DatePicker,
+  DayOfWeek,
+  DefaultButton,
+  Dialog,
+  DialogFooter,
+  DialogType,
+  Dropdown,
+  IDropdownOption,
+  MessageBar,
+  MessageBarType,
+  PrimaryButton,
+  Stack,
+  Text,
+  TextField,
+  ThemeProvider
+} from '@fluentui/react';
 import { dialogTitle } from './capability';
 import { NOTIFY_TARGETS, STAFF_POOL } from './mockData';
 import { DialogKind, ICheckItem, IPayDetailState } from './types';
+import { emiPayFluentTheme } from '../theme/fluentPayTheme';
+import { actionBtnStyles, compactBtnStyles, themeHostStyle } from './detail/detailStyles';
 
 export interface IActionDialogProps {
   kind: Exclude<DialogKind, undefined>;
   detail: IPayDetailState;
   onClose: () => void;
   onConfirm: (summary: string) => void;
+}
+
+function parseLocalDateTime(v: string): Date | undefined {
+  if (!v) return undefined;
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
+function toLocalDateTime(d: Date | null | undefined): string {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const hh = d.getHours();
+  const mm = d.getMinutes();
+  const p = (n: number): string => (n < 10 ? `0${n}` : `${n}`);
+  return `${y}-${p(m)}-${p(day)}T${p(hh)}:${p(mm)}`;
+}
+
+function toIsoDate(d: Date | null | undefined): string {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const p = (n: number): string => (n < 10 ? `0${n}` : `${n}`);
+  return `${y}-${p(m)}-${p(day)}`;
 }
 
 const ActionDialog: React.FC<IActionDialogProps> = (props) => {
@@ -58,14 +103,6 @@ const ActionDialog: React.FC<IActionDialogProps> = (props) => {
   };
 
   const missingRequired = (): boolean => {
-    for (let i = 0; i < detail.check.length; i++) {
-      const c = detail.check[i];
-      if (c.required && (c.result === 'Missing' || c.result === 'Fail' || c.result === 'Open')) {
-        if (c.result === 'Missing' || c.result === 'Fail') {
-          return true;
-        }
-      }
-    }
     return detail.check.some((c) => c.required && c.result === 'Missing');
   };
 
@@ -93,9 +130,7 @@ const ActionDialog: React.FC<IActionDialogProps> = (props) => {
         onConfirm(`ASSIGN · ${selectedStaff.length} người`);
         return;
       case 'checklist':
-        onConfirm(
-          `CHECKLIST cập nhật · hasFail=${String(checklistHasFailOpen())}`
-        );
+        onConfirm(`CHECKLIST cập nhật · hasFail=${String(checklistHasFailOpen())}`);
         return;
       case 'attach':
         onConfirm(`UPLOAD · ${fileName || 'file-demo.pdf'}`);
@@ -159,191 +194,220 @@ const ActionDialog: React.FC<IActionDialogProps> = (props) => {
     }
   };
 
+  const ouOptions: IDropdownOption[] = (detail.nextOuOptions || []).map((o) => ({
+    key: o.code,
+    text: `${o.name}${o.isDefault ? ' (mặc định)' : ''}`
+  }));
+
+  const staffOptions: IDropdownOption[] = STAFF_POOL.map((s) => ({
+    key: s.upn,
+    text: `${s.name} · ${s.upn}`
+  }));
+
   return (
-    <div className={styles.modalOverlay} role="dialog" aria-modal="true">
-      <div className={styles.modal}>
-        <div className={styles.modalH}>
-          <h3>{dialogTitle(kind)}</h3>
-          <button type="button" className={`${styles.btn} ${styles.btnGhost}`} onClick={onClose}>
-            Đóng
-          </button>
-        </div>
-        <div className={styles.modalB}>
+    <ThemeProvider theme={emiPayFluentTheme} style={themeHostStyle}>
+      <Dialog
+        hidden={false}
+        onDismiss={onClose}
+        dialogContentProps={{
+          type: DialogType.normal,
+          title: dialogTitle(kind)
+        }}
+        modalProps={{ isBlocking: true, styles: { main: { maxWidth: 560 } } }}
+      >
+        <Stack tokens={{ childrenGap: 12 }} styles={{ root: { padding: '4px 0 8px' } }}>
           {(kind === 'submit' || kind === 'forward') && (
             <>
-              <label className={styles.field}>
-                Phòng bước kế tiếp (chỉ 1)
-                <select value={nextOu} onChange={(e) => setNextOu(e.target.value)}>
-                  {(detail.nextOuOptions || []).map((o) => (
-                    <option key={o.code} value={o.code}>
-                      {o.name}
-                      {o.isDefault ? ' (mặc định)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <Dropdown
+                label="Phòng bước kế tiếp (chỉ 1)"
+                selectedKey={nextOu}
+                options={ouOptions}
+                onChange={(_, opt) => opt && setNextOu(String(opt.key))}
+              />
               {kind === 'submit' && missingRequired() && (
-                <p className={styles.warnBox}>BR-01: còn mục checklist bắt buộc thiếu / không đạt.</p>
+                <MessageBar messageBarType={MessageBarType.error}>
+                  BR-01: còn mục checklist bắt buộc thiếu / không đạt.
+                </MessageBar>
               )}
               {kind === 'forward' && checklistHasFailOpen() && (
-                <p className={styles.warnBox}>
+                <MessageBar messageBarType={MessageBarType.warning}>
                   Có mục Không đạt — trả BPCM1. Không cần Đạt hết checklist để chuyển bước.
-                </p>
+                </MessageBar>
               )}
               {kind === 'forward' && !checklistHasFailOpen() && (
-                <p className={styles.hint}>
+                <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
                   Phòng đánh giá mục phù hợp; sau PASS khóa mục đã Đạt/Không đạt.
-                </p>
+                </Text>
               )}
-              <p className={styles.hint}>BR-02: không gửi đồng thời hai phòng cùng bước.</p>
+              <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+                BR-02: không gửi đồng thời hai phòng cùng bước.
+              </Text>
             </>
           )}
 
           {kind === 'accept' && (
-            <label className={styles.field}>
-              Hạn hoàn thành (bắt buộc)
-              <input
-                type="datetime-local"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-              />
-            </label>
+            <DatePicker
+              label="Hạn hoàn thành (bắt buộc)"
+              firstDayOfWeek={DayOfWeek.Monday}
+              value={parseLocalDateTime(deadline)}
+              onSelectDate={(d) => setDeadline(toLocalDateTime(d))}
+              formatDate={(d) => (d ? d.toLocaleString('vi-VN') : '')}
+            />
           )}
 
           {kind === 'assign' && (
-            <div className={styles.checkList}>
+            <Stack tokens={{ childrenGap: 8 }}>
               {STAFF_POOL.map((s) => (
-                <label key={s.upn} className={styles.checkItem}>
-                  <input
-                    type="checkbox"
-                    checked={selectedStaff.indexOf(s.upn) >= 0}
-                    onChange={() => toggleStaff(s.upn)}
-                  />
-                  {s.name} · {s.upn}
-                </label>
+                <Checkbox
+                  key={s.upn}
+                  label={`${s.name} · ${s.upn}`}
+                  checked={selectedStaff.indexOf(s.upn) >= 0}
+                  onChange={() => toggleStaff(s.upn)}
+                />
               ))}
-              <p className={styles.hint}>Nhiều NV dùng một checklist chung (§7.2).</p>
-            </div>
+              <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+                Nhiều NV dùng một checklist chung (§7.2).
+              </Text>
+            </Stack>
           )}
 
           {kind === 'checklist' && (
-            <div className={styles.checkList}>
+            <Stack tokens={{ childrenGap: 10 }}>
               {checks.map((c) => (
-                <div key={c.code} className={styles.checkEditRow}>
-                  <div>
-                    <strong>{c.label}</strong>
-                    <span className={styles.meta}>{c.meta}</span>
-                  </div>
-                  <div className={styles.actions}>
-                    <button type="button" className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setCheckResult(c.code, 'Pass')}>
-                      Đạt
-                    </button>
-                    <button type="button" className={`${styles.btn} ${styles.btnDanger}`} onClick={() => setCheckResult(c.code, 'Fail')}>
-                      Không đạt
-                    </button>
-                    <button type="button" className={`${styles.btn} ${styles.btnOutline}`} onClick={() => setCheckResult(c.code, 'Open')}>
-                      Mở
-                    </button>
-                  </div>
-                </div>
+                <Stack
+                  key={c.code}
+                  tokens={{ childrenGap: 6 }}
+                  styles={{
+                    root: {
+                      padding: '8px 0',
+                      borderBottom: '1px solid #e5e7eb'
+                    }
+                  }}
+                >
+                  <Text styles={{ root: { fontWeight: 600 } }}>{c.label}</Text>
+                  <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+                    {c.meta}
+                  </Text>
+                  <Stack horizontal tokens={{ childrenGap: 6 }} wrap>
+                    <DefaultButton
+                      text="Đạt"
+                      onClick={() => setCheckResult(c.code, 'Pass')}
+                      styles={compactBtnStyles}
+                    />
+                    <DefaultButton
+                      text="Không đạt"
+                      onClick={() => setCheckResult(c.code, 'Fail')}
+                      styles={{
+                        root: {
+                          minWidth: 0,
+                          height: 28,
+                          padding: '0 10px',
+                          borderRadius: 4,
+                          borderColor: '#b91c1c',
+                          color: '#b91c1c'
+                        }
+                      }}
+                    />
+                    <DefaultButton
+                      text="Mở"
+                      onClick={() => setCheckResult(c.code, 'Open')}
+                      styles={compactBtnStyles}
+                    />
+                  </Stack>
+                </Stack>
               ))}
-            </div>
+            </Stack>
           )}
 
           {(kind === 'attach' || kind === 'unc') && (
             <>
-              <label className={styles.field}>
-                Tên file (demo)
-                <input
-                  value={fileName}
-                  placeholder={kind === 'unc' ? 'unc-20261112.pdf' : 'tai-lieu.pdf'}
-                  onChange={(e) => setFileName(e.target.value)}
-                />
-              </label>
-              <p className={styles.hint}>
+              <TextField
+                label="Tên file (demo)"
+                value={fileName}
+                placeholder={kind === 'unc' ? 'unc-20261112.pdf' : 'tai-lieu.pdf'}
+                onChange={(_, v) => setFileName(v || '')}
+              />
+              <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
                 {kind === 'unc'
                   ? 'UNC thuộc chứng từ thanh toán TCKT.'
                   : detail.canUploadSupplement
-                  ? 'Đính kèm bổ sung — nội bộ chưa chốt thì người tạo không xem (§13.2).'
-                  : 'Checklist đầu vào — chỉ mục được phép sửa.'}
-              </p>
+                    ? 'Đính kèm bổ sung — nội bộ chưa chốt thì người tạo không xem (§13.2).'
+                    : 'Checklist đầu vào — chỉ mục được phép sửa.'}
+              </Text>
             </>
           )}
 
-          {(kind === 'return' || kind === 'reject' || kind === 'cancel' || kind === 'extendDeadline') && (
-            <label className={styles.field}>
-              Lý do (bắt buộc)
-              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
-            </label>
+          {(kind === 'return' ||
+            kind === 'reject' ||
+            kind === 'cancel' ||
+            kind === 'extendDeadline') && (
+            <TextField
+              label="Lý do (bắt buộc)"
+              multiline
+              rows={3}
+              value={reason}
+              onChange={(_, v) => setReason(v || '')}
+            />
           )}
 
           {kind === 'extendDeadline' && (
-            <label className={styles.field}>
-              Hạn mới
-              <input
-                type="datetime-local"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-              />
-            </label>
+            <DatePicker
+              label="Hạn mới"
+              firstDayOfWeek={DayOfWeek.Monday}
+              value={parseLocalDateTime(deadline)}
+              onSelectDate={(d) => setDeadline(toLocalDateTime(d))}
+              formatDate={(d) => (d ? d.toLocaleString('vi-VN') : '')}
+            />
           )}
 
           {kind === 'withdraw' && (
-            <p className={styles.hint}>
+            <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
               Chỉ khi bên nhận chưa Tiếp nhận (BR-03). Sau Accept → không rút (BR-04). Không tăng
               ReviewRound.
-            </p>
+            </Text>
           )}
 
           {kind === 'approve' && (
-            <label className={styles.field}>
-              Thời hạn thanh toán (paymentDueAt)
-              <input type="date" value={paymentDue} onChange={(e) => setPaymentDue(e.target.value)} />
-            </label>
+            <DatePicker
+              label="Thời hạn thanh toán (paymentDueAt)"
+              firstDayOfWeek={DayOfWeek.Monday}
+              value={paymentDue ? new Date(paymentDue + 'T00:00:00') : undefined}
+              onSelectDate={(d) => setPaymentDue(toIsoDate(d))}
+              formatDate={(d) => (d ? d.toLocaleDateString('vi-VN') : '')}
+            />
           )}
 
           {kind === 'confirmPay' && (
-            <div className={styles.checkList}>
-              <p className={styles.hint}>§10.2 — TCKT chọn người nhận thông báo (không cố định).</p>
+            <Stack tokens={{ childrenGap: 8 }}>
+              <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+                §10.2 — TCKT chọn người nhận thông báo (không cố định).
+              </Text>
               {NOTIFY_TARGETS.map((t) => (
-                <label key={t.id} className={styles.checkItem}>
-                  <input
-                    type="checkbox"
-                    checked={notify.indexOf(t.id) >= 0}
-                    onChange={() => toggleNotify(t.id)}
-                  />
-                  {t.label}
-                </label>
+                <Checkbox
+                  key={t.id}
+                  label={t.label}
+                  checked={notify.indexOf(t.id) >= 0}
+                  onChange={() => toggleNotify(t.id)}
+                />
               ))}
-            </div>
+            </Stack>
           )}
 
           {kind === 'delegate' && (
-            <label className={styles.field}>
-              Người được ủy quyền
-              <select
-                value={selectedStaff[0] || STAFF_POOL[0].upn}
-                onChange={(e) => setSelectedStaff([e.target.value])}
-              >
-                {STAFF_POOL.map((s) => (
-                  <option key={s.upn} value={s.upn}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Dropdown
+              label="Người được ủy quyền"
+              selectedKey={selectedStaff[0] || STAFF_POOL[0].upn}
+              options={staffOptions}
+              onChange={(_, opt) => opt && setSelectedStaff([String(opt.key)])}
+            />
           )}
-        </div>
-        <div className={styles.modalF}>
-          <button type="button" className={`${styles.btn} ${styles.btnOutline}`} onClick={onClose}>
-            Hủy
-          </button>
-          <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={confirm}>
-            Xác nhận
-          </button>
-        </div>
-      </div>
-    </div>
+        </Stack>
+        <DialogFooter>
+          <DefaultButton text="Hủy" onClick={onClose} styles={actionBtnStyles} />
+          <PrimaryButton text="Xác nhận" onClick={confirm} styles={actionBtnStyles} />
+        </DialogFooter>
+      </Dialog>
+    </ThemeProvider>
   );
 };
 

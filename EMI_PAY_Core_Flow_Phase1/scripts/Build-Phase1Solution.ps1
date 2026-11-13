@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) {
 $phaseRoot = Split-Path $PSScriptRoot -Parent
 $repoRoot = Split-Path $phaseRoot -Parent
 if ([string]::IsNullOrWhiteSpace($OutZip)) {
-    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_15.zip'
+    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_19.zip'
 }
 $staging = Join-Path $phaseRoot '_staging_solution'
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
@@ -106,6 +106,9 @@ $definition = [ordered]@{
     triggers         = [ordered]@{
         # API sync: SPFx POST { commandId } → process Commands → HTTP Response (CORS).
         # Replaces SharePoint GetOnNewItems poll (~1 min latency).
+        # Sync HTTP + Response: KHÔNG được bật trigger concurrency.runs
+        # (InvalidConcurrencyConfiguration — Response cần operationOptions=Asynchronous).
+        # Song song vẫn chạy mặc định; an toàn nhờ Dedupe + Claim/Master ETag.
         TRG_HttpCommand = [ordered]@{
             type   = 'Request'
             kind   = 'Http'
@@ -145,7 +148,7 @@ $definition = [ordered]@{
                 parameters     = [ordered]@{
                     dataset             = $site
                     'parameters/method'  = 'GET'
-                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')?`$select=Id,CommandKey,CommandType,RequestKey,PayloadJson,State,ErrorMessage,StepInstanceKey,Author/EMail,Author/Email&`$expand=Author')"
+                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')?`$select=Id,CommandKey,CommandType,RequestKey,PayloadJson,State,ErrorMessage,StepInstanceKey,DedupeKey,Author/EMail,Author/Email&`$expand=Author')"
                     'parameters/headers' = [ordered]@{
                         Accept = 'application/json;odata=nometadata'
                     }
@@ -307,10 +310,39 @@ $definition = [ordered]@{
             }
             runAfter = @{ INIT_EffectiveActor = @('Succeeded') }
         }
+        INIT_DedupeKey = [ordered]@{
+            type     = 'InitializeVariable'
+            inputs   = [ordered]@{
+                variables = @(@{
+                        name  = 'DedupeKey'
+                        type  = 'string'
+                        value = "@coalesce(body('HTTP_LoadCommand')?['DedupeKey'],'')"
+                    })
+            }
+            runAfter = @{ INIT_AuthError = @('Succeeded') }
+        }
+        INIT_CommandETag = [ordered]@{
+            type     = 'InitializeVariable'
+            inputs   = [ordered]@{
+                variables = @(@{
+                        name  = 'CommandETag'
+                        type  = 'string'
+                        value = "@coalesce(body('HTTP_LoadCommand')?['@odata.etag'],'*')"
+                    })
+            }
+            runAfter = @{ INIT_DedupeKey = @('Succeeded') }
+        }
+        INIT_MasterETag = [ordered]@{
+            type     = 'InitializeVariable'
+            inputs   = [ordered]@{
+                variables = @(@{ name = 'MasterETag'; type = 'string'; value = '*' })
+            }
+            runAfter = @{ INIT_CommandETag = @('Succeeded') }
+        }
 
         IF_AlreadyDone = [ordered]@{
             type       = 'If'
-            runAfter   = @{ INIT_AuthError = @('Succeeded') }
+            runAfter   = @{ INIT_MasterETag = @('Succeeded') }
             expression = [ordered]@{
                 and = @(
                     [ordered]@{
@@ -361,7 +393,7 @@ $definition = [ordered]@{
                                 'parameters/headers' = [ordered]@{
                                     Accept          = 'application/json;odata=nometadata'
                                     'Content-Type'  = 'application/json;odata=nometadata'
-                                    'IF-MATCH'      = '*'
+                                    'IF-MATCH'      = "@variables('CommandETag')"
                                     'X-HTTP-Method' = 'MERGE'
                                 }
                                 'parameters/body'    = '{"State":"Processing"}'
@@ -2201,6 +2233,7 @@ $definition = [ordered]@{
 }
 
 # --- Wire OrgMembers AUTH gate (1.0.0.13): Claim → Auth → IF_AuthOk → SW_CommandType → GetFinal ---
+# --- Perf Gói 3 (1.0.0.16): Processing-wait + Dedupe + Claim etag ---
 $elseActions = $definition.actions.IF_AlreadyDone.else.actions
 $swCommand = $elseActions['SW_CommandType']
 $httpGetFinal = $elseActions['HTTP_GetFinal']
@@ -2208,9 +2241,72 @@ $ifWriteInternal = $elseActions['IF_WriteActivityInternal']
 $respApi = $elseActions['RESP_Api']
 $claim = $elseActions['HTTP_ClaimProcessing']
 
+function New-RespBody([string]$StateExpr, [string]$ErrExpr = "''") {
+    return [ordered]@{
+        commandId       = "@variables('CommandId')"
+        state           = $StateExpr
+        requestKey      = "@coalesce(variables('RequestKey'),'')"
+        stepInstanceKey = "@coalesce(variables('StepInstanceKey'),'')"
+        errorMessage    = $ErrExpr
+        commandType     = "@variables('CommandType')"
+    }
+}
+
+$respHeaders = [ordered]@{
+    'Access-Control-Allow-Origin'  = '*'
+    'Access-Control-Allow-Methods' = 'POST, OPTIONS'
+    'Access-Control-Allow-Headers' = 'Content-Type'
+    'Content-Type'                 = 'application/json'
+}
+
+# Until bắt buộc expression CHUỖI (@or(...)) — không dùng object như If (PropertyNotAllowed).
+function New-UntilTerminalExpr([string]$BodyAction) {
+    return "@or(equals(coalesce(body('$BodyAction')?['State'], body('$BodyAction')?['State/Value'], ''), 'Succeeded'), equals(coalesce(body('$BodyAction')?['State'], body('$BodyAction')?['State/Value'], ''), 'Rejected'), equals(coalesce(body('$BodyAction')?['State'], body('$BodyAction')?['State/Value'], ''), 'Failed'))"
+}
+
+$untilWaitTerminal = [ordered]@{
+    type       = 'Until'
+    expression = (New-UntilTerminalExpr 'HTTP_WaitCmd')
+    limit      = [ordered]@{ count = 60; timeout = 'PT2M' }
+    actions  = [ordered]@{
+        DELAY_WaitCmd = [ordered]@{
+            type   = 'Wait'
+            inputs = [ordered]@{ interval = [ordered]@{ count = 2; unit = 'Second' } }
+        }
+        HTTP_WaitCmd = [ordered]@{
+            type     = 'OpenApiConnection'
+            runAfter = @{ DELAY_WaitCmd = @('Succeeded') }
+            inputs   = [ordered]@{
+                host           = [ordered]@{
+                    connectionName = 'shared_sharepointonline'
+                    operationId    = 'HttpRequest'
+                    apiId          = '/providers/Microsoft.PowerApps/apis/shared_sharepointonline'
+                }
+                parameters     = [ordered]@{
+                    dataset             = $site
+                    'parameters/method'  = 'GET'
+                    'parameters/uri'     = "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')?`$select=Id,State,RequestKey,StepInstanceKey,ErrorMessage,CommandType')"
+                    'parameters/headers' = [ordered]@{ Accept = 'application/json;odata=nometadata' }
+                }
+                authentication = "@parameters('`$authentication')"
+            }
+        }
+    }
+}
+
+$respAfterWait = [ordered]@{
+    type     = 'Response'
+    kind     = 'Http'
+    runAfter = @{ UNTIL_WaitTerminal = @('Succeeded', 'Failed', 'TimedOut', 'Skipped') }
+    inputs   = [ordered]@{
+        statusCode = 200
+        headers    = $respHeaders
+        body       = (New-RespBody "@coalesce(body('HTTP_WaitCmd')?['State'], body('HTTP_WaitCmd')?['State/Value'], 'Failed')" "@coalesce(body('HTTP_WaitCmd')?['ErrorMessage'],'WAIT_TIMEOUT')")
+    }
+}
+
 $newElse = [ordered]@{}
 $newElse['HTTP_ClaimProcessing'] = $claim
-
 $newElse['SET_AuthorEmail'] = New-SetVar 'AuthorEmail' 'string' "@toLower(trim(coalesce(body('HTTP_LoadCommand')?['Author']?['EMail'], body('HTTP_LoadCommand')?['Author']?['Email'], '')))"
 $newElse['SET_AuthorEmail'].runAfter = @{ HTTP_ClaimProcessing = @('Succeeded') }
 
@@ -2521,7 +2617,186 @@ $newElse['HTTP_GetFinal'] = $httpGetFinal
 $newElse['IF_WriteActivityInternal'] = $ifWriteInternal
 $newElse['RESP_Api'] = $respApi
 
-$definition.actions.IF_AlreadyDone.else.actions = $newElse
+# Claim 412/fail → đợi lệnh terminal (run khác đã claim cùng commandId).
+$untilClaimFail = [ordered]@{
+    type       = 'Until'
+    runAfter   = @{ HTTP_ClaimProcessing = @('Failed', 'TimedOut') }
+    expression = (New-UntilTerminalExpr 'HTTP_WaitCmd_CF')
+    limit      = $untilWaitTerminal.limit
+    actions    = [ordered]@{
+        DELAY_WaitCmd_CF = [ordered]@{
+            type   = 'Wait'
+            inputs = [ordered]@{ interval = [ordered]@{ count = 2; unit = 'Second' } }
+        }
+        HTTP_WaitCmd_CF = [ordered]@{
+            type     = 'OpenApiConnection'
+            runAfter = @{ DELAY_WaitCmd_CF = @('Succeeded') }
+            inputs   = $untilWaitTerminal.actions.HTTP_WaitCmd.inputs
+        }
+    }
+}
+$newElse['UNTIL_WaitClaimFail'] = $untilClaimFail
+$newElse['RESP_AfterClaimFail'] = [ordered]@{
+    type     = 'Response'
+    kind     = 'Http'
+    runAfter = @{ UNTIL_WaitClaimFail = @('Succeeded', 'Failed', 'TimedOut', 'Skipped') }
+    inputs   = [ordered]@{
+        statusCode = 200
+        headers    = $respHeaders
+        body       = (New-RespBody "@coalesce(body('HTTP_WaitCmd_CF')?['State'], body('HTTP_WaitCmd_CF')?['State/Value'], 'Failed')" "@coalesce(body('HTTP_WaitCmd_CF')?['ErrorMessage'],'CLAIM_CONFLICT')")
+    }
+}
+
+$claimAuthPipeline = $newElse
+
+$dedupeFilter = "@concat('_api/web/lists(guid''$guidCommands'')/items?`$filter=DedupeKey eq ''', replace(variables('DedupeKey'),'''',''''''), ''' and State eq ''Succeeded'' and Id ne ', string(variables('CommandId')), '&`$select=Id,State,RequestKey,StepInstanceKey,DedupeKey&`$top=3')"
+
+$afterDedupeMiss = $claimAuthPipeline
+$ifDedupeHit = [ordered]@{
+    type       = 'If'
+    runAfter   = @{ HTTP_FindDedupe = @('Succeeded') }
+    expression = [ordered]@{
+        and = @(
+            [ordered]@{ not = [ordered]@{ empty = @("@variables('DedupeKey')") } }
+            [ordered]@{ greater = @("@length(coalesce(body('HTTP_FindDedupe')?['value'], json('[]')))", 0) }
+        )
+    }
+    actions    = [ordered]@{
+        # Không coalesce với variables('RequestKey') — SetVariable cấm self-reference.
+        SET_RequestKey_Dedupe = New-SetVar 'RequestKey' 'string' "@coalesce(first(body('HTTP_FindDedupe')?['value'])?['RequestKey'],'')"
+        SET_SIK_Dedupe        = $null
+        HTTP_MarkDedupeNoop   = $null
+        RESP_DedupeNoop       = $null
+    }
+    else       = [ordered]@{ actions = $afterDedupeMiss }
+}
+$ifDedupeHit.actions.SET_SIK_Dedupe = New-SetVar 'StepInstanceKey' 'string' "@coalesce(first(body('HTTP_FindDedupe')?['value'])?['StepInstanceKey'],'')"
+$ifDedupeHit.actions.SET_SIK_Dedupe.runAfter = @{ SET_RequestKey_Dedupe = @('Succeeded') }
+$ifDedupeHit.actions.HTTP_MarkDedupeNoop = New-SpHttpMerge `
+    "@concat('_api/web/lists(guid''$guidCommands'')/items(', string(variables('CommandId')), ')')" `
+    "@json(concat('{""State"":""Succeeded"",""ErrorMessage"":""DEDUPE_NOOP"",""RequestKey"":""', variables('RequestKey'), '"",""StepInstanceKey"":""', variables('StepInstanceKey'), '"",""ProcessedAt"":""', utcNow(), '""}'))"
+$ifDedupeHit.actions.HTTP_MarkDedupeNoop.runAfter = @{ SET_SIK_Dedupe = @('Succeeded') }
+$ifDedupeHit.actions.RESP_DedupeNoop = [ordered]@{
+    type     = 'Response'
+    kind     = 'Http'
+    runAfter = @{ HTTP_MarkDedupeNoop = @('Succeeded', 'Failed', 'TimedOut', 'Skipped') }
+    inputs   = [ordered]@{
+        statusCode = 200
+        headers    = $respHeaders
+        body       = (New-RespBody "'Succeeded'" "'DEDUPE_NOOP'")
+    }
+}
+
+$pendingBranch = [ordered]@{
+    HTTP_FindDedupe = (New-SpHttpGet $dedupeFilter)
+    IF_DedupeHit    = $ifDedupeHit
+}
+$pendingBranch.IF_DedupeHit.runAfter = @{ HTTP_FindDedupe = @('Succeeded') }
+
+$untilProcessing = [ordered]@{
+    type       = 'Until'
+    expression = (New-UntilTerminalExpr 'HTTP_WaitCmd_P')
+    limit      = $untilWaitTerminal.limit
+    actions    = [ordered]@{
+        DELAY_WaitCmd_P = [ordered]@{
+            type   = 'Wait'
+            inputs = [ordered]@{ interval = [ordered]@{ count = 2; unit = 'Second' } }
+        }
+        HTTP_WaitCmd_P = [ordered]@{
+            type     = 'OpenApiConnection'
+            runAfter = @{ DELAY_WaitCmd_P = @('Succeeded') }
+            inputs   = $untilWaitTerminal.actions.HTTP_WaitCmd.inputs
+        }
+    }
+}
+
+$topElse = [ordered]@{
+    IF_AlreadyProcessing = [ordered]@{
+        type       = 'If'
+        expression = [ordered]@{
+            and = @(
+                [ordered]@{
+                    equals = @(
+                        "@coalesce(body('HTTP_LoadCommand')?['State'], body('HTTP_LoadCommand')?['State/Value'], '')"
+                        'Processing'
+                    )
+                }
+            )
+        }
+        actions    = [ordered]@{
+            UNTIL_WaitProcessing = $untilProcessing
+            RESP_AfterProcessing = [ordered]@{
+                type     = 'Response'
+                kind     = 'Http'
+                runAfter = @{ UNTIL_WaitProcessing = @('Succeeded', 'Failed', 'TimedOut', 'Skipped') }
+                inputs   = [ordered]@{
+                    statusCode = 200
+                    headers    = $respHeaders
+                    body       = (New-RespBody "@coalesce(body('HTTP_WaitCmd_P')?['State'], body('HTTP_WaitCmd_P')?['State/Value'], 'Failed')" "@coalesce(body('HTTP_WaitCmd_P')?['ErrorMessage'],'WAIT_TIMEOUT')")
+                }
+            }
+        }
+        else       = [ordered]@{ actions = $pendingBranch }
+    }
+}
+
+$definition.actions.IF_AlreadyDone.else.actions = $topElse
+
+# --- Master ETag: SET sau FindMaster + IF-MATCH trên MERGE Requests ---
+function Set-MasterETagHooks($node) {
+    if ($null -eq $node) { return }
+    if ($node -is [System.Collections.IDictionary]) {
+        $keys = @($node.Keys)
+        foreach ($k in $keys) {
+            if ($k -like 'SET_MasterId_*') {
+                $src = switch -Wildcard ($k) {
+                    'SET_MasterId_Submit'  { "first(body('HTTP_FindMaster_Submit')?['value'])" }
+                    'SET_MasterId_Decide'  { "first(body('HTTP_FindMaster_Decide')?['value'])" }
+                    'SET_MasterId_Reject'  { "first(body('HTTP_FindMaster_Reject')?['value'])" }
+                    'SET_MasterId_Confirm' { "first(body('HTTP_FindMaster_Confirm')?['value'])" }
+                    default { $null }
+                }
+                if ($src) {
+                    $etagName = ($k -replace 'SET_MasterId_', 'SET_MasterETag_')
+                    if (-not $node.Contains($etagName)) {
+                        $nextKeys = @($node.Keys | Where-Object { $_ -ne $k -and $node[$_].runAfter -and ($node[$_].runAfter.Keys -contains $k) })
+                        # Tránh PS null-conditional nuốt `$src?[...]` — ghép chuỗi tay.
+                        $etagExpr = '@coalesce(' + $src + '?[''@odata.etag''],''*'')'
+                        $node[$etagName] = New-SetVar 'MasterETag' 'string' $etagExpr
+                        $node[$etagName].runAfter = @{ $k = @('Succeeded') }
+                        foreach ($nk in $nextKeys) {
+                            $node[$nk].runAfter = @{ $etagName = @('Succeeded') }
+                        }
+                    }
+                }
+            }
+            Set-MasterETagHooks $node[$k]
+        }
+    }
+    elseif ($node -is [System.Collections.IEnumerable] -and $node -isnot [string]) {
+        foreach ($item in $node) { Set-MasterETagHooks $item }
+    }
+}
+function Set-RequestsMergeETag($node) {
+    if ($null -eq $node) { return }
+    if ($node -is [System.Collections.IDictionary]) {
+        if ($node.Contains('inputs') -and $node.inputs -is [System.Collections.IDictionary]) {
+            $p = $node.inputs['parameters']
+            if ($p -and $p["parameters/headers"] -and $p["parameters/uri"]) {
+                $uri = [string]$p['parameters/uri']
+                if ($uri -like "*$guidRequests*" -and $uri -like '*items(*MasterId*') {
+                    $p['parameters/headers']['IF-MATCH'] = "@variables('MasterETag')"
+                }
+            }
+        }
+        foreach ($k in @($node.Keys)) { Set-RequestsMergeETag $node[$k] }
+    }
+    elseif ($node -is [System.Collections.IEnumerable] -and $node -isnot [string]) {
+        foreach ($item in $node) { Set-RequestsMergeETag $item }
+    }
+}
+Set-MasterETagHooks $definition
+Set-RequestsMergeETag $definition
 
 $workflowDoc = [ordered]@{
     properties    = [ordered]@{
@@ -2542,6 +2817,55 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 function Write-Utf8NoBom([string]$Path, [string]$Content) {
     [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
 }
+
+# --- Validate trước khi ZIP (tránh vòng Import XRM BadRequest) ---
+function Test-FlowDefinition([object]$Def) {
+    $issues = [System.Collections.Generic.List[string]]::new()
+    $json = $Def | ConvertTo-Json -Depth 100 -Compress:$false
+
+    # 1) Trigger concurrency + sync Response
+    $hasTrigConc = $json -match '"triggers"[\s\S]*?"concurrency"\s*:\s*\{\s*"runs"'
+    $hasResponse = $json -match '"type"\s*:\s*"Response"'
+    $hasAsyncResp = $json -match '"operationOptions"\s*:\s*"Asynchronous"'
+    if ($hasTrigConc -and $hasResponse -and -not $hasAsyncResp) {
+        $issues.Add('InvalidConcurrencyConfiguration: trigger concurrency.runs + sync Response (cần bỏ concurrency hoặc Response Asynchronous)')
+    }
+
+    # 2) Until expression phải là chuỗi
+    if ($json -match '"type"\s*:\s*"Until"[\s\S]{0,200}"expression"\s*:\s*\{') {
+        $issues.Add('PropertyNotAllowed: Until.expression dạng object — dùng chuỗi @or(...)')
+    }
+
+    # 3) SetVariable self-reference
+    $setVarPattern = '"type"\s*:\s*"SetVariable"\s*,\s*"inputs"\s*:\s*\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"value"\s*:\s*"([^"]*)"'
+    $matches = [regex]::Matches($json, $setVarPattern)
+    foreach ($m in $matches) {
+        $varName = $m.Groups[1].Value
+        $val = $m.Groups[2].Value
+        if ($val -match ("variables\('{0}'\)" -f [regex]::Escape($varName))) {
+            $issues.Add(("WorkflowRunActionInputsInvalidProperty: SetVariable '{0}' self-reference trong value" -f $varName))
+        }
+    }
+    # order name/value có thể đảo (value trước name) — check thêm
+    $setVarPattern2 = '"type"\s*:\s*"SetVariable"[\s\S]{0,400}?"name"\s*:\s*"([^"]+)"[\s\S]{0,200}?"value"\s*:\s*"([^"]*)"'
+    foreach ($m in [regex]::Matches($json, $setVarPattern2)) {
+        $varName = $m.Groups[1].Value
+        $val = $m.Groups[2].Value
+        if ($val -match ("variables\('{0}'\)" -f [regex]::Escape($varName))) {
+            $msg = ("WorkflowRunActionInputsInvalidProperty: SetVariable '{0}' self-reference trong value" -f $varName)
+            if (-not $issues.Contains($msg)) { $issues.Add($msg) }
+        }
+    }
+
+    if ($issues.Count -gt 0) {
+        Write-Host 'Flow definition validation FAILED:' -ForegroundColor Red
+        $issues | ForEach-Object { Write-Host ("  - {0}" -f $_) -ForegroundColor Red }
+        throw ("Build aborted: {0} validation issue(s)" -f $issues.Count)
+    }
+    Write-Host 'Flow definition validation OK (concurrency/Until/SetVariable self-ref)' -ForegroundColor Green
+}
+
+Test-FlowDefinition $definition
 
 $wfPath = Join-Path $staging "Workflows\$workflowFile"
 # IMPORTANT: Power Automate rejects UTF-8 BOM ("Unexpected character ﻿")
@@ -2614,9 +2938,9 @@ $solution = @"
       <LocalizedName description="EMI_PAY_CORE_V1" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
-      <Description description="Core Orchestrator HTTP API 1.0.0.15: SET AuthError clear via expression; CREATE templates; AUTH" languagecode="1033" />
+      <Description description="Core Orchestrator HTTP API 1.0.0.19: Goi3 Dedupe+ETag no trigger concurrency (sync Response); AUTH" languagecode="1033" />
     </Descriptions>
-    <Version>1.0.0.15</Version>
+    <Version>1.0.0.19</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>tfime</UniqueName>

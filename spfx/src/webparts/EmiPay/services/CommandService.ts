@@ -1,5 +1,6 @@
 import { PAY_LISTS, escapeOData, newKey } from './PayLists';
 import { ISpRestContext, createItem, getItemById } from './SpRest';
+import { perfLog, perfNow } from './perfMark';
 
 export type CommandType =
   | 'CREATE_REQUEST'
@@ -36,6 +37,36 @@ function choiceState(v: unknown): CommandState {
   return String(v || 'Pending') as CommandState;
 }
 
+/** Idempotent DedupeKey (Perf Gói 3) — trùng key + Succeeded → Flow no-op. */
+export function buildDedupeKey(
+  type: CommandType,
+  commandKey: string,
+  payload: Record<string, unknown>,
+  options?: { requestKey?: string; stepInstanceKey?: string }
+): string {
+  const rk = (options?.requestKey || '').trim();
+  const sik = (
+    options?.stepInstanceKey ||
+    String(payload.expectedStepInstanceKey || '')
+  ).trim();
+  switch (type) {
+    case 'CREATE_REQUEST':
+      return `CREATE_REQUEST-${commandKey}`;
+    case 'SUBMIT':
+      return `SUBMIT-${rk}-r${String(payload.expectedReviewRound ?? '')}`;
+    case 'ACCEPT':
+      return `ACCEPT-${sik || rk}`;
+    case 'DECIDE':
+      return `DECIDE-${sik || rk}-${String(payload.decision || '')}`;
+    case 'CONFIRM_PAYMENT':
+      return `CONFIRM_PAYMENT-${rk}-${String(
+        payload.uncDocumentKey || payload.fileUrl || 'UNC'
+      )}`;
+    default:
+      return `${type}-${commandKey}`;
+  }
+}
+
 export async function enqueueCommand(
   ctx: ISpRestContext,
   type: CommandType,
@@ -51,7 +82,7 @@ export async function enqueueCommand(
     CommandType: type,
     PayloadJson: JSON.stringify(payload),
     State: 'Pending',
-    DedupeKey: `${type}-${commandKey}`,
+    DedupeKey: buildDedupeKey(type, commandKey, payload, options),
     RequestKey: requestKey,
     StepInstanceKey: stepInstanceKey
   });
@@ -214,12 +245,34 @@ export async function enqueueAndRun(
     orchestratorUrl?: string;
   }
 ): Promise<IOrchestratorApiResult> {
+  const t0 = perfNow();
   const enq = await enqueueCommand(ctx, type, payload, options);
+  perfLog('enqueueCommand', t0, { type, commandId: enq.id });
   const url = (options?.orchestratorUrl || '').trim();
   if (url) {
-    return invokeOrchestratorApi(url, enq, ctx.postToOrchestrator);
+    const tApi = perfNow();
+    const result = await invokeOrchestratorApi(url, enq, ctx.postToOrchestrator);
+    perfLog('orchestratorApi', tApi, {
+      type,
+      commandId: enq.id,
+      state: result.state,
+      requestKey: result.requestKey
+    });
+    perfLog('enqueueAndRun.total', t0, {
+      type,
+      mode: 'api',
+      requestKey: result.requestKey
+    });
+    return result;
   }
+  const tPoll = perfNow();
   const waited = await waitCommand(ctx, enq.id, { pollMs: 1000 });
+  perfLog('waitCommand.poll', tPoll, { type, commandId: enq.id, state: waited.state });
+  perfLog('enqueueAndRun.total', t0, {
+    type,
+    mode: 'poll',
+    requestKey: waited.requestKey || enq.requestKey
+  });
   return {
     id: enq.id,
     commandKey: enq.commandKey,

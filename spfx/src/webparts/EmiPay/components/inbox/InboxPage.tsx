@@ -1,7 +1,24 @@
 import * as React from 'react';
-import styles from '../EmiPay.module.scss';
+import {
+  DefaultButton,
+  MessageBar,
+  MessageBarType,
+  PrimaryButton,
+  Stack,
+  Text,
+  TextField,
+  ThemeProvider
+} from '@fluentui/react';
 import { IRequestMaster } from '../../services/RequestService';
 import { IOrgMember, IOrgUnit } from '../../services/ConfigService';
+import { emiPayFluentTheme } from '../../theme/fluentPayTheme';
+import {
+  actionBtnStyles,
+  cardStack,
+  fillStack,
+  themeHostStyle
+} from '../detail/detailStyles';
+import { badgeBg, badgeColor } from '../detail/fluentBadge';
 import {
   InboxStatusTabId,
   buildStatusTabs,
@@ -14,14 +31,6 @@ import {
 } from './inboxHelpers';
 import InboxStatusTabs from './InboxStatusTabs';
 import InboxTable from './InboxTable';
-
-const badgeClass = (kind: string): string => {
-  if (kind === 'warn') return `${styles.badge} ${styles.badgeWarn}`;
-  if (kind === 'ok') return `${styles.badge} ${styles.badgeOk}`;
-  if (kind === 'info') return `${styles.badge} ${styles.badgeInfo}`;
-  if (kind === 'danger') return `${styles.badge} ${styles.badgeDanger}`;
-  return `${styles.badge} ${styles.badgeMute}`;
-};
 
 export interface IInboxPageProps {
   todoRows: IRequestMaster[];
@@ -43,6 +52,23 @@ function tabStillValid(tabs: { id: string }[], id: InboxStatusTabId): boolean {
   }
   return false;
 }
+
+const countPill = (n: number, kind: string): React.ReactNode => (
+  <Text
+    variant="small"
+    styles={{
+      root: {
+        fontWeight: '600',
+        color: badgeColor(kind),
+        background: badgeBg(kind),
+        borderRadius: 4,
+        padding: '2px 8px'
+      }
+    }}
+  >
+    {n}
+  </Text>
+);
 
 const InboxPage: React.FC<IInboxPageProps> = (props) => {
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -120,91 +146,101 @@ const InboxPage: React.FC<IInboxPageProps> = (props) => {
 
   const resetBase = `${props.inboxFilter}|${searchQuery}`;
 
+  const stats: { label: string; value: number }[] = [
+    { label: 'Cần xử lý', value: props.todoRows.length },
+    { label: 'Cần tiếp nhận', value: acceptTodoCount },
+    { label: 'Hồ sơ của tôi', value: props.mineRows.length },
+    { label: 'Đã trả về', value: returnedCount },
+    { label: 'Đang xử lý', value: inProgressCount }
+  ];
+
   return (
-    <>
-      <div className={styles.pageHead}>
-        <div>
-          <h2>Việc của tôi</h2>
-        </div>
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnOutline}`}
-            disabled={props.busy}
-            onClick={props.onRefresh}
-          >
-            Làm mới
-          </button>
-          {props.mayCreate && (
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.btnPrimary}`}
-              onClick={props.onCreate}
+    <ThemeProvider theme={emiPayFluentTheme} style={themeHostStyle}>
+      <Stack tokens={{ childrenGap: 14 }} styles={fillStack}>
+        <Stack
+          horizontal
+          horizontalAlign="space-between"
+          verticalAlign="center"
+          wrap
+          tokens={{ childrenGap: 12 }}
+          styles={cardStack}
+        >
+          <Text variant="xLarge" styles={{ root: { fontWeight: 700 } }}>
+            Việc của tôi
+          </Text>
+          <Stack horizontal tokens={{ childrenGap: 8 }} wrap>
+            <DefaultButton
+              text="Làm mới"
+              disabled={props.busy}
+              onClick={props.onRefresh}
+              styles={actionBtnStyles}
+            />
+            {props.mayCreate && (
+              <PrimaryButton
+                text="Tạo hồ sơ mới"
+                onClick={props.onCreate}
+                styles={actionBtnStyles}
+              />
+            )}
+          </Stack>
+        </Stack>
+
+        <Stack horizontal wrap tokens={{ childrenGap: 10 }}>
+          {stats.map((s) => (
+            <Stack
+              key={s.label}
+              tokens={{ childrenGap: 4 }}
+              styles={{
+                root: {
+                  flex: '1 1 120px',
+                  minWidth: 110,
+                  background: '#fff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 4,
+                  padding: '12px 14px'
+                }
+              }}
             >
-              Tạo hồ sơ mới
-            </button>
-          )}
-        </div>
-      </div>
+              <Text variant="small" styles={{ root: { color: '#4b5563', fontWeight: 600 } }}>
+                {s.label}
+              </Text>
+              <Text variant="xLarge" styles={{ root: { fontWeight: 700, color: '#0f766e' } }}>
+                {s.value}
+              </Text>
+            </Stack>
+          ))}
+        </Stack>
 
-      <div className={styles.heroStats}>
-        <div className={styles.stat}>
-          <b>Cần xử lý</b>
-          <span>{props.todoRows.length}</span>
-        </div>
-        <div className={styles.stat}>
-          <b>Cần tiếp nhận</b>
-          <span>{acceptTodoCount}</span>
-        </div>
-        <div className={styles.stat}>
-          <b>Hồ sơ của tôi</b>
-          <span>{props.mineRows.length}</span>
-        </div>
-        <div className={styles.stat}>
-          <b>Đã trả về</b>
-          <span>{returnedCount}</span>
-        </div>
-        <div className={styles.stat}>
-          <b>Đang xử lý</b>
-          <span>{inProgressCount}</span>
-        </div>
-      </div>
-
-      <div className={styles.inboxSearch}>
-        <label className={styles.inboxSearchLabel} htmlFor="emiPayInboxSearch">
-          Tìm kiếm
-        </label>
-        <input
-          id="emiPayInboxSearch"
-          type="search"
-          className={styles.inboxSearchInput}
-          value={searchQuery}
-          placeholder="Mã, tiêu đề, người tạo, phòng, trạng thái…"
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      {(props.inboxFilter === 'all' || props.inboxFilter === 'todo') && (
-        <section className={styles.card}>
-          <div className={styles.cardH}>
-            <h3>Cần tôi xử lý</h3>
-            <span className={badgeClass(acceptTodoCount > 0 ? 'warn' : 'mute')}>
-              {props.todoRows.length}
-            </span>
-          </div>
-          {acceptTodoCount > 0 && (
-            <p className={styles.inboxSectionHint}>
-              Có {acceptTodoCount} hồ sơ cần tiếp nhận (đặt hạn xử lý) trước khi
-              đánh giá / quyết định.
-            </p>
-          )}
-          <InboxStatusTabs
-            tabs={todoTabs}
-            activeId={effectiveTodoTab}
-            ariaLabel="Lọc trạng thái — cần tôi xử lý"
-            onChange={setTodoTab}
+        <Stack styles={cardStack}>
+          <TextField
+            label="Tìm kiếm"
+            type="search"
+            value={searchQuery}
+            placeholder="Mã, tiêu đề, người tạo, phòng, trạng thái…"
+            onChange={(_, v) => setSearchQuery(v || '')}
           />
-          <div className={styles.cardB} style={{ padding: 0 }}>
+        </Stack>
+
+        {(props.inboxFilter === 'all' || props.inboxFilter === 'todo') && (
+          <Stack tokens={{ childrenGap: 10 }} styles={cardStack}>
+            <Stack horizontal horizontalAlign="space-between" verticalAlign="center">
+              <Text variant="large" styles={{ root: { fontWeight: 600 } }}>
+                Cần tôi xử lý
+              </Text>
+              {countPill(props.todoRows.length, acceptTodoCount > 0 ? 'warn' : 'mute')}
+            </Stack>
+            {acceptTodoCount > 0 && (
+              <MessageBar messageBarType={MessageBarType.warning}>
+                Có {acceptTodoCount} hồ sơ cần tiếp nhận (đặt hạn xử lý) trước khi đánh giá /
+                quyết định.
+              </MessageBar>
+            )}
+            <InboxStatusTabs
+              tabs={todoTabs}
+              activeId={effectiveTodoTab}
+              ariaLabel="Lọc trạng thái — cần tôi xử lý"
+              onChange={setTodoTab}
+            />
             <InboxTable
               rows={todoFiltered}
               searchQuery=""
@@ -213,23 +249,23 @@ const InboxPage: React.FC<IInboxPageProps> = (props) => {
               onOpen={props.onOpen}
               resetToken={`${resetBase}|todo|${effectiveTodoTab}`}
             />
-          </div>
-        </section>
-      )}
+          </Stack>
+        )}
 
-      {(props.inboxFilter === 'all' || props.inboxFilter === 'mine') && (
-        <section className={styles.card}>
-          <div className={styles.cardH}>
-            <h3>{secondTitle}</h3>
-            <span className={badgeClass('mute')}>{secondSource.length}</span>
-          </div>
-          <InboxStatusTabs
-            tabs={secondTabs}
-            activeId={effectiveSecondTab}
-            ariaLabel={`Lọc trạng thái — ${secondTitle}`}
-            onChange={setSecondTab}
-          />
-          <div className={styles.cardB} style={{ padding: 0 }}>
+        {(props.inboxFilter === 'all' || props.inboxFilter === 'mine') && (
+          <Stack tokens={{ childrenGap: 10 }} styles={cardStack}>
+            <Stack horizontal horizontalAlign="space-between" verticalAlign="center">
+              <Text variant="large" styles={{ root: { fontWeight: 600 } }}>
+                {secondTitle}
+              </Text>
+              {countPill(secondSource.length, 'mute')}
+            </Stack>
+            <InboxStatusTabs
+              tabs={secondTabs}
+              activeId={effectiveSecondTab}
+              ariaLabel={`Lọc trạng thái — ${secondTitle}`}
+              onChange={setSecondTab}
+            />
             <InboxTable
               rows={secondFiltered}
               searchQuery=""
@@ -238,10 +274,10 @@ const InboxPage: React.FC<IInboxPageProps> = (props) => {
               onOpen={props.onOpen}
               resetToken={`${resetBase}|second|${effectiveSecondTab}`}
             />
-          </div>
-        </section>
-      )}
-    </>
+          </Stack>
+        )}
+      </Stack>
+    </ThemeProvider>
   );
 };
 

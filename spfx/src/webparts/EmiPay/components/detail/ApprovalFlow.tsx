@@ -1,5 +1,5 @@
 import * as React from 'react';
-import styles from '../EmiPay.module.scss';
+import { Stack, Text } from '@fluentui/react';
 import { IActivityPublicRow } from '../../services/ActivityService';
 import { stepFlowFacts } from '../../services/flowFacts';
 import { CORE_STEPS } from '../../services/PayLists';
@@ -31,33 +31,88 @@ function formatWhen(iso: string): string {
 const ApprovalFlow: React.FC<IApprovalFlowProps> = (props) => {
   const cur = stepIndex(props.currentStepKey);
   return (
-    <div className={styles.flowV}>
+    <Stack tokens={{ childrenGap: 0 }}>
       {CORE_STEPS.map((s, idx) => {
         const done = idx < cur;
         const now = idx === cur;
         const facts = stepFlowFacts(s, props.workItems, props.activities);
+        const last = idx === CORE_STEPS.length - 1;
         return (
-          <div
+          <Stack
             key={s}
-            className={`${styles.flowStep} ${done ? styles.flowDone : ''} ${
-              now ? styles.flowNow : ''
-            }`.trim()}
+            horizontal
+            tokens={{ childrenGap: 10 }}
+            styles={{
+              root: {
+                position: 'relative',
+                paddingBottom: last ? 0 : 14
+              }
+            }}
           >
-            <span className={styles.flowDot}>{done ? '✓' : idx + 1}</span>
-            <strong>{stepShortVi(s)}</strong>
-            {!!facts.receivedAt && (
-              <span className={styles.flowMeta}>Nhận: {formatWhen(facts.receivedAt)}</span>
+            {!last && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 11,
+                  top: 24,
+                  bottom: 0,
+                  width: 2,
+                  background: done || now ? '#0f766e' : '#e5e7eb'
+                }}
+              />
             )}
-            {!!facts.processedAt && (
-              <span className={styles.flowMeta}>Xử lý: {formatWhen(facts.processedAt)}</span>
-            )}
-            {!!facts.closedBy && (
-              <span className={styles.flowMeta}>Chốt: {facts.closedBy}</span>
-            )}
-          </div>
+            <Stack
+              horizontalAlign="center"
+              verticalAlign="center"
+              styles={{
+                root: {
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  flexShrink: 0,
+                  background: done ? '#0f766e' : now ? '#e7f5f3' : '#f3f4f6',
+                  border: now ? '2px solid #0f766e' : '1px solid #e5e7eb',
+                  color: done ? '#fff' : now ? '#0c5f59' : '#4b5563',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  zIndex: 1
+                }
+              }}
+            >
+              {done ? '✓' : idx + 1}
+            </Stack>
+            <Stack tokens={{ childrenGap: 2 }} styles={{ root: { minWidth: 0, paddingTop: 2 } }}>
+              <Text
+                styles={{
+                  root: {
+                    fontWeight: now ? 700 : 600,
+                    color: now ? '#0c5f59' : '#111',
+                    fontSize: 13
+                  }
+                }}
+              >
+                {stepShortVi(s)}
+              </Text>
+              {!!facts.receivedAt && (
+                <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+                  Nhận: {formatWhen(facts.receivedAt)}
+                </Text>
+              )}
+              {!!facts.processedAt && (
+                <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+                  Xử lý: {formatWhen(facts.processedAt)}
+                </Text>
+              )}
+              {!!facts.closedBy && (
+                <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+                  Chốt: {facts.closedBy}
+                </Text>
+              )}
+            </Stack>
+          </Stack>
         );
       })}
-    </div>
+    </Stack>
   );
 };
 

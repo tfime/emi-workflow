@@ -1,5 +1,18 @@
 import * as React from 'react';
-import styles from './EmiPay.module.scss';
+import {
+  DefaultButton,
+  MessageBar,
+  MessageBarType,
+  Panel,
+  PanelType,
+  PrimaryButton,
+  Spinner,
+  SpinnerSize,
+  Stack,
+  Text,
+  TextField,
+  ThemeProvider
+} from '@fluentui/react';
 import {
   IDocumentIndexRow,
   INoteListItem,
@@ -8,6 +21,9 @@ import {
   IResolvedPreview,
   shortFileName
 } from '../services';
+import { emiPayFluentTheme } from '../theme/fluentPayTheme';
+import styles from './EmiPay.module.scss';
+import { actionBtnStyles, themeHostStyle } from './detail/detailStyles';
 
 export interface IFilePreviewDrawerProps {
   sp: ISpRestContext;
@@ -43,7 +59,6 @@ const FilePreviewDrawer: React.FC<IFilePreviewDrawerProps> = ({
     let cancelled = false;
     setLoading(true);
     setPreview(undefined);
-    // eslint prefers undefined over void — giữ void để fire-and-forget trong effect
     void (async () => {
       const result = await resolveDocPreview(sp, doc.fileUrl, doc.fileName);
       if (cancelled) {
@@ -68,51 +83,50 @@ const FilePreviewDrawer: React.FC<IFilePreviewDrawerProps> = ({
   }, [sp, doc.fileUrl, doc.fileName, doc.id]);
 
   return (
-    <div
-      className={styles.drawerOverlay}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Xem tài liệu"
-      onClick={onClose}
-    >
-      <aside className={styles.drawer} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.drawerH}>
-          <div style={{ minWidth: 0 }}>
-            <h3
-              style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-              title={doc.fileName}
-            >
-              {shortFileName(doc.fileName || 'Tài liệu', 22, 12)}
-            </h3>
-            <span className={styles.meta} style={{ margin: 0 }}>
-              {doc.docClass || '—'} · {doc.uploadedByUPN || '—'}
-              {doc.uploadedAt ? ` · ${new Date(doc.uploadedAt).toLocaleString('vi-VN')}` : ''}
-            </span>
-          </div>
-          <div className={styles.actions}>
+    <ThemeProvider theme={emiPayFluentTheme} style={themeHostStyle}>
+      <Panel
+        isOpen={true}
+        onDismiss={onClose}
+        type={PanelType.large}
+        isLightDismiss={true}
+        headerText={shortFileName(doc.fileName || 'Tài liệu', 22, 12)}
+        closeButtonAriaLabel="Đóng"
+        styles={{
+          main: { maxWidth: 920 },
+          content: { paddingBottom: 24 }
+        }}
+        onRenderFooterContent={() => (
+          <Stack horizontal tokens={{ childrenGap: 8 }} horizontalAlign="end">
             {doc.fileUrl && (
-              <a
-                className={`${styles.btn} ${styles.btnOutline}`}
+              <DefaultButton
+                text="Tải xuống"
                 href={doc.fileUrl}
-                download={doc.fileName || true}
-                style={{ padding: '6px 10px', fontSize: 12, textDecoration: 'none' }}
-              >
-                Tải xuống
-              </a>
+                target="_blank"
+                styles={actionBtnStyles}
+              />
             )}
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.btnGhost}`}
-              onClick={onClose}
-            >
-              Đóng
-            </button>
-          </div>
-        </div>
+            <DefaultButton text="Đóng" onClick={onClose} styles={actionBtnStyles} />
+          </Stack>
+        )}
+        isFooterAtBottom={true}
+      >
+        <Stack tokens={{ childrenGap: 16 }}>
+          <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+            {doc.docClass || '—'} · {doc.uploadedByUPN || '—'}
+            {doc.uploadedAt ? ` · ${new Date(doc.uploadedAt).toLocaleString('vi-VN')}` : ''}
+          </Text>
 
-        <div className={styles.drawerB}>
           <div className={`${styles.filePreview} ${styles.filePreviewLive}`}>
-            {loading && <p className={styles.hint}>Đang tải xem trước…</p>}
+            {loading && (
+              <Stack
+                horizontalAlign="center"
+                verticalAlign="center"
+                tokens={{ childrenGap: 8 }}
+                styles={{ root: { padding: 24 } }}
+              >
+                <Spinner size={SpinnerSize.medium} label="Đang tải xem trước…" />
+              </Stack>
+            )}
             {!loading && preview?.mode === 'embed' && preview.embedUrl && (
               <iframe
                 title={doc.fileName || 'preview'}
@@ -135,84 +149,98 @@ const FilePreviewDrawer: React.FC<IFilePreviewDrawerProps> = ({
               />
             )}
             {!loading && preview?.mode === 'none' && (
-              <div style={{ padding: 24, textAlign: 'center' }}>
-                <strong>{doc.fileName}</strong>
-                <p className={styles.hint} style={{ marginTop: 8 }}>
+              <Stack
+                horizontalAlign="center"
+                tokens={{ childrenGap: 8 }}
+                styles={{ root: { padding: 24 } }}
+              >
+                <Text styles={{ root: { fontWeight: 600 } }}>{doc.fileName}</Text>
+                <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
                   {preview.error || 'Không xem trước được tệp này trong khung.'}
-                </p>
-              </div>
+                </Text>
+              </Stack>
             )}
           </div>
 
-          <div>
-            <h4 style={{ margin: '0 0 8px', fontSize: 14 }}>
-              Ghi chú trên tài liệu
-              {notes.length > 0 ? (
-                <span className={styles.tabCountBadge} style={{ marginLeft: 8 }}>
-                  {notes.length}
-                </span>
-              ) : null}
-            </h4>
-            {notes.length === 0 ? (
-              <p className={styles.hint} style={{ marginTop: 0 }}>
-                Chưa có ghi chú cho tệp này.
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-                {notes.map((n) => (
-                  <div
-                    key={n.id}
-                    style={{
-                      padding: '8px 10px',
-                      border: '1px solid var(--emi-line, #e5e7eb)',
+          <Stack tokens={{ childrenGap: 10 }}>
+            <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 8 }}>
+              <Text styles={{ root: { fontWeight: 600 } }}>Ghi chú trên tài liệu</Text>
+              {notes.length > 0 && (
+                <Text
+                  variant="small"
+                  styles={{
+                    root: {
+                      background: '#fee2e2',
+                      color: '#b91c1c',
                       borderRadius: 4,
-                      background: '#fafafa'
+                      padding: '1px 6px',
+                      fontWeight: '600'
+                    }
+                  }}
+                >
+                  {notes.length}
+                </Text>
+              )}
+            </Stack>
+            {notes.length === 0 ? (
+              <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+                Chưa có ghi chú cho tệp này.
+              </Text>
+            ) : (
+              <Stack tokens={{ childrenGap: 8 }}>
+                {notes.map((n) => (
+                  <Stack
+                    key={n.id}
+                    tokens={{ childrenGap: 4 }}
+                    styles={{
+                      root: {
+                        padding: '8px 10px',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: 4,
+                        background: '#fafafa'
+                      }
                     }}
                   >
-                    <div className={styles.meta} style={{ margin: '0 0 4px' }}>
-                      {[
-                        n.at ? new Date(n.at).toLocaleString('vi-VN') : '',
-                        n.actorUPN
-                      ]
+                    <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+                      {[n.at ? new Date(n.at).toLocaleString('vi-VN') : '', n.actorUPN]
                         .filter(Boolean)
                         .join(' · ')}
-                    </div>
-                    <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{n.body}</div>
-                  </div>
+                    </Text>
+                    <Text styles={{ root: { whiteSpace: 'pre-wrap', fontSize: 13 } }}>
+                      {n.body}
+                    </Text>
+                  </Stack>
                 ))}
-              </div>
+              </Stack>
             )}
             {!commentsEnabled ? (
-              <p className={styles.hint}>
+              <MessageBar messageBarType={MessageBarType.info}>
                 {commentsDisabledHint ||
                   'Tiếp nhận và đặt hạn trước khi ghi chú trên tài liệu.'}
-              </p>
+              </MessageBar>
             ) : (
-              <>
-                <label className={`${styles.field} ${styles.fieldFull}`}>
-                  Thêm ghi chú cho tệp này
-                  <textarea
-                    rows={3}
-                    value={comment}
-                    onChange={(e) => onCommentChange(e.target.value)}
-                    placeholder="Ghi chú gắn với tài liệu này…"
-                  />
-                </label>
-                <div className={styles.actions} style={{ justifyContent: 'flex-end', marginTop: 8 }}>
-                  <button
-                    type="button"
-                    className={`${styles.btn} ${styles.btnPrimary}`}
+              <Stack tokens={{ childrenGap: 8 }}>
+                <TextField
+                  label="Thêm ghi chú cho tệp này"
+                  multiline
+                  rows={3}
+                  value={comment}
+                  onChange={(_, v) => onCommentChange(v || '')}
+                  placeholder="Ghi chú gắn với tài liệu này…"
+                />
+                <Stack horizontal horizontalAlign="end">
+                  <PrimaryButton
+                    text="Gửi ghi chú"
                     onClick={onSendComment}
-                  >
-                    Gửi ghi chú
-                  </button>
-                </div>
-              </>
+                    styles={actionBtnStyles}
+                  />
+                </Stack>
+              </Stack>
             )}
-          </div>
-        </div>
-      </aside>
-    </div>
+          </Stack>
+        </Stack>
+      </Panel>
+    </ThemeProvider>
   );
 };
 

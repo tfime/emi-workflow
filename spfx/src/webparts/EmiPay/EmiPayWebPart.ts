@@ -12,7 +12,10 @@ import { AadHttpClient } from '@microsoft/sp-http';
 import * as strings from 'EmiPayWebPartStrings';
 import EmiPay from './components/EmiPay';
 import { IEmiPayProps } from './components/EmiPay';
-import { expandCanvasParents } from '../../shared/ui/expandCanvas';
+import {
+  expandCanvasParents,
+  releaseCanvasParents
+} from '../../shared/ui/expandCanvas';
 import { IOrchestratorHttpResult } from './services/SpRest';
 
 /** Audience bắt buộc cho HTTP trigger Flow (kèm trailing slash). */
@@ -58,12 +61,28 @@ export default class EmiPayWebPart extends BaseClientSideWebPart<IEmiPayWebPartP
 
     ReactDom.render(element, this.domElement);
     // Match emi-uikit EmiEcm: expand now and again after SharePoint finishes layout.
+    this._expandLayout();
+    window.setTimeout(() => this._expandLayout(), 100);
+    window.setTimeout(() => this._expandLayout(), 400);
+    window.setTimeout(() => this._expandLayout(), 1000);
+    if (!this._resizeBound) {
+      this._resizeBound = (): void => this._expandLayout();
+      window.addEventListener('resize', this._resizeBound);
+    }
+  }
+
+  private _resizeBound?: () => void;
+
+  private _expandLayout(): void {
     expandCanvasParents(this.domElement);
-    window.setTimeout(() => expandCanvasParents(this.domElement), 100);
-    window.setTimeout(() => expandCanvasParents(this.domElement), 400);
   }
 
   protected onDispose(): void {
+    if (this._resizeBound) {
+      window.removeEventListener('resize', this._resizeBound);
+      this._resizeBound = undefined;
+    }
+    releaseCanvasParents();
     ReactDom.unmountComponentAtNode(this.domElement);
   }
 

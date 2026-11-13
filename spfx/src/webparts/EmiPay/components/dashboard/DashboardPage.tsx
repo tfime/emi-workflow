@@ -1,4 +1,18 @@
 import * as React from 'react';
+import {
+  DefaultButton,
+  DetailsList,
+  DetailsListLayoutMode,
+  IColumn,
+  MessageBar,
+  MessageBarType,
+  SelectionMode,
+  Spinner,
+  SpinnerSize,
+  Stack,
+  Text,
+  ThemeProvider
+} from '@fluentui/react';
 import styles from '../EmiPay.module.scss';
 import { ISpRestContext } from '../../services/SpRest';
 import {
@@ -15,28 +29,60 @@ import {
 } from '../../services/RequestService';
 import { listRecentActivityPublic, IActivityPublicRow } from '../../services/ActivityService';
 import { ICommandActor, requestVisibleTo } from '../../services/actorAuth';
-import { buildDashboardModel, IDashAlert, ouNameOf } from './dashboardStats';
+import { emiPayFluentTheme } from '../../theme/fluentPayTheme';
+import {
+  actionBtnStyles,
+  cardStack,
+  fillStack,
+  themeHostStyle
+} from '../detail/detailStyles';
+import { badgeBg, badgeColor } from '../detail/fluentBadge';
+import {
+  buildDashboardModel,
+  IDashAlert,
+  IOuLoadRow,
+  IOuRateRow,
+  ouNameOf
+} from './dashboardStats';
 import DashBarChart from './DashBarChart';
 
-const badgeClass = (kind: string): string => {
-  if (kind === 'warn') return `${styles.badge} ${styles.badgeWarn}`;
-  if (kind === 'ok') return `${styles.badge} ${styles.badgeOk}`;
-  if (kind === 'info') return `${styles.badge} ${styles.badgeInfo}`;
-  if (kind === 'danger') return `${styles.badge} ${styles.badgeDanger}`;
-  return `${styles.badge} ${styles.badgeMute}`;
-};
+const pill = (text: string, kind: string): React.ReactNode => (
+  <Text
+    variant="small"
+    styles={{
+      root: {
+        fontWeight: '600',
+        color: badgeColor(kind),
+        background: badgeBg(kind),
+        borderRadius: 4,
+        padding: '2px 8px'
+      }
+    }}
+  >
+    {text}
+  </Text>
+);
 
 const formatRate = (
   rate: number | undefined,
-  hint?: string
+  hint?: string,
+  warn?: boolean
 ): React.ReactNode => {
   if (rate === undefined) {
-    return <span className={styles.dashRateEmpty}>—</span>;
+    return <Text styles={{ root: { color: '#9ca3af' } }}>—</Text>;
   }
   return (
-    <span className={styles.dashRate} title={hint || undefined}>
+    <Text
+      title={hint || undefined}
+      styles={{
+        root: {
+          fontWeight: 600,
+          color: warn && rate > 0 ? '#b45309' : '#111'
+        }
+      }}
+    >
       {rate}%
-    </span>
+    </Text>
   );
 };
 
@@ -122,325 +168,412 @@ const DashboardPage: React.FC<IDashboardPageProps> = (props) => {
 
   const renderAlert = (a: IDashAlert): React.ReactNode => {
     const clickable = !!a.requestKey;
-    const tone =
-      a.severity === 'danger'
-        ? styles.dashAlertDanger
-        : a.severity === 'warn'
-          ? styles.dashAlertWarn
-          : styles.dashAlertInfo;
+    const border =
+      a.severity === 'danger' ? '#fecaca' : a.severity === 'warn' ? '#fde68a' : '#bfdbfe';
+    const bg =
+      a.severity === 'danger' ? '#fef2f2' : a.severity === 'warn' ? '#fffbeb' : '#eff6ff';
+    const kindColor =
+      a.severity === 'danger' ? '#b91c1c' : a.severity === 'warn' ? '#92400e' : '#1d4ed8';
     const headline = a.requestCode
       ? a.requestCode
       : a.ouCode
         ? ouNameOf(a.ouCode, props.orgUnits)
         : 'Hệ thống';
     return (
-      <button
+      <DefaultButton
         key={a.id}
-        type="button"
-        className={`${styles.dashAlert} ${tone}`.trim()}
         disabled={!clickable}
         onClick={() => {
           if (a.requestKey) props.onOpen(a.requestKey);
         }}
+        styles={{
+          root: {
+            width: '100%',
+            height: 'auto',
+            minHeight: 44,
+            padding: '10px 12px',
+            borderRadius: 4,
+            border: `1px solid ${border}`,
+            background: bg,
+            textAlign: 'left'
+          },
+          rootHovered: { background: bg, borderColor: border },
+          flexContainer: {
+            width: '100%',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start'
+          },
+          label: { margin: 0, width: '100%' }
+        }}
       >
-        <span className={styles.dashAlertKind}>{a.title}</span>
-        <span className={styles.dashAlertBody}>
-          <strong>{headline}</strong>
-          <span>{a.detail}</span>
-        </span>
-        {clickable && <span className={styles.dashAlertGo}>Mở</span>}
-      </button>
+        <Stack
+          horizontal
+          horizontalAlign="space-between"
+          verticalAlign="start"
+          tokens={{ childrenGap: 10 }}
+          styles={{ root: { width: '100%' } }}
+        >
+          <Stack tokens={{ childrenGap: 4 }} styles={{ root: { minWidth: 0, flex: 1 } }}>
+            <Text
+              variant="small"
+              styles={{ root: { color: kindColor, fontWeight: 700 } }}
+            >
+              {a.title}
+            </Text>
+            <Text styles={{ root: { fontWeight: 600 } }}>{headline}</Text>
+            <Text variant="small" styles={{ root: { color: '#4b5563', whiteSpace: 'normal' } }}>
+              {a.detail}
+            </Text>
+          </Stack>
+          {clickable && (
+            <Text
+              variant="small"
+              styles={{ root: { color: '#0f766e', fontWeight: 600, flexShrink: 0 } }}
+            >
+              Mở
+            </Text>
+          )}
+        </Stack>
+      </DefaultButton>
     );
   };
 
+  const kpiItems = [
+    { label: 'Hồ sơ đang mở', value: model.totals.open, hot: false },
+    { label: 'Chờ tiếp nhận', value: model.totals.waitingAccept, hot: false },
+    { label: 'Quá hạn xử lý', value: model.totals.wiOverdue, hot: !!model.totals.wiOverdue },
+    {
+      label: 'Điểm nóng',
+      value: model.totals.attentionCount,
+      hot: !!model.totals.attentionCount
+    }
+  ];
+
   return (
-    <div className={styles.dashPage}>
-      <div className={styles.pageHead}>
-        <div>
-          <h2>Tổng quan vận hành</h2>
-          <p className={styles.dashLead}>{scopeLabel}</p>
-        </div>
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={`${styles.btn} ${styles.btnOutline}`}
+    <ThemeProvider theme={emiPayFluentTheme} style={themeHostStyle}>
+      <Stack tokens={{ childrenGap: 14 }} styles={fillStack} className={styles.dashPage}>
+        <Stack
+          horizontal
+          horizontalAlign="space-between"
+          verticalAlign="center"
+          wrap
+          tokens={{ childrenGap: 12 }}
+          styles={cardStack}
+        >
+          <Stack tokens={{ childrenGap: 4 }}>
+            <Text variant="xLarge" styles={{ root: { fontWeight: 700 } }}>
+              Tổng quan vận hành
+            </Text>
+            <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+              {scopeLabel}
+            </Text>
+          </Stack>
+          <DefaultButton
+            text="Làm mới"
             disabled={loading || props.busy}
+            styles={actionBtnStyles}
             onClick={() => {
               void load();
               if (props.onRefreshParent) props.onRefreshParent();
             }}
-          >
-            Làm mới
-          </button>
-        </div>
-      </div>
+          />
+        </Stack>
 
-      {error && <p className={styles.empty}>{error}</p>}
-      {loading && !error && <p className={styles.empty}>Đang tải tổng quan…</p>}
+        {error && (
+          <MessageBar messageBarType={MessageBarType.error}>{error}</MessageBar>
+        )}
+        {loading && !error && (
+          <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 10 }}>
+            <Spinner size={SpinnerSize.small} />
+            <Text>Đang tải tổng quan…</Text>
+          </Stack>
+        )}
 
-      {!loading && !error && (
-        <>
-          <section className={styles.dashSection}>
-            <div className={styles.dashTopRow}>
-              <div className={styles.dashKpiPanel}>
-                <div className={styles.dashKpiGrid2x2}>
-                  <div className={styles.dashKpi}>
-                    <span className={styles.dashKpiLabel}>Hồ sơ đang mở</span>
-                    <strong className={styles.dashKpiValue}>{model.totals.open}</strong>
-                  </div>
-                  <div className={styles.dashKpi}>
-                    <span className={styles.dashKpiLabel}>Chờ tiếp nhận</span>
-                    <strong className={styles.dashKpiValue}>
-                      {model.totals.waitingAccept}
-                    </strong>
-                  </div>
-                  <div
-                    className={`${styles.dashKpi} ${
-                      model.totals.wiOverdue ? styles.dashKpiHot : ''
-                    }`.trim()}
-                  >
-                    <span className={styles.dashKpiLabel}>Quá hạn xử lý</span>
-                    <strong className={styles.dashKpiValue}>
-                      {model.totals.wiOverdue}
-                    </strong>
-                  </div>
-                  <div
-                    className={`${styles.dashKpi} ${
-                      model.totals.attentionCount ? styles.dashKpiHot : ''
-                    }`.trim()}
-                  >
-                    <span className={styles.dashKpiLabel}>Điểm nóng</span>
-                    <strong className={styles.dashKpiValue}>
-                      {model.totals.attentionCount}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              <section
-                className={`${styles.card} ${styles.dashAttentionCard}`.trim()}
+        {!loading && !error && (
+          <>
+            <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
+              <Stack
+                horizontal
+                wrap
+                tokens={{ childrenGap: 10 }}
+                styles={{ root: { flex: '1 1 280px', minWidth: 0 } }}
               >
-                <div className={styles.cardH}>
-                  <h3>Cần để ý ngay</h3>
-                  <span
-                    className={badgeClass(
-                      model.priorityAlerts.length ? 'danger' : 'ok'
-                    )}
+                {kpiItems.map((k) => (
+                  <Stack
+                    key={k.label}
+                    tokens={{ childrenGap: 4 }}
+                    styles={{
+                      root: {
+                        flex: '1 1 120px',
+                        minWidth: 110,
+                        background: '#fff',
+                        border: `1px solid ${k.hot ? '#fecaca' : '#e5e7eb'}`,
+                        borderRadius: 4,
+                        padding: '12px 14px'
+                      }
+                    }}
                   >
-                    {model.priorityAlerts.length}
-                  </span>
-                </div>
-                <div
-                  className={`${styles.cardB} ${styles.dashAttentionBody}`.trim()}
-                  style={{
-                    padding: model.priorityAlerts.length ? 0 : undefined
-                  }}
-                >
-                  {model.priorityAlerts.length === 0 ? (
-                    <p className={styles.empty}>
-                      Không có việc nóng theo mức cảnh báo hiện tại.
-                    </p>
-                  ) : (
-                    <div className={styles.dashAlertList}>
-                      {model.priorityAlerts.map(renderAlert)}
-                    </div>
+                    <Text
+                      variant="small"
+                      styles={{ root: { color: '#4b5563', fontWeight: 600 } }}
+                    >
+                      {k.label}
+                    </Text>
+                    <Text
+                      variant="xLarge"
+                      styles={{
+                        root: { fontWeight: 700, color: k.hot ? '#b91c1c' : '#0f766e' }
+                      }}
+                    >
+                      {k.value}
+                    </Text>
+                  </Stack>
+                ))}
+              </Stack>
+
+              <Stack
+                tokens={{ childrenGap: 10 }}
+                styles={{
+                  ...cardStack,
+                  root: {
+                    ...(cardStack.root as object),
+                    flex: '1 1 280px',
+                    minWidth: 0,
+                    maxHeight: 320,
+                    overflow: 'auto'
+                  }
+                }}
+              >
+                <Stack horizontal horizontalAlign="space-between" verticalAlign="center">
+                  <Text variant="large" styles={{ root: { fontWeight: 600 } }}>
+                    Cần để ý ngay
+                  </Text>
+                  {pill(
+                    String(model.priorityAlerts.length),
+                    model.priorityAlerts.length ? 'danger' : 'ok'
                   )}
-                </div>
-              </section>
-            </div>
-          </section>
-
-          <section className={styles.dashSection}>
-            <h3 className={styles.dashSectionTitle}>Tình trạng từng phòng</h3>
-            <div className={styles.card}>
-              <div className={styles.cardB} style={{ padding: 0 }}>
-                {model.ouRows.length === 0 ? (
-                  <p className={styles.empty}>Không có dữ liệu phòng.</p>
+                </Stack>
+                {model.priorityAlerts.length === 0 ? (
+                  <Text styles={{ root: { color: '#4b5563' } }}>
+                    Không có việc nóng theo mức cảnh báo hiện tại.
+                  </Text>
                 ) : (
-                  <table className={styles.dataTable}>
-                    <thead>
-                      <tr>
-                        <th>Phòng ban</th>
-                        <th>Hồ sơ đang giữ</th>
-                        <th>Chờ tiếp nhận</th>
-                        <th>Đang xử lý</th>
-                        <th>Quá hạn</th>
-                        <th>Sắp hết hạn</th>
-                        <th>Cần để ý</th>
-                        <th>Tình trạng</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {model.ouRows.map((row) => (
-                        <tr
-                          key={row.ouCode || 'none'}
-                          className={
-                            row.overloaded || row.wiOverdue > 0
-                              ? styles.dashRowHot
-                              : undefined
-                          }
-                        >
-                          <td>
-                            <strong>{row.ouName}</strong>
-                          </td>
-                          <td>{row.total}</td>
-                          <td>{row.waitingAccept}</td>
-                          <td>{row.inReview}</td>
-                          <td>
-                            {row.wiOverdue > 0 ? (
-                              <span className={badgeClass('danger')}>
-                                {row.wiOverdue}
-                              </span>
-                            ) : (
-                              0
-                            )}
-                          </td>
-                          <td>
-                            {row.wiDueSoon > 0 ? (
-                              <span className={badgeClass('warn')}>
-                                {row.wiDueSoon}
-                              </span>
-                            ) : (
-                              0
-                            )}
-                          </td>
-                          <td className={styles.dashAttentionCell}>
-                            {row.attention}
-                          </td>
-                          <td>
-                            {row.overloaded ? (
-                              <span className={badgeClass('danger')}>Quá tải</span>
-                            ) : row.wiOverdue > 0 || row.waitingAccept > 0 ? (
-                              <span className={badgeClass('warn')}>
-                                Cần theo dõi
-                              </span>
-                            ) : (
-                              <span className={badgeClass('ok')}>Ổn định</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <Stack tokens={{ childrenGap: 8 }}>
+                    {model.priorityAlerts.map(renderAlert)}
+                  </Stack>
                 )}
+              </Stack>
+            </Stack>
+
+          <Stack tokens={{ childrenGap: 10 }} styles={cardStack}>
+            <Text variant="large" styles={{ root: { fontWeight: 600 } }}>
+              Tình trạng từng phòng
+            </Text>
+            {model.ouRows.length === 0 ? (
+              <Text styles={{ root: { color: '#4b5563' } }}>Không có dữ liệu phòng.</Text>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <DetailsList
+                  items={model.ouRows}
+                  selectionMode={SelectionMode.none}
+                  layoutMode={DetailsListLayoutMode.justified}
+                  compact={true}
+                  columns={
+                    [
+                      {
+                        key: 'ou',
+                        name: 'Phòng ban',
+                        minWidth: 120,
+                        isResizable: true,
+                        onRender: (row: IOuLoadRow) => (
+                          <Text styles={{ root: { fontWeight: 600 } }}>{row.ouName}</Text>
+                        )
+                      },
+                      {
+                        key: 'total',
+                        name: 'Hồ sơ đang giữ',
+                        minWidth: 80,
+                        onRender: (row: IOuLoadRow) => row.total
+                      },
+                      {
+                        key: 'wa',
+                        name: 'Chờ tiếp nhận',
+                        minWidth: 80,
+                        onRender: (row: IOuLoadRow) => row.waitingAccept
+                      },
+                      {
+                        key: 'ir',
+                        name: 'Đang xử lý',
+                        minWidth: 70,
+                        onRender: (row: IOuLoadRow) => row.inReview
+                      },
+                      {
+                        key: 'od',
+                        name: 'Quá hạn',
+                        minWidth: 70,
+                        onRender: (row: IOuLoadRow) =>
+                          row.wiOverdue > 0 ? pill(String(row.wiOverdue), 'danger') : 0
+                      },
+                      {
+                        key: 'soon',
+                        name: 'Sắp hết hạn',
+                        minWidth: 80,
+                        onRender: (row: IOuLoadRow) =>
+                          row.wiDueSoon > 0 ? pill(String(row.wiDueSoon), 'warn') : 0
+                      },
+                      {
+                        key: 'att',
+                        name: 'Cần để ý',
+                        minWidth: 70,
+                        onRender: (row: IOuLoadRow) => row.attention
+                      },
+                      {
+                        key: 'st',
+                        name: 'Tình trạng',
+                        minWidth: 100,
+                        onRender: (row: IOuLoadRow) =>
+                          row.overloaded
+                            ? pill('Quá tải', 'danger')
+                            : row.wiOverdue > 0 || row.waitingAccept > 0
+                              ? pill('Cần theo dõi', 'warn')
+                              : pill('Ổn định', 'ok')
+                      }
+                    ] as IColumn[]
+                  }
+                />
               </div>
-            </div>
-          </section>
+            )}
+          </Stack>
 
-          <section className={styles.dashSection}>
-            <h3 className={styles.dashSectionTitle}>Hiệu suất theo đơn vị</h3>
-            <div className={styles.card}>
-              <div className={styles.cardB} style={{ padding: 0 }}>
-                {model.ouRateRows.length === 0 ? (
-                  <p className={styles.empty}>
-                    Chưa đủ dữ liệu việc / quyết định để tính tỉ lệ.
-                  </p>
-                ) : (
-                  <table className={styles.dataTable}>
-                    <thead>
-                      <tr>
-                        <th>Phòng ban</th>
-                        <th>Tiếp nhận</th>
-                        <th>Đúng hạn</th>
-                        <th>Trễ</th>
-                        <th>Chấp thuận</th>
-                        <th>Trả lại</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {model.ouRateRows.map((row) => (
-                        <tr key={`rate-${row.ouCode || 'none'}`}>
-                          <td>
-                            <strong>{row.ouName}</strong>
-                          </td>
-                          <td>{formatRate(row.acceptRate, row.acceptHint)}</td>
-                          <td>{formatRate(row.onTimeRate, row.onTimeHint)}</td>
-                          <td>
-                            {row.lateRate !== undefined && row.lateRate > 0 ? (
-                              <span
-                                className={styles.dashRateWarn}
-                                title={row.lateHint || undefined}
-                              >
-                                {row.lateRate}%
-                              </span>
-                            ) : (
-                              formatRate(row.lateRate, row.lateHint)
-                            )}
-                          </td>
-                          <td>{formatRate(row.approveRate, row.approveHint)}</td>
-                          <td>
-                            {row.returnRate !== undefined && row.returnRate > 0 ? (
-                              <span
-                                className={styles.dashRateWarn}
-                                title={row.returnHint || undefined}
-                              >
-                                {row.returnRate}%
-                              </span>
-                            ) : (
-                              formatRate(row.returnRate, row.returnHint)
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
+          <Stack tokens={{ childrenGap: 10 }} styles={cardStack}>
+            <Text variant="large" styles={{ root: { fontWeight: 600 } }}>
+              Hiệu suất theo đơn vị
+            </Text>
+            {model.ouRateRows.length === 0 ? (
+              <Text styles={{ root: { color: '#4b5563' } }}>
+                Chưa đủ dữ liệu việc / quyết định để tính tỉ lệ.
+              </Text>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <DetailsList
+                  items={model.ouRateRows}
+                  selectionMode={SelectionMode.none}
+                  layoutMode={DetailsListLayoutMode.justified}
+                  compact={true}
+                  columns={
+                    [
+                      {
+                        key: 'ou',
+                        name: 'Phòng ban',
+                        minWidth: 120,
+                        isResizable: true,
+                        onRender: (row: IOuRateRow) => (
+                          <Text styles={{ root: { fontWeight: 600 } }}>{row.ouName}</Text>
+                        )
+                      },
+                      {
+                        key: 'acc',
+                        name: 'Tiếp nhận',
+                        minWidth: 80,
+                        onRender: (row: IOuRateRow) =>
+                          formatRate(row.acceptRate, row.acceptHint)
+                      },
+                      {
+                        key: 'ot',
+                        name: 'Đúng hạn',
+                        minWidth: 80,
+                        onRender: (row: IOuRateRow) =>
+                          formatRate(row.onTimeRate, row.onTimeHint)
+                      },
+                      {
+                        key: 'late',
+                        name: 'Trễ',
+                        minWidth: 70,
+                        onRender: (row: IOuRateRow) =>
+                          formatRate(row.lateRate, row.lateHint, true)
+                      },
+                      {
+                        key: 'ap',
+                        name: 'Chấp thuận',
+                        minWidth: 80,
+                        onRender: (row: IOuRateRow) =>
+                          formatRate(row.approveRate, row.approveHint)
+                      },
+                      {
+                        key: 'ret',
+                        name: 'Trả lại',
+                        minWidth: 70,
+                        onRender: (row: IOuRateRow) =>
+                          formatRate(row.returnRate, row.returnHint, true)
+                      }
+                    ] as IColumn[]
+                  }
+                />
               </div>
-            </div>
-            <p className={styles.dashSectionHint}>
-              Theo việc (Work Item) của phòng phụ trách: tiếp nhận trên bước cần
-              ACCEPT; đúng hạn/trễ so ngày đóng với hạn xử lý; chấp thuận/trả lại theo
-              quyết định PASS·APPROVE / REJECT. Di chuột lên số để xem mẫu (vd. 3/4).
-            </p>
-          </section>
+            )}
+            <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+              Theo việc (Work Item) của phòng phụ trách: tiếp nhận trên bước cần ACCEPT;
+              đúng hạn/trễ so ngày đóng với hạn xử lý; chấp thuận/trả lại theo quyết định
+              PASS·APPROVE / REJECT. Di chuột lên số để xem mẫu (vd. 3/4).
+            </Text>
+          </Stack>
 
-          <section className={styles.dashSection}>
-            <h3 className={styles.dashSectionTitle}>Biểu đồ vận hành</h3>
-            <div className={styles.dashGrid3}>
-              <DashBarChart
-                title="Hồ sơ đang mở theo bước"
-                emptyText="Chưa có hồ sơ."
-                items={model.stepRows.map((s) => ({
-                  id: s.stepKey || 'none',
-                  label: s.label,
-                  value: s.count
-                }))}
-              />
-              <DashBarChart
-                title="Phòng tạo hồ sơ"
-                emptyText="Chưa có dữ liệu tạo hồ sơ."
-                accent="ok"
-                items={model.createOuRows.map((r) => ({
-                  id: r.ouCode || 'none',
-                  label: r.ouName,
-                  value: r.count
-                }))}
-              />
-              <DashBarChart
-                title="Người thao tác gần đây"
-                emptyText="Chưa có nhật ký thao tác."
-                accent="warn"
-                items={model.actorRows.map((a) => ({
-                  id: a.upn,
-                  label: a.displayName,
-                  value: a.count,
-                  hint: a.upn
-                }))}
-              />
-            </div>
-          </section>
+          <Stack tokens={{ childrenGap: 10 }}>
+            <Text variant="large" styles={{ root: { fontWeight: 600 } }}>
+              Biểu đồ vận hành
+            </Text>
+            <Stack horizontal wrap tokens={{ childrenGap: 12 }}>
+              <Stack styles={{ root: { flex: '1 1 240px', minWidth: 220 } }}>
+                <DashBarChart
+                  title="Hồ sơ đang mở theo bước"
+                  emptyText="Chưa có hồ sơ."
+                  items={model.stepRows.map((s) => ({
+                    id: s.stepKey || 'none',
+                    label: s.label,
+                    value: s.count
+                  }))}
+                />
+              </Stack>
+              <Stack styles={{ root: { flex: '1 1 240px', minWidth: 220 } }}>
+                <DashBarChart
+                  title="Phòng tạo hồ sơ"
+                  emptyText="Chưa có dữ liệu tạo hồ sơ."
+                  accent="ok"
+                  items={model.createOuRows.map((r) => ({
+                    id: r.ouCode || 'none',
+                    label: r.ouName,
+                    value: r.count
+                  }))}
+                />
+              </Stack>
+              <Stack styles={{ root: { flex: '1 1 240px', minWidth: 220 } }}>
+                <DashBarChart
+                  title="Người thao tác gần đây"
+                  emptyText="Chưa có nhật ký thao tác."
+                  accent="warn"
+                  items={model.actorRows.map((a) => ({
+                    id: a.upn,
+                    label: a.displayName,
+                    value: a.count,
+                    hint: a.upn
+                  }))}
+                />
+              </Stack>
+            </Stack>
+          </Stack>
 
-          <p className={styles.dashThresholdNote}>
+          <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
             «Người thao tác gần đây» đếm sự kiện trên nhật ký hồ sơ (tiếp nhận, quyết
             định…), không phải lượt mở trang. «Hồ sơ đang mở» lấy trong phạm vi xem hiện
             tại.
             {thresholds
               ? ` Mức cảnh báo: sắp hết hạn xử lý ${thresholds.dueSoonDays} ngày; sắp đến hạn thanh toán ${thresholds.paymentDueSoonDays} ngày; quá tải khi chờ tiếp nhận từ ${thresholds.overloadWaitingAccept} hoặc việc quá hạn từ ${thresholds.overloadOverdueWi}; xử lý lại từ ${thresholds.alertReviewRound} lượt — chỉnh trong danh mục cấu hình hệ thống.`
               : ''}
-          </p>
+          </Text>
         </>
       )}
-    </div>
+      </Stack>
+    </ThemeProvider>
   );
 };
 

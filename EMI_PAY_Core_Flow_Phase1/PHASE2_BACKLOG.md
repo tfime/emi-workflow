@@ -30,15 +30,15 @@ Không làm trong Phase 1. Làm lần lượt khi Flow CREATE→CONFIRM đã ổ
 
 ## Kỹ thuật Flow
 
-6. **Dedupe chặt** — GET Commands theo `DedupeKey`; nếu bản khác đã `Succeeded` → no-op
-7. **ETag Master** — không dùng `IF-MATCH: *` cho MERGE Requests; xử lý 412
+6. **Dedupe chặt** — **DONE in 1.0.0.17** (`PERF_GOI3.md`): GET theo `DedupeKey` + `Succeeded` → `DEDUPE_NOOP`
+7. **ETag Master** — **DONE in 1.0.0.17**: `MasterETag` từ `@odata.etag`; MERGE Requests `IF-MATCH` = etag; Claim dùng `CommandETag` (412 → wait terminal)
 8. **Catch / Failed** — Scope runAfter failed → Commands `Failed` + ErrorMessage an toàn (Choice `NEEDS_RECONCILIATION` chỉ sau khi ApproveChoice)
 9. **ActivityPublic / ActivityInternal** — **DONE trong 1.0.0.11** (`ActivityKey={CommandKey}|{EventType}`)
 9b. **`ACCEPT` + DueAt** — **DONE trong 1.0.0.11** (gate DECIDE/CONFIRM khi chưa `AcceptedAt`)
 9c. **CHAIR hai bước** — **DONE trong 1.0.0.12** (duyệt hồ sơ giữ CHAIR → duyệt TT + `paymentDueAt` → TCKT_PAY)
 10. **Trusted caller / OrgMembers gate** — **DONE in 1.0.0.13+** (`AUTH_ORGMEMBERS_GATE.md` + Build; gói trong **1.0.0.14**). Import ZIP + UAT AUTH còn lại.
 10b. **Perf CREATE** — **DONE in 1.0.0.14** (`PERF_GOI2_CREATE.md`): Title/Amount/Explanation/RoutePlanJson + seed ChecklistTemplates (foreach concurrency 4); fallback stub nếu thiếu seed.
-11. **Concurrency = 1** trên trigger; xác nhận trên designer sau Import
+11. **Concurrency** — **DONE in 1.0.0.19**: Dedupe+ETag cho parallel HTTP; **không** `trigger.concurrency.runs` (xung đột sync Response)
 12. ~~**Đọc StepRecipients / WorkflowSteps**~~ — DONE trong Build Phase1 (SUBMIT/DECIDE đọc list; CREATE dùng `createdOUCode`)
 
 ## Dữ liệu / seed

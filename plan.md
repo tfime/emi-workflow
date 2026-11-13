@@ -3,7 +3,7 @@
 2. RBAC tĩnh	Nhóm và ACL 23 List/Library	Đã xong (V1.9.1); Dyn ACL theo hồ sơ: kit V1 (`10.EMI_PAY_Dynamic_Permission_V1`)
 3. Configuration	Cấu hình phòng ban, trưởng phòng, loại hồ sơ, checklist, quy trình	Một phần (seed gói 9; seed EMI_PAY_SPV kit còn lại)
 4. Core Orchestrator	PA Solution `EMI_PAY_CORE_V1` (Phase1+2 gates)	**1.0.0.13** — AUTH OrgMembers (cần Import + UAT)
-5. SPFx	Giao diện live trên EMI-Pay.aspx (tạo dynamic + upload + Commands)	Đang làm (LivePayApp: Activity VI, StepAttachment, CHAIR 2 bước)
+5. SPFx	Giao diện live trên EMI-Pay.aspx (tạo dynamic + upload + Commands)	Đang làm — Fluent UI 8 + Contoso teal (màn hồ sơ / hộp thư / tạo / tổng quan / khung shell)
 6. Kiểm thử	Chạy hồ sơ thanh toán từ đầu đến cuối	UAT Core PASS (09/04/08); UAT UI trên EMI-Pay.aspx còn lại
 
 ### Core Flow (1.0.0.13 — HTTP API + AUTH)
@@ -20,6 +20,7 @@
 - `08_UAT_Phase2_ChairPaymentDueAt.ps1` — gate due trước dossier / dossier / payment
 
 ### SPFx (Demo Off) gần đây
+- **Fluent UI 8** (theme Contoso teal): hầu hết UI live — chi tiết / hộp thư / tạo·sửa hồ sơ / tổng quan / audit / header·nav / rail / hộp thoại live+demo / Panel tệp / ComboBox / Busy·Notice; khung shell CSS chỉ giữ layout grid
 - Nhật ký Activity: mới nhất trước, badge/tiêu đề tiếng Việt; tab **Nhật ký / Ghi chú** có badge đỏ đếm
 - Tab Ghi chú: list Note/Reason; gửi StepReviews (`USER_NOTE` trong ChecklistItemKey; Dyn ListContribute StepReviews theo UPN)
 - Chưa ACCEPT (BPCM2/3/TCKT): khoá **đánh giá checklist** và **gửi ghi chú** (tab + preview tệp); chỉ tin AcceptedAt của WI đúng CurrentStepInstanceKey
@@ -33,8 +34,8 @@
 - ~~Seed OrgMembers + Đóng vai~~; ~~Admin tạo/trình trực tiếp~~; ~~Member phòng kiểm tra (xem/review, không DECIDE)~~
 - **Perf Gói 1 (SPFx)** — DONE: `loadDetail`/`boot` song song; spinner tắt sau lệnh; reconcile chỉ khi lệch; ghi checklist `mapPool(4)`
 - **Perf Gói 2 (Flow)** — DONE trong repo: Core **1.0.0.14** CREATE đủ field + ChecklistTemplates; SPFx bỏ patch/reconcile — còn **Import ZIP** trên tenant
-- **Perf Gói 3** — Dedupe + ETag Master → concurrency trigger 1→5–10; Dyn ACL async sau Response
-- Cổng OrgMembers (trong 1.0.0.14) — Import Solution + UAT AUTH reject/pass
-- Dyn ACL hook sau Core Succeeded khi UPN Entra có thật; DocsInternal/Archive ACL (Dyn V1.1)
-- Dedupe (PHASE2_BACKLOG #6); Assignments (phân công nhiều người) sau
+- **Perf Gói 3** — DONE trong repo **1.0.0.19** (`PERF_GOI3.md`): Dedupe + Claim/Master ETag (không trigger concurrency — sync Response); Dyn ACL PnP async — còn **Import ZIP** + `11_PERF_Goi3_Concurrent.ps1`
+- Cổng OrgMembers (trong 1.0.0.14+) — Import + UAT AUTH reject/pass
+- Dyn ACL child Flow (sau Response) khi gắn kit V1; DocsInternal/Archive ACL (Dyn V1.1)
+- Assignments (phân công nhiều người) sau
 

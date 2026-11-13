@@ -1,5 +1,7 @@
 import * as React from 'react';
-import { MessageBar, MessageBarType } from '@fluentui/react';
+import { MessageBar, MessageBarType, ThemeProvider } from '@fluentui/react';
+import { emiPayFluentTheme } from '../theme/fluentPayTheme';
+import { themeHostStyle } from './detail/detailStyles';
 
 export type PayNoticeKind = 'success' | 'error' | 'warning' | 'info';
 
@@ -33,14 +35,17 @@ const PayNoticeBar: React.FC<IPayNoticeBarProps> = ({ notice, onDismiss }) => {
   }
 
   return (
-    <MessageBar
-      messageBarType={mapType(notice.kind)}
-      isMultiline={notice.text.length > 80}
-      onDismiss={onDismiss}
-      dismissButtonAriaLabel="Đóng thông báo"
-    >
-      {notice.text}
-    </MessageBar>
+    <ThemeProvider theme={emiPayFluentTheme} style={themeHostStyle}>
+      <MessageBar
+        messageBarType={mapType(notice.kind)}
+        isMultiline={notice.text.length > 80}
+        onDismiss={onDismiss}
+        dismissButtonAriaLabel="Đóng thông báo"
+        styles={{ root: { marginBottom: 4 } }}
+      >
+        {notice.text}
+      </MessageBar>
+    </ThemeProvider>
   );
 };
 

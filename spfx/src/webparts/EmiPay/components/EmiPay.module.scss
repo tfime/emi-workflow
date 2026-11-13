@@ -1,24 +1,30 @@
+/* Full-bleed chỉ khi JS gắn body.emi-pay-viewport-lock — tránh phá khung preview SP */
 :global {
-  #workbenchPageContent,
-  #spPageCanvasContent,
-  .SPCanvas,
-  .CanvasComponent,
-  .CanvasZone,
-  .CanvasSection,
-  .ControlZone,
-  .ControlZone--clean,
-  [data-automation-id='CanvasZone'],
-  [data-automation-id='CanvasSection'],
-  [data-automation-id='CanvasControl'],
-  [data-automation-id='contentScrollRegion'],
-  [data-automation-id^='CanvasZone'] {
-    max-width: none !important;
-    width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    box-sizing: border-box !important;
+  body.emi-pay-viewport-lock {
+    #workbenchPageContent,
+    #spPageCanvasContent,
+    .SPCanvas,
+    .CanvasComponent,
+    .CanvasZone,
+    .CanvasSection,
+    .ControlZone,
+    .ControlZone--clean,
+    [data-automation-id='CanvasZone'],
+    [data-automation-id='CanvasSection'],
+    [data-automation-id='CanvasControl'],
+    [data-automation-id='contentScrollRegion'],
+    [data-automation-id^='CanvasZone'] {
+      max-width: 100% !important;
+      width: 100% !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      box-sizing: border-box !important;
+      overflow-x: hidden !important;
+    }
   }
 }
 
@@ -42,6 +48,8 @@
   --emi-info: #1d4ed8;
   --emi-info-soft: #dbeafe;
   --emi-radius: 4px;
+  /* Fallback khi JS chưa đo top; runtime set height host = 100dvh - top */
+  --emi-sp-top: 48px;
 
   font-family: "Segoe UI", "Segoe UI Web (West European)", system-ui, sans-serif;
   font-size: 14px;
@@ -49,12 +57,13 @@
   color: var(--emi-text);
   background: var(--emi-surface);
   width: 100%;
-  max-width: none;
+  max-width: 100%;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  min-height: calc(100vh - 48px);
-  height: calc(100vh - 48px);
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -154,8 +163,30 @@
   padding: 14px 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.navScroll {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navFooter {
+  flex: 0 0 auto;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--emi-line);
+  min-width: 0;
 }
 
 .navGroup {
@@ -172,18 +203,21 @@
 }
 
 .navBtn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: block;
   width: 100%;
+  box-sizing: border-box;
   border: 0;
   background: transparent;
   text-align: left;
   padding: 10px 12px;
   border-radius: var(--emi-radius);
   font-size: 13px;
+  line-height: 1.35;
   color: var(--emi-text);
   cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .navBtn:hover {
@@ -203,10 +237,12 @@
 }
 
 .navNote {
-  margin: auto 8px 8px;
+  margin: 0 8px 4px;
   font-size: 12px;
   line-height: 1.45;
   color: var(--emi-muted);
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .navProfile {
@@ -232,9 +268,14 @@
 .workspace {
   min-width: 0;
   min-height: 0;
+  height: 100%;
+  max-height: 100%;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
-  overflow: hidden;
+  align-items: start;
+  /* Một thanh cuộn cho cả vùng nội dung + rail */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .workspaceNoRail {
@@ -247,17 +288,23 @@
   flex-direction: column;
   gap: 14px;
   padding: 16px 20px 28px;
-  overflow: auto;
+  overflow: visible;
 }
 
 .rail {
   border-left: 1px solid var(--emi-line);
   background: #fafafa;
-  overflow: auto;
   padding: 16px 14px 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .railCard {
@@ -872,13 +919,9 @@
 }
 
 .reqKey {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--emi-text);
-  margin: 0 0 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--emi-line);
-  word-break: break-all;
+  margin: 0;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .reqKey span {
@@ -891,13 +934,28 @@
   margin-bottom: 4px;
 }
 
+.reqKey strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--emi-text);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .bigNum {
-  font-size: 22px;
+  display: block;
+  font-size: 20px;
   font-weight: 750;
   letter-spacing: -0.02em;
   color: var(--emi-text);
-  line-height: 1.15;
-  margin-bottom: 8px;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bigNum span {
@@ -905,7 +963,8 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--emi-muted);
-  margin-top: 4px;
+  line-height: 1.4;
+  margin-top: 8px;
 }
 
 .flowV {
@@ -1960,7 +2019,8 @@
 @media (max-width: 900px) {
   .app {
     height: auto;
-    min-height: calc(100vh - 48px);
+    min-height: calc(100vh - var(--emi-sp-top, 48px));
+    max-height: none;
     overflow: visible;
   }
 

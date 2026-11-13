@@ -1,5 +1,7 @@
 import * as React from 'react';
-import { Dialog, DialogType, Spinner, SpinnerSize } from '@fluentui/react';
+import { Dialog, DialogType, Spinner, SpinnerSize, ThemeProvider } from '@fluentui/react';
+import { emiPayFluentTheme } from '../theme/fluentPayTheme';
+import { themeHostStyle } from './detail/detailStyles';
 
 export interface IBusyDialogProps {
   open: boolean;
@@ -14,21 +16,23 @@ const BusyDialog: React.FC<IBusyDialogProps> = ({ open, title, message }) => {
   }
 
   return (
-    <Dialog
-      hidden={false}
-      dialogContentProps={{
-        type: DialogType.normal,
-        title: title || 'Đang xử lý'
-      }}
-      modalProps={{
-        isBlocking: true,
-        styles: { main: { maxWidth: 420 } }
-      }}
-    >
-      <div style={{ padding: '12px 0 8px' }}>
-        <Spinner size={SpinnerSize.large} label={message} ariaLive="assertive" />
-      </div>
-    </Dialog>
+    <ThemeProvider theme={emiPayFluentTheme} style={themeHostStyle}>
+      <Dialog
+        hidden={false}
+        dialogContentProps={{
+          type: DialogType.normal,
+          title: title || 'Đang xử lý'
+        }}
+        modalProps={{
+          isBlocking: true,
+          styles: { main: { maxWidth: 420 } }
+        }}
+      >
+        <div style={{ padding: '12px 0 8px' }}>
+          <Spinner size={SpinnerSize.large} label={message} ariaLive="assertive" />
+        </div>
+      </Dialog>
+    </ThemeProvider>
   );
 };
 
