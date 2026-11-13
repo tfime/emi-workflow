@@ -88,27 +88,36 @@ export function requiredChecklistReady(items: IChecklistItemRow[]): boolean {
   });
 }
 
-/** Mục cần đánh giá ở bước KT: bắt buộc hoặc đã có tệp. */
+/** Mục có thể đánh giá: bắt buộc hoặc đã có tệp. */
 export function reviewableChecklistItems(items: IChecklistItemRow[]): IChecklistItemRow[] {
   return items.filter((i) => i.isRequired || i.uploadedCount > 0);
 }
 
-/** Đã Pass/Fail hết các mục cần đánh giá. */
+/** Mục chưa khóa — phòng hiện tại được đánh giá / chốt. */
+export function unlockedReviewableItems(items: IChecklistItemRow[]): IChecklistItemRow[] {
+  return reviewableChecklistItems(items).filter((i) => !i.isLocked);
+}
+
+/** Đã Pass/Fail hết các mục chưa khóa (tuỳ chọn UX). */
 export function checklistReviewComplete(items: IChecklistItemRow[]): boolean {
-  const rows = reviewableChecklistItems(items);
-  if (!rows.length) return false;
+  const rows = unlockedReviewableItems(items);
+  if (!rows.length) return true;
   return rows.every((i) => i.itemStatus === 'Pass' || i.itemStatus === 'Fail');
 }
 
-/** Đủ điều kiện chuyển bước (PASS): mọi mục cần đánh giá đều Đạt. */
+/**
+ * @deprecated Không dùng để chặn DECIDE — phòng chỉ đánh giá subset mục.
+ * Giữ để tương thích demo; ưu tiên unlocked + không Fail.
+ */
 export function checklistAllPass(items: IChecklistItemRow[]): boolean {
-  const rows = reviewableChecklistItems(items);
-  if (!rows.length) return false;
+  const rows = unlockedReviewableItems(items);
+  if (!rows.length) return true;
   return rows.every((i) => i.itemStatus === 'Pass');
 }
 
+/** Có mục Không đạt chưa khóa → không DECIDE PASS, phải trả BPCM1. */
 export function checklistHasFail(items: IChecklistItemRow[]): boolean {
-  return reviewableChecklistItems(items).some((i) => i.itemStatus === 'Fail');
+  return unlockedReviewableItems(items).some((i) => i.itemStatus === 'Fail');
 }
 
 export async function bumpChecklistUpload(
@@ -140,6 +149,7 @@ export async function setChecklistItemReview(
   return { ...item, itemStatus: result };
 }
 
+/** Khóa mọi mục chưa khóa (dùng hạn chế — ưu tiên lockReviewedItems). */
 export async function lockChecklistItems(
   ctx: ISpRestContext,
   items: IChecklistItemRow[]
@@ -149,6 +159,50 @@ export async function lockChecklistItems(
     if (row.isLocked) continue;
     await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, { IsLocked: true });
   }
+}
+
+/**
+ * Sau DECIDE PASS ở BPCM2/BPCM3/TCKT_CHECK: khóa mục đã Pass/Fail.
+ * Mục Missing/Uploaded chưa đánh giá giữ mở cho bước sau.
+ */
+export async function lockReviewedItems(
+  ctx: ISpRestContext,
+  items: IChecklistItemRow[]
+): Promise<void> {
+  for (let i = 0; i < items.length; i++) {
+    const row = items[i];
+    if (row.isLocked) continue;
+    if (row.itemStatus !== 'Pass' && row.itemStatus !== 'Fail') continue;
+    await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, { IsLocked: true });
+  }
+}
+
+/**
+ * BPCM1 Draft/Returned (sửa lại): mở khóa để tải/xóa lại.
+ * «Đã khóa» chỉ dành cho bước kiểm tra sau khi chốt.
+ */
+export async function unlockChecklistItems(
+  ctx: ISpRestContext,
+  items: IChecklistItemRow[]
+): Promise<void> {
+  for (let i = 0; i < items.length; i++) {
+    const row = items[i];
+    if (!row.isLocked) continue;
+    await mergeItem(ctx, PAY_LISTS.ChecklistItems, row.id, { IsLocked: false });
+  }
+}
+
+/** Reset đếm tệp / trạng thái sau khi xóa hồ sơ mục (tải lên mới). */
+export async function resetChecklistItemFiles(
+  ctx: ISpRestContext,
+  item: IChecklistItemRow
+): Promise<IChecklistItemRow> {
+  await mergeItem(ctx, PAY_LISTS.ChecklistItems, item.id, {
+    UploadedCount: 0,
+    ItemStatus: 'Missing',
+    IsLocked: false
+  });
+  return { ...item, uploadedCount: 0, itemStatus: 'Missing', isLocked: false };
 }
 
 export async function saveStepReview(

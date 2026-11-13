@@ -2,6 +2,7 @@ import * as React from 'react';
 import styles from './EmiPay.module.scss';
 import {
   IDocumentIndexRow,
+  INoteListItem,
   ISpRestContext,
   resolveDocPreview,
   IResolvedPreview,
@@ -15,6 +16,11 @@ export interface IFilePreviewDrawerProps {
   onCommentChange: (v: string) => void;
   onSendComment: () => void;
   onClose: () => void;
+  /** false = chỉ xem tệp, ẩn form ghi chú. */
+  commentsEnabled?: boolean;
+  commentsDisabledHint?: string;
+  /** Chỉ ghi chú gắn documentKey của tệp đang mở. */
+  docNotes?: INoteListItem[];
 }
 
 const FilePreviewDrawer: React.FC<IFilePreviewDrawerProps> = ({
@@ -23,16 +29,21 @@ const FilePreviewDrawer: React.FC<IFilePreviewDrawerProps> = ({
   comment,
   onCommentChange,
   onSendComment,
-  onClose
+  onClose,
+  commentsEnabled = true,
+  commentsDisabledHint,
+  docNotes
 }) => {
   const [preview, setPreview] = React.useState<IResolvedPreview | undefined>(undefined);
   const [loading, setLoading] = React.useState(true);
   const blobRef = React.useRef<string | undefined>(undefined);
+  const notes = docNotes || [];
 
   React.useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setPreview(undefined);
+    // eslint prefers undefined over void — giữ void để fire-and-forget trong effect
     void (async () => {
       const result = await resolveDocPreview(sp, doc.fileUrl, doc.fileName);
       if (cancelled) {
@@ -134,25 +145,70 @@ const FilePreviewDrawer: React.FC<IFilePreviewDrawerProps> = ({
           </div>
 
           <div>
-            <h4 style={{ margin: '0 0 8px', fontSize: 14 }}>Ghi chú trên tài liệu</h4>
-            <label className={`${styles.field} ${styles.fieldFull}`}>
-              Nội dung
-              <textarea
-                rows={3}
-                value={comment}
-                onChange={(e) => onCommentChange(e.target.value)}
-                placeholder="Ghi chú gắn với tài liệu này…"
-              />
-            </label>
-            <div className={styles.actions} style={{ justifyContent: 'flex-end', marginTop: 8 }}>
-              <button
-                type="button"
-                className={`${styles.btn} ${styles.btnPrimary}`}
-                onClick={onSendComment}
-              >
-                Gửi ghi chú
-              </button>
-            </div>
+            <h4 style={{ margin: '0 0 8px', fontSize: 14 }}>
+              Ghi chú trên tài liệu
+              {notes.length > 0 ? (
+                <span className={styles.tabCountBadge} style={{ marginLeft: 8 }}>
+                  {notes.length}
+                </span>
+              ) : null}
+            </h4>
+            {notes.length === 0 ? (
+              <p className={styles.hint} style={{ marginTop: 0 }}>
+                Chưa có ghi chú cho tệp này.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                {notes.map((n) => (
+                  <div
+                    key={n.id}
+                    style={{
+                      padding: '8px 10px',
+                      border: '1px solid var(--emi-line, #e5e7eb)',
+                      borderRadius: 4,
+                      background: '#fafafa'
+                    }}
+                  >
+                    <div className={styles.meta} style={{ margin: '0 0 4px' }}>
+                      {[
+                        n.at ? new Date(n.at).toLocaleString('vi-VN') : '',
+                        n.actorUPN
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </div>
+                    <div style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{n.body}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!commentsEnabled ? (
+              <p className={styles.hint}>
+                {commentsDisabledHint ||
+                  'Tiếp nhận và đặt hạn trước khi ghi chú trên tài liệu.'}
+              </p>
+            ) : (
+              <>
+                <label className={`${styles.field} ${styles.fieldFull}`}>
+                  Thêm ghi chú cho tệp này
+                  <textarea
+                    rows={3}
+                    value={comment}
+                    onChange={(e) => onCommentChange(e.target.value)}
+                    placeholder="Ghi chú gắn với tài liệu này…"
+                  />
+                </label>
+                <div className={styles.actions} style={{ justifyContent: 'flex-end', marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className={`${styles.btn} ${styles.btnPrimary}`}
+                    onClick={onSendComment}
+                  >
+                    Gửi ghi chú
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </aside>

@@ -25,18 +25,21 @@ import {
   listRecentRequests,
   getRequestByKey,
   patchRequestAfterCreate,
-  stepIndex,
+  patchRequestBusinessFields,
+  canEditRequestBusinessFields,
+  displayRequestTitle,
   listChecklistItems,
   reconcileChecklistFromTemplates,
   requiredChecklistReady,
-  checklistAllPass,
   checklistReviewComplete,
   checklistHasFail,
-  lockChecklistItems,
+  lockReviewedItems,
+  unlockChecklistItems,
   enqueueAndRun,
   uploadChecklistFile,
   uploadStepAttachment,
   uploadUncFile,
+  clearChecklistItemFiles,
   listUncDocuments,
   listDocumentsForRequest,
   IDocumentIndexRow,
@@ -53,7 +56,15 @@ import {
   listActivityPublic,
   listStepReviews,
   buildTimeline,
-  CORE_STEPS,
+  buildNoteList,
+  latestRejectNote,
+  notesForDocument,
+  addUserNote,
+  needsAcceptFirst,
+  canAddUserNote,
+  IActivityPublicRow,
+  IStepReviewRow,
+  INoteListItem,
   statusVi,
   chairStatusDetailVi,
   stepShortVi,
@@ -66,6 +77,7 @@ import { DialogKind, IPayAction, PayPersona, PayView } from './types';
 import BusyDialog from './BusyDialog';
 import PayNoticeBar, { IPayNotice } from './PayNotice';
 import FilePreviewDrawer from './FilePreviewDrawer';
+import ApprovalFlow from './detail/ApprovalFlow';
 
 initializeIcons(undefined, { disableWarnings: true });
 
@@ -164,10 +176,19 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const [stepRecipients, setStepRecipients] = React.useState<IStepRecipient[]>([]);
   const [routePlan, setRoutePlan] = React.useState<Record<string, string>>({});
 
+  /** Form sửa trên detail khi Draft/Returned */
+  const [editTitle, setEditTitle] = React.useState('');
+  const [editAmount, setEditAmount] = React.useState('');
+  const [editExpl, setEditExpl] = React.useState('');
+  const [editOu, setEditOu] = React.useState('');
+  const [editRoutePlan, setEditRoutePlan] = React.useState<Record<string, string>>({});
+
   const [requestKey, setRequestKey] = React.useState('');
   const [master, setMaster] = React.useState<IRequestMaster | undefined>(undefined);
   const [checklist, setChecklist] = React.useState<IChecklistItemRow[]>([]);
   const [workItems, setWorkItems] = React.useState<IWorkItemRow[]>([]);
+  const [activities, setActivities] = React.useState<IActivityPublicRow[]>([]);
+  const [stepReviews, setStepReviews] = React.useState<IStepReviewRow[]>([]);
   const [timeline, setTimeline] = React.useState<ITimelineItem[]>([]);
   const [uncDocs, setUncDocs] = React.useState<IDocumentIndexRow[]>([]);
   const [docs, setDocs] = React.useState<IDocumentIndexRow[]>([]);
@@ -184,6 +205,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const [reviewResult, setReviewResult] = React.useState<'Pass' | 'Fail'>('Pass');
   const [reviewReason, setReviewReason] = React.useState('');
   const fileRef = React.useRef<HTMLInputElement>(null);
+  /** File picker trực tiếp từ nút Tải lên/Tải thêm trên từng mục checklist (không qua dialog). */
+  const checklistFileRef = React.useRef<HTMLInputElement>(null);
+  const pendingChecklistItemCode = React.useRef<string>('');
 
   const showNotice = (kind: IPayNotice['kind'], text: string): void => {
     setNotice({ kind, text });
@@ -214,24 +238,110 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     setInbox(rows);
   };
 
+  const defaultOuForStep = React.useCallback(
+    (stepKey: string, recipients: IStepRecipient[]): string => {
+      const rows = recipients.filter((r) => r.stepKey === stepKey);
+      const def = rows.filter((r) => r.isDefault)[0] || rows[0];
+      return def ? def.ouCode : '';
+    },
+    []
+  );
+
+  const fillRoutePlanGaps = React.useCallback(
+    (
+      plan: Record<string, string>,
+      recipients: IStepRecipient[]
+    ): Record<string, string> => {
+      const next = { ...plan };
+      ROUTE_STEPS_UI.forEach((rs) => {
+        if (!next[rs.key]) next[rs.key] = defaultOuForStep(rs.key, recipients);
+      });
+      ROUTE_STEPS_AUTO.forEach((sk) => {
+        if (!next[sk]) next[sk] = defaultOuForStep(sk, recipients);
+      });
+      return next;
+    },
+    [defaultOuForStep]
+  );
+
+  const syncEditForm = (m: IRequestMaster, recipients: IStepRecipient[]): void => {
+    setEditTitle(m.title || '');
+    setEditAmount(m.amount !== undefined && m.amount !== null ? String(m.amount) : '');
+    setEditExpl(m.explanation || '');
+    setEditOu(m.createdOUCode || '');
+    // title đã được mapMaster tách khỏi RequestKey
+    let plan: Record<string, string> = {};
+    if (m.routePlanJson) {
+      try {
+        plan = JSON.parse(m.routePlanJson) as Record<string, string>;
+      } catch {
+        plan = {};
+      }
+    }
+    // RoutePlanJson thiếu / rỗng → điền mặc định IsDefault (tránh select value="" hiện option đầu nhưng state vẫn trống).
+    setEditRoutePlan(fillRoutePlanGaps(plan, recipients));
+  };
+
   const loadDetail = async (key: string): Promise<void> => {
     const m = await getRequestByKey(props.sp, key);
     if (!m) throw new Error(`Không tìm thấy hồ sơ ${key}`);
-    const items = await listChecklistItems(props.sp, key);
+    let items = await listChecklistItems(props.sp, key);
+    // Đang sửa lại ở BPCM1: mở khóa — «Đã khóa» chỉ áp dụng bước kiểm tra sau khi chốt.
+    if (
+      m.currentStepKey === 'BPCM1_PREPARE' &&
+      (m.status === 'Draft' || m.status === 'Returned') &&
+      items.some((i) => i.isLocked)
+    ) {
+      await unlockChecklistItems(props.sp, items);
+      items = await listChecklistItems(props.sp, key);
+    }
     const wis = await listWorkItems(props.sp, key);
     const acts = await listActivityPublic(props.sp, key);
     const reviews = await listStepReviews(props.sp, key);
     const unc = await listUncDocuments(props.sp, key);
     const allDocs = await listDocumentsForRequest(props.sp, key);
     setMaster(m);
+    syncEditForm(m, stepRecipients);
     setChecklist(items);
     setWorkItems(wis);
+    setActivities(acts);
+    setStepReviews(reviews);
     setTimeline(buildTimeline(acts, reviews));
     setUncDocs(unc);
     setDocs(allDocs);
     setRequestKey(key);
     setDocsTab('checklist');
     setActivityTab('timeline');
+  };
+
+  const onSaveBusinessFields = (): void => {
+    if (!master) return;
+    void run(
+      async () => {
+        const fullRoute = fillRoutePlanGaps({ ...editRoutePlan }, stepRecipients);
+        const missingUi = ROUTE_STEPS_UI.filter((rs) => !fullRoute[rs.key]);
+        if (missingUi.length) {
+          throw new Error(
+            `Chưa cấu hình phòng nhận ${missingUi.map((r) => r.label).join(', ')} (StepRecipients).`
+          );
+        }
+        const title = editTitle.trim();
+        if (!title) throw new Error('Nhập tiêu đề hồ sơ.');
+        if (title === master.requestKey) {
+          throw new Error('Tiêu đề phải khác mã hồ sơ.');
+        }
+        setBusyMessage('Đang lưu thông tin hồ sơ…');
+        await patchRequestBusinessFields(props.sp, master.requestKey, {
+          title,
+          amount: Number(editAmount) || 0,
+          explanation: editExpl,
+          createdOUCode: editOu || master.createdOUCode,
+          routePlanJson: JSON.stringify(fullRoute)
+        });
+        await loadDetail(master.requestKey);
+      },
+      { waiting: 'Đang lưu thông tin…', success: 'Đã lưu thông tin hồ sơ.' }
+    );
   };
 
   React.useEffect(() => {
@@ -333,7 +443,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     }
     void run(
       async () => {
-        const title = createTitle || 'Hồ sơ thanh toán';
+        const title = (createTitle || '').trim();
+        if (!title) throw new Error('Nhập tiêu đề hồ sơ.');
         const amount = Number(createAmount) || 0;
         const explanation = createExpl || 'Tạo từ giao diện EMI PAY';
         const fullRoute: Record<string, string> = { ...routePlan };
@@ -349,7 +460,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           throw new Error(`Chọn phòng: ${missingUi.map((r) => r.label).join(', ')}`);
         }
         const routePlanJson = JSON.stringify(fullRoute);
-        setBusyMessage('Đang tạo hồ sơ… Gọi Orchestrator…');
+        setBusyMessage('Đang tạo hồ sơ cho bạn…');
         const cmdDone = await enqueueAndRun(
           props.sp,
           'CREATE_REQUEST',
@@ -402,18 +513,120 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     ? liveActionsFor(master, checklist, uncDocs.length > 0, persona, activeWi, workItems)
     : [];
 
+  const acceptBlocked = needsAcceptFirst(master, activeWi, workItems);
+  const notesAllowed = canAddUserNote(master);
+
   const canReviewDocs = !!(
     master &&
     REVIEW_STEPS.indexOf(master.currentStepKey) >= 0 &&
     REVIEW_PERSONAS.indexOf(persona) >= 0 &&
-    isWorkItemAccepted(activeWi)
+    !acceptBlocked
   );
 
+  const noteList: INoteListItem[] = buildNoteList(activities, stepReviews);
+  const rejectNote = latestRejectNote(activities);
+
   const openReview = (itemCode: string): void => {
+    if (acceptBlocked || !canReviewDocs) {
+      showNotice(
+        'warning',
+        'Cần «Tiếp nhận và đặt hạn» trước khi đánh giá checklist.'
+      );
+      return;
+    }
     setReviewItemCode(itemCode);
     setReviewResult('Pass');
     setReviewReason('');
     setDialog('review');
+  };
+
+  const sendUserNote = (text: string, documentKey?: string): void => {
+    if (!master) return;
+    if (!notesAllowed) {
+      showNotice('warning', 'Hồ sơ đã đóng — không gửi thêm ghi chú.');
+      return;
+    }
+    void run(
+      async () => {
+        await addUserNote(props.sp, {
+          requestKey: master.requestKey,
+          stepInstanceKey: master.currentStepInstanceKey,
+          reviewRound: master.reviewRound,
+          actorUPN,
+          note: text,
+          documentKey
+        });
+        setActivityTab('comment');
+        await loadDetail(master.requestKey);
+      },
+      { waiting: 'Đang gửi ghi chú…', success: 'Đã gửi ghi chú.' }
+    );
+  };
+
+  const isBpcm1Adjusting = !!(
+    master &&
+    master.currentStepKey === 'BPCM1_PREPARE' &&
+    (master.status === 'Draft' || master.status === 'Returned')
+  );
+
+  /** Mở file picker ngay cho mục checklist đã chọn (không dialog chọn mục). */
+  const pickChecklistFile = (itemCode: string): void => {
+    pendingChecklistItemCode.current = itemCode;
+    setUploadMode('checklist');
+    setUploadItemCode(itemCode);
+    const input = checklistFileRef.current;
+    if (!input) return;
+    input.value = '';
+    input.click();
+  };
+
+  const onChecklistFilePicked = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const input = e.target;
+    const file = input.files && input.files[0];
+    if (!file || !master) return;
+    const code = pendingChecklistItemCode.current || uploadItemCode;
+    const item = checklist.filter((c) => c.itemCode === code)[0] || checklist[0];
+    if (!item) {
+      showNotice('warning', 'Không có mục checklist');
+      input.value = '';
+      return;
+    }
+    void run(
+      async () => {
+        const buf = await file.arrayBuffer();
+        await uploadChecklistFile(props.sp, {
+          requestKey: master.requestKey,
+          item,
+          fileName: file.name,
+          content: buf,
+          uploadedByUPN: actorUPN
+        });
+        input.value = '';
+        await loadDetail(master.requestKey);
+      },
+      {
+        waiting: `Đang tải tệp «${file.name}»…`,
+        success: `Đã tải «${file.name}» vào mục ${item.itemLabel}`
+      }
+    );
+  };
+
+  const onClearChecklistItem = (item: IChecklistItemRow): void => {
+    if (!master) return;
+    if (
+      !window.confirm(
+        `Xóa toàn bộ tệp của mục «${item.itemLabel}» để tải lên mới? Tệp cũ sẽ không còn hiện trên hồ sơ.`
+      )
+    ) {
+      return;
+    }
+    void run(
+      async () => {
+        await clearChecklistItemFiles(props.sp, item);
+        await loadDetail(master.requestKey);
+      },
+      { waiting: 'Đang xóa hồ sơ mục…', success: `Đã xóa tệp mục «${item.itemLabel}».` }
+    );
   };
 
   const personaMeta: Record<PayPersona, { name: string; meta: string }> = {
@@ -479,7 +692,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           if (!requiredChecklistReady(checklist)) {
             throw new Error('Chưa đủ tài liệu checklist bắt buộc');
           }
-          setBusyMessage('Đang gửi hồ sơ… Gọi Orchestrator…');
+          setBusyMessage('Đang gửi hồ sơ…');
           await enqueueAndRun(
             props.sp,
             'SUBMIT',
@@ -533,10 +746,10 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     if (kind === 'mgrApprove' || kind === 'forward' || kind === 'approve' || kind === 'approvePay') {
       void run(
         async () => {
-          // Chỉ BPCM2/BPCM3/TCKT KT mới bắt Đạt hết; TP duyệt trình gửi thì không.
-          if (kind === 'forward' && !checklistAllPass(checklist)) {
+          // Có Fail chưa khóa → phải trả BPCM1, không PASS. Không đòi Đạt hết checklist.
+          if (kind === 'forward' && checklistHasFail(checklist)) {
             throw new Error(
-              'Chưa thể chuyển bước: cần đánh giá Đạt hết các mục checklist có tệp/bắt buộc.'
+              'Có mục checklist Không đạt — hãy «Trả về người tạo», không chuyển bước.'
             );
           }
           const payload: Record<string, unknown> = {
@@ -572,9 +785,10 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             stepInstanceKey: master.currentStepInstanceKey,
             orchestratorUrl: props.orchestratorUrl
           });
-          // Khóa sau bước KT chuyển tiếp / duyệt TT — không khóa khi chỉ duyệt hồ sơ CHAIR
+          // BPCM2/3/TCKT_CHECK: khóa mục đã Pass/Fail; mục chưa đánh giá để bước sau.
+          // approvePay: khóa nốt mục đã đánh giá còn mở. Không khóa khi chỉ duyệt hồ sơ CHAIR.
           if (kind === 'forward' || kind === 'approvePay') {
-            await lockChecklistItems(props.sp, checklist);
+            await lockReviewedItems(props.sp, checklist);
           }
           await loadDetail(master.requestKey);
           await refreshInbox();
@@ -624,7 +838,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               orchestratorUrl: props.orchestratorUrl
             }
           );
-          await lockChecklistItems(props.sp, checklist);
+          // Không khóa toàn bộ checklist khi trả — BPCM1 cần sửa/tải lại mục Fail.
           await loadDetail(master.requestKey);
           await refreshInbox();
         },
@@ -664,6 +878,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     if (kind === 'review') {
       void run(
         async () => {
+          if (needsAcceptFirst(master, activeWi, workItems)) {
+            throw new Error('Cần «Tiếp nhận và đặt hạn» trước khi đánh giá checklist.');
+          }
           const item =
             checklist.filter((c) => c.itemCode === reviewItemCode)[0] || checklist[0];
           if (!item) throw new Error('Không tìm thấy mục checklist');
@@ -813,9 +1030,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               onClick={() => openLiveDetail(item.requestKey)}
             >
               <td>
-                <strong>{item.requestKey}</strong>
+                <strong>{item.requestCode || item.requestKey}</strong>
               </td>
-              <td>{item.title || '—'}</td>
+              <td>{displayRequestTitle(item)}</td>
               <td>{stepShortVi(item.currentStepKey)}</td>
               <td>{moneyVi(item.amount)}</td>
               <td>
@@ -1043,6 +1260,35 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                 <div className={styles.cardB}>
                   <div className={styles.form}>
                     <label className={`${styles.field} ${styles.fieldFull}`}>
+                      Tiêu đề hồ sơ
+                      <input
+                        value={createTitle}
+                        onChange={(e) => setCreateTitle(e.target.value)}
+                        placeholder="Ví dụ: Thanh toán đợt 2 theo HĐ…"
+                      />
+                    </label>
+                    <label className={styles.field}>
+                      Số tiền đề nghị (VND)
+                      <input
+                        value={createAmount}
+                        onChange={(e) => setCreateAmount(e.target.value)}
+                        inputMode="numeric"
+                      />
+                    </label>
+                    <label className={styles.field}>
+                      Đơn vị khởi tạo
+                      <select value={createOu} onChange={(e) => setCreateOu(e.target.value)}>
+                        {orgUnits.length === 0 && (
+                          <option value="OU_TONGHOP">OU_TONGHOP</option>
+                        )}
+                        {orgUnits.map((o) => (
+                          <option key={o.id} value={o.ouCode}>
+                            {o.ouName}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className={`${styles.field} ${styles.fieldFull}`}>
                       Loại hồ sơ
                       <select
                         value={selectedType}
@@ -1058,29 +1304,18 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                         ))}
                       </select>
                     </label>
-                    <label className={styles.field}>
-                      Đơn vị khởi tạo
-                      <select value={createOu} onChange={(e) => setCreateOu(e.target.value)}>
-                        {orgUnits.length === 0 && (
-                          <option value="OU_TONGHOP">OU_TONGHOP</option>
-                        )}
-                        {orgUnits.map((o) => (
-                          <option key={o.id} value={o.ouCode}>
-                            {o.ouCode} · {o.ouName}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
                     <div className={`${styles.field} ${styles.fieldFull}`}>
-                      <span>Phòng nhận BPCM2 / BPCM3</span>
+                      <span>Phòng nhận kiểm tra</span>
                       <div className={styles.routeRow}>
                         {ROUTE_STEPS_UI.map((rs) => {
                           const opts = stepRecipients.filter((r) => r.stepKey === rs.key);
+                          const selected =
+                            routePlan[rs.key] || defaultOuForStep(rs.key, stepRecipients);
                           return (
                             <label key={rs.key} className={styles.routeChip}>
                               <span>{rs.label}</span>
                               <select
-                                value={routePlan[rs.key] || ''}
+                                value={selected}
                                 onChange={(e) =>
                                   setRoutePlan((prev) => ({
                                     ...prev,
@@ -1089,38 +1324,25 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                                 }
                               >
                                 {!opts.length && <option value="">—</option>}
-                                {opts.map((o) => (
-                                  <option key={`${rs.key}-${o.ouCode}`} value={o.ouCode}>
-                                    {o.ouCode}
-                                  </option>
-                                ))}
+                                {opts.map((o) => {
+                                  const ou = orgUnits.filter((u) => u.ouCode === o.ouCode)[0];
+                                  return (
+                                    <option key={`${rs.key}-${o.ouCode}`} value={o.ouCode}>
+                                      {ou ? ou.ouName : o.ouCode}
+                                    </option>
+                                  );
+                                })}
                               </select>
                             </label>
                           );
                         })}
                       </div>
-                      <p className={styles.hint}>TCKT / CT.HĐQT lấy mặc định từ cấu hình — không chọn tay.</p>
+                      <p className={styles.hint}>TCKT / CT.HĐQT lấy mặc định từ cấu hình.</p>
                     </div>
-                    <label className={styles.field}>
-                      Số tiền đề nghị (VND)
-                      <input
-                        value={createAmount}
-                        onChange={(e) => setCreateAmount(e.target.value)}
-                        inputMode="numeric"
-                      />
-                    </label>
-                    <label className={`${styles.field} ${styles.fieldFull}`}>
-                      Tiêu đề hồ sơ
-                      <input
-                        value={createTitle}
-                        onChange={(e) => setCreateTitle(e.target.value)}
-                        placeholder="Ví dụ: Thanh toán đợt 2 theo HĐ…"
-                      />
-                    </label>
                     <label className={`${styles.field} ${styles.fieldFull}`}>
                       Diễn giải
                       <textarea
-                        rows={3}
+                        rows={2}
                         value={createExpl}
                         onChange={(e) => setCreateExpl(e.target.value)}
                         placeholder="Mô tả ngắn nội dung đề nghị thanh toán"
@@ -1152,7 +1374,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                           <tr key={t.itemCode}>
                             <td>
                               <strong>{t.itemLabel}</strong>
-                              <span className={styles.meta}>{t.itemCode}</span>
+                              {/* <span className={styles.meta}>{t.itemCode}</span> */}
                             </td>
                             <td>
                               <span className={badgeClass(t.isRequired ? 'warn' : 'mute')}>
@@ -1185,7 +1407,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             <>
               <div className={styles.pageHead}>
                 <div>
-                  <h2>{master.title || master.requestKey}</h2>
+                  <h2>{displayRequestTitle(master)}</h2>
                   <div className={styles.tags}>
                     <span
                       className={badgeClass(
@@ -1245,10 +1467,117 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                 <div className={styles.panelWarn}>
                   <h4>Hồ sơ đã được trả về</h4>
                   <div>
-                    Chỉnh sửa tài liệu / nội dung rồi gửi lại. Bước hiện tại:{' '}
+                    Chỉnh sửa thông tin / tài liệu rồi trình lại. Bước hiện tại:{' '}
                     <b>{stepShortVi(master.currentStepKey)}</b>
+                    {rejectNote ? (
+                      <>
+                        <br />
+                        <b>Lý do:</b> {rejectNote}
+                      </>
+                    ) : null}
                   </div>
                 </div>
+              )}
+
+              {canEditRequestBusinessFields(master) && (
+                <section className={styles.card}>
+                  <div className={styles.cardH}>
+                    <h3>Sửa thông tin hồ sơ</h3>
+                    <span className={badgeClass('warn')}>
+                      {master.status === 'Returned' ? 'Đã trả về' : 'Nháp'}
+                    </span>
+                  </div>
+                  <div className={styles.cardB}>
+                    <div className={styles.form}>
+                      <label className={`${styles.field} ${styles.fieldFull}`}>
+                        Tiêu đề hồ sơ
+                        <input
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          placeholder="Ví dụ: Thanh toán công tác tháng 11…"
+                        />
+                      </label>
+                      <label className={styles.field}>
+                        Số tiền đề nghị (VND)
+                        <input
+                          value={editAmount}
+                          onChange={(e) => setEditAmount(e.target.value)}
+                          inputMode="numeric"
+                        />
+                      </label>
+                      <label className={styles.field}>
+                        Đơn vị khởi tạo
+                        <select value={editOu} onChange={(e) => setEditOu(e.target.value)}>
+                          {orgUnits.length === 0 && (
+                            <option value={editOu || 'OU_TONGHOP'}>
+                              {editOu || 'OU_TONGHOP'}
+                            </option>
+                          )}
+                          {orgUnits.map((o) => (
+                            <option key={o.id} value={o.ouCode}>
+                              {o.ouName}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <div className={`${styles.field} ${styles.fieldFull}`}>
+                        <span>Phòng nhận kiểm tra</span>
+                        <div className={styles.routeRow}>
+                          {ROUTE_STEPS_UI.map((rs) => {
+                            const opts = stepRecipients.filter((r) => r.stepKey === rs.key);
+                            const selected =
+                              editRoutePlan[rs.key] || defaultOuForStep(rs.key, stepRecipients);
+                            return (
+                              <label key={rs.key} className={styles.routeChip}>
+                                <span>{rs.label}</span>
+                                <select
+                                  value={selected}
+                                  onChange={(e) =>
+                                    setEditRoutePlan((prev) => ({
+                                      ...prev,
+                                      [rs.key]: e.target.value
+                                    }))
+                                  }
+                                >
+                                  {!opts.length && <option value="">—</option>}
+                                  {opts.map((o) => {
+                                    const ou = orgUnits.filter((u) => u.ouCode === o.ouCode)[0];
+                                    return (
+                                      <option key={`edit-${rs.key}-${o.ouCode}`} value={o.ouCode}>
+                                        {ou ? ou.ouName : o.ouCode}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <p className={styles.hint}>
+                          Loại hồ sơ: {master.paymentTypeCode} (không đổi).
+                        </p>
+                      </div>
+                      <label className={`${styles.field} ${styles.fieldFull}`}>
+                        Diễn giải
+                        <textarea
+                          rows={2}
+                          value={editExpl}
+                          onChange={(e) => setEditExpl(e.target.value)}
+                        />
+                      </label>
+                    </div>
+                    <div className={styles.actions} style={{ marginTop: 10 }}>
+                      <button
+                        type="button"
+                        className={`${styles.btn} ${styles.btnPrimary}`}
+                        disabled={busy}
+                        onClick={onSaveBusinessFields}
+                      >
+                        Lưu thông tin
+                      </button>
+                    </div>
+                  </div>
+                </section>
               )}
 
               {master.currentStepKey === 'BPCM1_PREPARE' &&
@@ -1283,15 +1612,21 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                   </div>
                 )}
 
-              {canReviewDocs && !checklistAllPass(checklist) && (
+              {canReviewDocs && checklistHasFail(checklist) && (
                 <div className={styles.panelWarn}>
-                  <h4>Chưa đủ điều kiện chuyển bước</h4>
+                  <h4>Có mục Không đạt</h4>
                   <div>
-                    {!checklistReviewComplete(checklist)
-                      ? 'Cần đánh giá Đạt/Không đạt hết các mục checklist (bắt buộc hoặc đã có tệp) trước khi chuyển tiếp.'
-                      : checklistHasFail(checklist)
-                        ? 'Có mục Không đạt — chỉ có thể «Trả về người tạo», không chuyển bước.'
-                        : 'Checklist chưa Đạt đủ.'}
+                    Chỉ «Trả về người tạo». Phòng đánh giá các mục chưa khóa thuộc phạm vi mình;
+                    không cần Đạt hết toàn bộ checklist để chuyển bước.
+                  </div>
+                </div>
+              )}
+              {canReviewDocs && !checklistHasFail(checklist) && !checklistReviewComplete(checklist) && (
+                <div className={styles.panelWarn}>
+                  <h4>Gợi ý đánh giá checklist</h4>
+                  <div>
+                    Chủ động đánh giá các mục chưa khóa phù hợp phòng. Có thể chuyển bước khi không
+                    còn mục Không đạt; mục đã khóa chỉ xem, không đánh giá lại.
                   </div>
                 </div>
               )}
@@ -1379,8 +1714,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                                 <td>
                                   <strong>{c.itemLabel}</strong>
                                   <span className={styles.meta}>
-                                    {c.itemCode}
-                                    {c.isRequired ? ' · Bắt buộc' : ' · Tuỳ chọn'}
+                                    {/* {c.itemCode} */}
+                                    {c.isRequired ? 'Bắt buộc' : 'Tuỳ chọn'}
                                     {` · ${c.uploadedCount}/${min} tệp`}
                                   </span>
                                 </td>
@@ -1452,21 +1787,28 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                                         Đánh giá
                                       </button>
                                     )}
-                                    {c.isLocked && (
+                                    {/* «Đã khóa» chỉ hiện ở bước kiểm tra — không hiện khi đang sửa lại BPCM1 */}
+                                    {c.isLocked && !isBpcm1Adjusting && (
                                       <span className={badgeClass('mute')}>Đã khóa</span>
                                     )}
-                                    {master.currentStepKey === 'BPCM1_PREPARE' &&
-                                      (master.status === 'Draft' || master.status === 'Returned') && (
+                                    {isBpcm1Adjusting && linked.length > 0 && (
+                                      <button
+                                        type="button"
+                                        className={`${styles.btn} ${styles.btnOutline}`}
+                                        style={{ padding: '6px 10px', fontSize: 12 }}
+                                        disabled={busy}
+                                        onClick={() => onClearChecklistItem(c)}
+                                      >
+                                        Xóa hồ sơ
+                                      </button>
+                                    )}
+                                    {isBpcm1Adjusting && (
                                       <button
                                         type="button"
                                         className={`${styles.btn} ${styles.btnPrimary}`}
                                         style={{ padding: '6px 10px', fontSize: 12 }}
                                         disabled={busy}
-                                        onClick={() => {
-                                          setUploadMode('checklist');
-                                          setUploadItemCode(c.itemCode);
-                                          setDialog('attach');
-                                        }}
+                                        onClick={() => pickChecklistFile(c.itemCode)}
                                       >
                                         {c.uploadedCount > 0 ? 'Tải thêm' : 'Tải lên'}
                                       </button>
@@ -1486,7 +1828,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                     {supportingDocs.length === 0 ? (
                       <p className={styles.empty}>
                         Chưa có tài liệu hỗ trợ. Dùng «Tải đính kèm hỗ trợ» để bổ sung chứng từ
-                        theo bước (không thay checklist).
+                        theo bước.
                       </p>
                     ) : (
                       <table className={styles.dataTable}>
@@ -1567,7 +1909,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                     }`}
                     onClick={() => setActivityTab('timeline')}
                   >
-                    Nhật ký
+                    <span className={styles.tabLabel}>
+                      Nhật ký
+                      <span className={styles.tabCountBadge} aria-label={`${timeline.length} mục`}>
+                        {timeline.length}
+                      </span>
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -1576,7 +1923,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                     }`}
                     onClick={() => setActivityTab('comment')}
                   >
-                    Ghi chú
+                    <span className={styles.tabLabel}>
+                      Ghi chú
+                      <span className={styles.tabCountBadge} aria-label={`${noteList.length} ghi chú`}>
+                        {noteList.length}
+                      </span>
+                    </span>
                   </button>
                 </div>
                 {activityTab === 'timeline' && (
@@ -1617,35 +1969,103 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                 )}
                 {activityTab === 'comment' && (
                   <div className={styles.cardB}>
-                    <label className={`${styles.field} ${styles.fieldFull}`}>
-                      Thêm ghi chú
-                      <textarea
-                        rows={3}
-                        value={commentDraft}
-                        onChange={(e) => setCommentDraft(e.target.value)}
-                        placeholder="Thêm ghi chú…"
-                      />
-                    </label>
-                    <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
-                      <button
-                        type="button"
-                        className={`${styles.btn} ${styles.btnPrimary}`}
-                        disabled={busy}
-                        onClick={() => {
-                          if (!commentDraft.trim()) {
-                            showNotice('warning', 'Nhập nội dung ghi chú');
-                            return;
-                          }
-                          showNotice(
-                            'info',
-                            'Ghi chú UI đã nhận — chờ nối list Activity/Comments trên CECM.'
-                          );
-                          setCommentDraft('');
-                        }}
-                      >
-                        Gửi ghi chú
-                      </button>
-                    </div>
+                    {noteList.length === 0 && (
+                      <p className={styles.empty}>Chưa có ghi chú trên hồ sơ.</p>
+                    )}
+                    {noteList.map((n) => {
+                      const linkedDoc = n.documentKey
+                        ? docs.filter(
+                            (d) =>
+                              (d.documentKey || '').replace(/\|/g, '_') === n.documentKey
+                          )[0]
+                        : undefined;
+                      return (
+                        <div className={styles.actRow} key={n.id}>
+                          <div>
+                            <strong>{n.title}</strong>
+                            <span className={styles.meta}>
+                              {[
+                                n.at ? new Date(n.at).toLocaleString('vi-VN') : '',
+                                n.actorUPN,
+                                linkedDoc
+                                  ? shortFileName(linkedDoc.fileName || linkedDoc.documentKey)
+                                  : ''
+                              ]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </span>
+                            <div style={{ marginTop: 4 }}>{n.body}</div>
+                            {linkedDoc && (
+                              <button
+                                type="button"
+                                className={styles.linkish}
+                                style={{ marginTop: 4, padding: 0, fontSize: 12 }}
+                                onClick={() => setDrawerDoc(linkedDoc)}
+                              >
+                                Mở tệp
+                              </button>
+                            )}
+                          </div>
+                          <span
+                            className={badgeClass(
+                              n.kind === 'reject'
+                                ? 'danger'
+                                : n.kind === 'user'
+                                  ? 'info'
+                                  : 'mute'
+                            )}
+                          >
+                            {n.kind === 'reject'
+                              ? 'Trả về'
+                              : n.kind === 'review'
+                                ? 'Nhận xét'
+                                : n.documentKey
+                                  ? 'Tệp'
+                                  : n.kind === 'user'
+                                    ? 'Ghi chú'
+                                    : 'Khác'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {!notesAllowed ? (
+                      <p className={styles.hint} style={{ marginTop: 12 }}>
+                        Hồ sơ đã đóng — không gửi thêm ghi chú.
+                      </p>
+                    ) : (
+                      <>
+                        <label
+                          className={`${styles.field} ${styles.fieldFull}`}
+                          style={{ marginTop: noteList.length ? 12 : 0 }}
+                        >
+                          Thêm ghi chú
+                          <textarea
+                            rows={3}
+                            value={commentDraft}
+                            onChange={(e) => setCommentDraft(e.target.value)}
+                            placeholder="Thêm ghi chú…"
+                          />
+                        </label>
+                        <div className={styles.actions} style={{ justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            className={`${styles.btn} ${styles.btnPrimary}`}
+                            disabled={busy}
+                            onClick={() => {
+                              if (!commentDraft.trim()) {
+                                showNotice('warning', 'Nhập nội dung ghi chú');
+                                return;
+                              }
+                              const text = commentDraft.trim();
+                              setCommentDraft('');
+                              sendUserNote(text);
+                            }}
+                          >
+                            Gửi ghi chú
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </section>
@@ -1730,7 +2150,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                   <div className={styles.railCard}>
                     <div className={styles.reqKey}>
                       <span>Mã hồ sơ</span>
-                      {master.requestKey}
+                      {master.requestCode || master.requestKey}
                     </div>
                     <div className={styles.bigNum}>
                       {moneyVi(master.amount)}
@@ -1747,6 +2167,10 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                   </div>
                   <div className={styles.railCard}>
                     <h4>Tóm tắt nhanh</h4>
+                    <div className={styles.kv}>
+                      <b>Tiêu đề</b>
+                      <span>{displayRequestTitle(master)}</span>
+                    </div>
                     <div className={styles.kv}>
                       <b>Loại</b>
                       <span>{master.paymentTypeCode || '—'}</span>
@@ -1812,24 +2236,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                   </div>
                   <div className={styles.railCard}>
                     <h4>Luồng duyệt</h4>
-                    <div className={styles.flowV}>
-                      {CORE_STEPS.map((s, idx) => {
-                        const cur = stepIndex(master.currentStepKey);
-                        const done = idx < cur;
-                        const now = idx === cur;
-                        return (
-                          <div
-                            key={s}
-                            className={`${styles.flowStep} ${done ? styles.flowDone : ''} ${
-                              now ? styles.flowNow : ''
-                            }`.trim()}
-                          >
-                            <span className={styles.flowDot}>{done ? '✓' : idx + 1}</span>
-                            <strong>{stepShortVi(s)}</strong>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <ApprovalFlow
+                      currentStepKey={master.currentStepKey}
+                      workItems={workItems}
+                      activities={activities}
+                    />
                   </div>
                 </>
               )}
@@ -1930,8 +2341,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           )}
           {dialog === 'submit' && (
             <p className={styles.hint}>
-              Hệ thống kiểm tra đủ tài liệu checklist bắt buộc rồi trình trưởng phòng (chưa sang
-              BPCM2). Không cần đánh giá Đạt/Không đạt ở bước này.
+              Bạn xác nhận hồ sơ đã đúng, đủ để trình trưởng phòng rồi?
             </p>
           )}
           {dialog === 'mgrApprove' && (
@@ -2006,6 +2416,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           doc={drawerDoc}
           comment={docComment}
           onCommentChange={setDocComment}
+          commentsEnabled={notesAllowed}
+          commentsDisabledHint="Hồ sơ đã đóng — không gửi thêm ghi chú."
+          docNotes={notesForDocument(noteList, drawerDoc.documentKey)}
           onClose={() => {
             setDrawerDoc(undefined);
             setDocComment('');
@@ -2015,15 +2428,21 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               showNotice('warning', 'Nhập nội dung ghi chú');
               return;
             }
-            showNotice(
-              'info',
-              'Đã nhận ghi chú tài liệu (chờ nối list Comments trên CECM).'
-            );
+            const text = docComment.trim();
+            const docKey = drawerDoc.documentKey;
             setDocComment('');
+            sendUserNote(text, docKey);
           }}
         />
       )}
 
+      <input
+        ref={checklistFileRef}
+        type="file"
+        style={{ display: 'none' }}
+        aria-hidden={true}
+        onChange={onChecklistFilePicked}
+      />
       <BusyDialog open={busy} message={busyMessage} />
     </div>
   );

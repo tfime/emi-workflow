@@ -69,10 +69,8 @@ const ActionDialog: React.FC<IActionDialogProps> = (props) => {
     return detail.check.some((c) => c.required && c.result === 'Missing');
   };
 
-  const checklistAllPass = (): boolean => {
-    return checks
-      .filter((c) => c.required)
-      .every((c) => c.result === 'Pass' || c.result === 'Uploaded');
+  const checklistHasFailOpen = (): boolean => {
+    return checks.some((c) => c.result === 'Fail');
   };
 
   const confirm = (): void => {
@@ -95,17 +93,19 @@ const ActionDialog: React.FC<IActionDialogProps> = (props) => {
         onConfirm(`ASSIGN · ${selectedStaff.length} người`);
         return;
       case 'checklist':
-        onConfirm(`CHECKLIST cập nhật · allPass=${String(checklistAllPass())}`);
+        onConfirm(
+          `CHECKLIST cập nhật · hasFail=${String(checklistHasFailOpen())}`
+        );
         return;
       case 'attach':
         onConfirm(`UPLOAD · ${fileName || 'file-demo.pdf'}`);
         return;
       case 'forward':
-        if (!checklistAllPass()) {
-          onConfirm('Chặn gửi tiếp: checklist chưa Đạt hết (BR-06)');
+        if (checklistHasFailOpen()) {
+          onConfirm('Chặn gửi tiếp: có mục Không đạt — trả BPCM1');
           return;
         }
-        onConfirm(`DECIDE PASS → ${nextOu}`);
+        onConfirm(`DECIDE PASS → ${nextOu} · khóa mục đã đánh giá`);
         return;
       case 'return':
         if (!reason.trim()) {
@@ -185,8 +185,15 @@ const ActionDialog: React.FC<IActionDialogProps> = (props) => {
               {kind === 'submit' && missingRequired() && (
                 <p className={styles.warnBox}>BR-01: còn mục checklist bắt buộc thiếu / không đạt.</p>
               )}
-              {kind === 'forward' && !checklistAllPass() && (
-                <p className={styles.warnBox}>BR-06: chưa Đạt hết checklist bắt buộc — không gửi tiếp.</p>
+              {kind === 'forward' && checklistHasFailOpen() && (
+                <p className={styles.warnBox}>
+                  Có mục Không đạt — trả BPCM1. Không cần Đạt hết checklist để chuyển bước.
+                </p>
+              )}
+              {kind === 'forward' && !checklistHasFailOpen() && (
+                <p className={styles.hint}>
+                  Phòng đánh giá mục phù hợp; sau PASS khóa mục đã Đạt/Không đạt.
+                </p>
               )}
               <p className={styles.hint}>BR-02: không gửi đồng thời hai phòng cùng bước.</p>
             </>

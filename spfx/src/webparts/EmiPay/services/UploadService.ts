@@ -1,6 +1,10 @@
-import { IChecklistItemRow, bumpChecklistUpload } from './ChecklistService';
+import {
+  IChecklistItemRow,
+  bumpChecklistUpload,
+  resetChecklistItemFiles
+} from './ChecklistService';
 import { DOCS_WORKING_TITLE, PAY_LISTS, newKey } from './PayLists';
-import { ISpRestContext, createItem, getItems, uploadFileToLibrary } from './SpRest';
+import { ISpRestContext, createItem, getItems, mergeItem, uploadFileToLibrary } from './SpRest';
 import { escapeOData } from './PayLists';
 
 export interface IUploadResult {
@@ -205,4 +209,31 @@ export async function listDocumentsForRequest(
     `$filter=RequestKey eq '${escapeOData(requestKey)}' and IsCurrent eq 1&$orderby=Id desc&$top=100`
   );
   return rows.map(mapDocRow);
+}
+
+/**
+ * Soft-delete toàn bộ tệp checklist hiện tại của một mục (IsCurrent=false)
+ * và reset UploadedCount → Missing để tải lên mới hoàn toàn.
+ */
+export async function clearChecklistItemFiles(
+  ctx: ISpRestContext,
+  item: IChecklistItemRow
+): Promise<void> {
+  const key = item.checklistItemKey || `${item.requestKey}|${item.itemCode}`;
+  const code = (item.itemCode || '').toLowerCase();
+  const rows = await getItems<Record<string, unknown>>(
+    ctx,
+    PAY_LISTS.DocumentIndex,
+    `$filter=RequestKey eq '${escapeOData(item.requestKey)}' and DocClass eq 'Checklist' and IsCurrent eq 1&$top=50`
+  );
+  const matched = rows.filter((r) => {
+    const ck = String(r.ChecklistItemKey || '').toLowerCase();
+    const dk = String(r.DocumentKey || '').toLowerCase();
+    if (ck && (ck === key.toLowerCase() || ck.indexOf(`|${code}`) >= 0)) return true;
+    return dk.indexOf(`|${code}|`) >= 0 || dk.indexOf(`|${code}`) >= 0;
+  });
+  for (let i = 0; i < matched.length; i++) {
+    await mergeItem(ctx, PAY_LISTS.DocumentIndex, Number(matched[i].Id), { IsCurrent: false });
+  }
+  await resetChecklistItemFiles(ctx, item);
 }

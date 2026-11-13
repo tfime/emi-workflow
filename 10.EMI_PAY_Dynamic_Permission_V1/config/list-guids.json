@@ -1,0 +1,16 @@
+{
+  "EMI_PAY_OrgUnits": "a95e5ccf-00cc-4c7e-b375-828a07117530",
+  "EMI_PAY_OrgMembers": "58db4d66-1299-4edb-893e-50c8fe459253",
+  "EMI_PAY_StepRecipients": "7ebac733-193d-4216-bf63-785c6a5f06a2",
+  "EMI_PAY_Requests": "12b3051d-7642-4f90-a39d-5364df561fbf",
+  "EMI_PAY_WorkItems": "e21ef6e7-ee31-466a-be3b-65ae30ca7722",
+  "EMI_PAY_Assignments": "0ec1447a-6ff0-4071-b6c4-4d939d74d404",
+  "EMI_PAY_ChecklistItems": "d02c6a03-9561-4d90-b5d5-ad30a2fef88b",
+  "EMI_PAY_DocumentIndex": "a45c74cd-1f21-454c-9fcc-6812692b801b",
+  "EMI_PAY_ActivityPublic": "84b57c9e-6b90-4a6b-a200-b3afb4499895",
+  "EMI_PAY_StepReviews": "02a39987-5801-401e-8f3f-ba8caf1c1f4a",
+  "EMI_PAY_DocsWorking": "c2b4ef47-2c55-41e4-8b3c-c6480a27bbb2",
+  "EMI_PAY_DocsInternal": "84ba461f-30ea-4d32-bb56-0ab1aa9cf456",
+  "EMI_PAY_ArchiveCompleted": "bb7f6020-1fb6-448b-af3b-2cb36d793cc1",
+  "EMI_PAY_ArchiveCancelled": "e64e349b-2fca-4925-b18b-08e387163601"
+}

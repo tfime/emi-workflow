@@ -5,6 +5,9 @@ import { PayStateKey } from '../components/types';
 export interface IRequestMaster {
   id: number;
   requestKey: string;
+  /** Mã hiển thị (RequestCode); fallback RequestKey. */
+  requestCode: string;
+  /** Tiêu đề nghiệp vụ (Title) — không dùng RequestKey thay thế. */
   title: string;
   status: string;
   currentStepKey: string;
@@ -31,6 +34,7 @@ export interface IWorkItemRow {
   stepInstanceKey: string;
   acceptedAt?: string;
   dueAt?: string;
+  closedAt?: string;
   acceptedByUPN?: string;
   decisionNote?: string;
   responsibleOUCode?: string;
@@ -46,10 +50,15 @@ function choiceVal(v: unknown): string {
 }
 
 function mapMaster(r: Record<string, unknown>): IRequestMaster {
+  const requestKey = String(r.RequestKey || '');
+  const rawTitle = String(r.Title || '');
+  // Flow CREATE từng ghi Title=RequestKey — không coi đó là tiêu đề nghiệp vụ.
+  const title = rawTitle && rawTitle !== requestKey ? rawTitle : '';
   return {
     id: Number(r.Id),
-    requestKey: String(r.RequestKey || ''),
-    title: String(r.Title || r.RequestKey || ''),
+    requestKey,
+    requestCode: String(r.RequestCode || requestKey),
+    title,
     status: choiceVal(r.Status),
     currentStepKey: String(r.CurrentStepKey || ''),
     currentStepInstanceKey: String(r.CurrentStepInstanceKey || ''),
@@ -75,37 +84,86 @@ export async function getRequestByKey(
   const rows = await getItems<Record<string, unknown>>(
     ctx,
     PAY_LISTS.Requests,
-    `$filter=RequestKey eq '${escapeOData(requestKey)}'&$select=Id,Title,RequestKey,Status,CurrentStepKey,CurrentStepInstanceKey,CurrentOUCode,ReviewRound,PaymentTypeCode,CreatorUPN,CreatedOUCode,Explanation,Amount,PaymentDueAt,PaidAt,ArchiveStatus,IsLocked,RoutePlanJson&$top=2`
+    `$filter=RequestKey eq '${escapeOData(requestKey)}'&$select=Id,Title,RequestKey,RequestCode,Status,CurrentStepKey,CurrentStepInstanceKey,CurrentOUCode,ReviewRound,PaymentTypeCode,CreatorUPN,CreatedOUCode,Explanation,Amount,PaymentDueAt,PaidAt,ArchiveStatus,IsLocked,RoutePlanJson&$top=2`
   );
   if (!rows.length) return undefined;
   return mapMaster(rows[0]);
 }
 
+/** Được sửa Title/Amount/Explanation/OU/RoutePlan khi Nháp hoặc Đã trả (BPCM1). */
+export function canEditRequestBusinessFields(master: IRequestMaster): boolean {
+  if (master.isLocked) return false;
+  if (master.currentStepKey !== 'BPCM1_PREPARE') return false;
+  return master.status === 'Draft' || master.status === 'Returned';
+}
+
+export interface IRequestBusinessPatch {
+  title?: string;
+  amount?: number;
+  explanation?: string;
+  routePlanJson?: string;
+  createdOUCode?: string;
+}
+
 /**
- * Flow CREATE (1.0.0.9) ghi Title=RequestKey, Explanation cứng, không ghi Amount.
- * SPFx bổ sung các trường nghiệp vụ sau khi Command Succeeded — không đổi Core Flow.
+ * MERGE trường nghiệp vụ trên Requests — không đổi Status/Step (không qua Core).
+ * Chỉ khi Draft/Returned + BPCM1_PREPARE.
+ */
+export async function patchRequestBusinessFields(
+  ctx: ISpRestContext,
+  requestKey: string,
+  fields: IRequestBusinessPatch
+): Promise<void> {
+  const master = await getRequestByKey(ctx, requestKey);
+  if (!master) {
+    throw new Error(`Không thấy hồ sơ ${requestKey}`);
+  }
+  if (!canEditRequestBusinessFields(master)) {
+    throw new Error(
+      'Chỉ được sửa thông tin khi hồ sơ Nháp hoặc Đã trả về (bước BPCM1).'
+    );
+  }
+  const body: Record<string, unknown> = {};
+  if (fields.title !== undefined) {
+    const t = String(fields.title).trim();
+    if (!t) {
+      throw new Error('Nhập tiêu đề hồ sơ (khác mã hồ sơ).');
+    }
+    if (t === master.requestKey) {
+      throw new Error('Tiêu đề hồ sơ phải khác mã hồ sơ hệ thống.');
+    }
+    body.Title = t;
+  }
+  if (fields.explanation !== undefined) body.Explanation = fields.explanation;
+  if (fields.amount !== undefined && !isNaN(fields.amount)) body.Amount = fields.amount;
+  if (fields.routePlanJson !== undefined) body.RoutePlanJson = fields.routePlanJson;
+  if (fields.createdOUCode !== undefined && fields.createdOUCode !== '') {
+    body.CreatedOUCode = fields.createdOUCode;
+  }
+  // Đồng bộ mã hiển thị nếu trống
+  if (!master.requestCode || master.requestCode === master.requestKey) {
+    body.RequestCode = master.requestKey;
+  }
+  if (!Object.keys(body).length) return;
+  await mergeItem(ctx, PAY_LISTS.Requests, master.id, body);
+}
+
+/** Tiêu đề hiển thị; không lẫn với mã hồ sơ. */
+export function displayRequestTitle(master: IRequestMaster): string {
+  if (master.title && master.title !== master.requestKey) return master.title;
+  return 'Chưa đặt tiêu đề';
+}
+
+/**
+ * Flow CREATE ghi Title=RequestKey, Explanation cứng, không ghi Amount.
+ * SPFx bổ sung sau Command Succeeded — không đổi Core Flow.
  */
 export async function patchRequestAfterCreate(
   ctx: ISpRestContext,
   requestKey: string,
-  fields: {
-    title?: string;
-    amount?: number;
-    explanation?: string;
-    routePlanJson?: string;
-  }
+  fields: IRequestBusinessPatch
 ): Promise<void> {
-  const master = await getRequestByKey(ctx, requestKey);
-  if (!master) {
-    throw new Error(`Không thấy hồ sơ ${requestKey} sau CREATE`);
-  }
-  const body: Record<string, unknown> = {};
-  if (fields.title) body.Title = fields.title;
-  if (fields.explanation !== undefined) body.Explanation = fields.explanation;
-  if (fields.amount !== undefined && !isNaN(fields.amount)) body.Amount = fields.amount;
-  if (fields.routePlanJson !== undefined) body.RoutePlanJson = fields.routePlanJson;
-  if (!Object.keys(body).length) return;
-  await mergeItem(ctx, PAY_LISTS.Requests, master.id, body);
+  await patchRequestBusinessFields(ctx, requestKey, fields);
 }
 
 export async function listRecentRequests(
@@ -132,7 +190,7 @@ export async function listWorkItems(
   const rows = await getItems<Record<string, unknown>>(
     ctx,
     PAY_LISTS.WorkItems,
-    `$filter=RequestKey eq '${escapeOData(requestKey)}'&$top=50`
+    `$filter=RequestKey eq '${escapeOData(requestKey)}'&$select=Id,StepKey,State,Decision,StepInstanceKey,AcceptedAt,DueAt,ClosedAt,AcceptedByUPN,DecisionNote,ResponsibleOUCode,ReviewRound&$top=50`
   );
   return rows
     .map((r) => ({
@@ -143,6 +201,7 @@ export async function listWorkItems(
       stepInstanceKey: String(r.StepInstanceKey || ''),
       acceptedAt: r.AcceptedAt ? String(r.AcceptedAt) : undefined,
       dueAt: r.DueAt ? String(r.DueAt) : undefined,
+      closedAt: r.ClosedAt ? String(r.ClosedAt) : undefined,
       acceptedByUPN: r.AcceptedByUPN ? String(r.AcceptedByUPN) : undefined,
       decisionNote: r.DecisionNote ? String(r.DecisionNote) : undefined,
       responsibleOUCode: r.ResponsibleOUCode ? String(r.ResponsibleOUCode) : undefined,

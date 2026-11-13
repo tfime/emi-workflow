@@ -45,6 +45,7 @@ https://emicomvn.sharepoint.com/sites/cecm/_layouts/15/workbench.aspx?debug=true
 | Màn | Hành vi |
 |---|---|
 | Tạo hồ sơ | Đọc `PaymentTypes` + `ChecklistTemplates` theo loại → `CREATE_REQUEST` → reconcile checklist thiếu |
+| Sửa Draft/Returned | Form trên detail (BPCM1): title, số tiền, diễn giải, OU, RoutePlan → MERGE Requests |
 | Checklist | Upload file thật → `EMI_PAY_DocsWorking` + `DocumentIndex` + cập nhật `ChecklistItems` |
 | Gửi | `SUBMIT` (Flow chặn nếu thiếu file bắt buộc) |
 | Xử lý bước | `DECIDE` PASS/REJECT; CHAIR cần `paymentDueAt` |
@@ -57,6 +58,20 @@ https://emicomvn.sharepoint.com/sites/cecm/_layouts/15/workbench.aspx?debug=true
 3. PASS tới CHAIR → nhập due → PASS → `TCKT_PAY`.
 4. Upload UNC → Xác nhận → `SYSTEM_ARCHIVE` / Archiving.
 5. File thử trong DocsWorking có thể xóa sau.
+
+## UAT sửa thông tin Draft / Returned
+
+1. Tạo hồ sơ → mở detail (Nháp) → đổi tiêu đề/số tiền → **Lưu thông tin** → Làm mới thấy đúng.
+2. Trả hồ sơ về Returned → sửa diễn giải / RoutePlan → Lưu → Trình lại.
+3. Hồ sơ đang BPCM2+: không còn form sửa.
+
+## UAT checklist theo phòng (không Đạt hết)
+
+1. CREATE full checklist; SUBMIT vẫn cần upload đủ mục bắt buộc.
+2. BPCM2: đánh giá **một phần** mục (Đạt) → «Chuyển bước» được (không bắt Đạt hết).
+3. Các mục vừa Đạt có badge **Đã khóa**; BPCM3 **xem** được nhưng không «Đánh giá» lại.
+4. BPCM3 đánh giá mục còn mở → PASS; TCKT_CHECK tương tự.
+5. Có mục **Không đạt** chưa khóa → chỉ «Trả về người tạo», ẩn/chặn chuyển bước.
 
 ## Full-bleed (như emi-uikit)
 

@@ -1,7 +1,7 @@
 import { IPayAction, PayPersona } from '../components/types';
 import {
   IChecklistItemRow,
-  checklistAllPass,
+  checklistHasFail,
   requiredChecklistReady
 } from './ChecklistService';
 import { IRequestMaster, IWorkItemRow, isWorkItemAccepted } from './RequestService';
@@ -15,7 +15,38 @@ const STEP_PERSONAS: Record<string, PayPersona[]> = {
   TCKT_PAY: ['tckt_pay', 'manager']
 };
 
-const ACCEPT_STEPS = ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK', 'TCKT_PAY'];
+/** Bước bắt buộc ACCEPT (+DueAt) trước DECIDE / đánh giá checklist. */
+export const ACCEPT_STEPS = ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK', 'TCKT_PAY'];
+
+export function needsAcceptFirst(
+  master: IRequestMaster | undefined,
+  currentWi: IWorkItemRow | undefined,
+  workItems?: IWorkItemRow[]
+): boolean {
+  if (!master) return false;
+  if (ACCEPT_STEPS.indexOf(master.currentStepKey) < 0) return false;
+  if (isWorkItemAccepted(currentWi)) return false;
+  // Fallback: WI cùng bước đã có AcceptedAt (tránh lệch CurrentStepInstanceKey).
+  if (workItems && workItems.length) {
+    const hit = workItems.some(
+      (w) =>
+        w.stepKey === master.currentStepKey &&
+        !!(w.acceptedAt && String(w.acceptedAt).trim())
+    );
+    if (hit) return false;
+  }
+  return true;
+}
+
+/** Ghi chú tự do: chặn khi hồ sơ đã hoàn tất / hủy. */
+export function canAddUserNote(master: IRequestMaster | undefined): boolean {
+  if (!master) return false;
+  const st = master.status || '';
+  if (st === 'Completed' || st === 'Cancelled' || st === 'CancellationArchiving') {
+    return false;
+  }
+  return true;
+}
 
 /** CHAIR đã duyệt hồ sơ (chưa PaymentDueAt) — WI CHAIR Decision=Approved đã đóng. */
 export function isChairDossierApproved(
@@ -117,8 +148,10 @@ export function liveActionsFor(
   }
 
   if (step === 'BPCM2_TECH' || step === 'BPCM3_PRICE' || step === 'TCKT_CHECK') {
+    // Phòng tự chọn mục chưa khóa để đánh giá — không đòi Đạt hết checklist.
+    // Có Fail chưa khóa → chỉ trả BPCM1, không PASS.
     const actions: IPayAction[] = [];
-    if (checklistAllPass(checklist)) {
+    if (!checklistHasFail(checklist)) {
       actions.push({
         id: 'forward',
         label: 'Chuyển bước tiếp theo',

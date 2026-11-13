@@ -8,10 +8,11 @@ alwaysApply: true
 ## Nguồn sự thật (theo thứ tự)
 
 1. Schema CECM + seed (`EMI_PAY_*` lists, `seed-config.json`, list-guids)
-2. Main Flow Core đã chốt (`EMI_PAY_Core_Flow_Phase1`, Commands 1.0.0.11)
-3. Nghiệp vụ: `BA.md`, `EMI_Quy_tac_nghiep_vu_*.md`, `EMI_PAY_MaTran_VaiTro_*.md`
-4. Trạng thái làm: `plan.md`, `EMI_PAY_Doi_chieu_BA.md`
-5. SPFx chỉ là UI trên model/Flow — không thay thế orchestrator
+2. Main Flow Core đã chốt (`EMI_PAY_Core_Flow_Phase1`, Commands 1.0.0.12)
+3. Dyn ACL theo hồ sơ: `10.EMI_PAY_Dynamic_Permission_V1` (không nới RBAC tĩnh 23/23)
+4. Nghiệp vụ: `BA.md`, `EMI_Quy_tac_nghiep_vu_*.md`, `EMI_PAY_MaTran_VaiTro_*.md`
+5. Trạng thái làm: `plan.md`, `EMI_PAY_Doi_chieu_BA.md`
+6. SPFx chỉ là UI trên model/Flow — không thay thế orchestrator
 
 ## Không tự ý
 

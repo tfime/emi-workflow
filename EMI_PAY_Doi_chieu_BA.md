@@ -39,7 +39,7 @@ Luồng tạo → Archiving: Core **1.0.0.12** (Activity + ACCEPT + CHAIR hai b�
 | 1 | Quyền động và cổng lệnh tin cậy | Không tin `ActorUPN`; cấp đọc/ghi theo hồ sơ trước go-live |
 | 2 | Tách người xử lý và người chốt | Chỉ trưởng phòng hoặc người được ủy quyền được `DECIDE` |
 | 3 | Phân công nhiều người / Assignments | ACCEPT+DueAt đã có; chưa giao nhiều nhân sự |
-| 4 | Checklist theo bộ phận và lượt | Kết quả Đạt của BPCM2 không được ghi đè cho BPCM3 |
+| 4 | Checklist theo bộ phận và lượt | SPFx: phòng đánh giá mục chưa khóa; DECIDE PASS khóa Pass/Fail — phòng sau xem không sửa. Core mirror IsLocked còn backlog |
 | 5 | Hủy, lưu trữ, thông báo | `Archiving` dừng ở trạng thái; chưa `COMPLETED`, chưa email |
 
 `featureMap` đánh dấu tiếp nhận, phân công, ủy quyền, gia hạn và hủy là đã phủ. Các dialog đó nằm ở UI demo. Orchestrator không thực thi chúng.
@@ -57,6 +57,7 @@ Luồng tạo → Archiving: Core **1.0.0.12** (Activity + ACCEPT + CHAIR hai b�
 | Chặn gửi khi thiếu chứng từ bắt buộc | Đủ | Gate UI và Flow trước `SUBMIT` |
 | Nhập đề nghị, pháp nhân, dự án | Một phần | Title, số tiền, diễn giải vá sau CREATE; chưa có trường pháp nhân và dự án |
 | Sinh checklist theo loại hồ sơ | Một phần | Flow seed 2 mục; UI bù template. Chưa đồng bộ một kênh |
+| Điều chỉnh thông tin khi Draft/Returned | Một phần | Form sửa trên detail BPCM1 (`patchRequestBusinessFields`); chưa lệnh Core EDIT |
 | Lưu và hoàn thiện bản nháp | Một phần | Có trạng thái Draft sau khi tạo, không có nháp trước lệnh |
 | Khóa sửa khi bộ phận khác đang kiểm tra | Một phần | `IsLocked` khi SUBMIT; chưa có lệnh EDIT khi hồ sơ bị trả |
 
@@ -88,9 +89,9 @@ Luồng tạo → Archiving: Core **1.0.0.12** (Activity + ACCEPT + CHAIR hai b�
 | Chức năng | Trạng thái | Hiện trạng |
 |---|---|---|
 | Xem chứng từ trong hồ sơ | Đủ | Upload DocsWorking và drawer xem tệp |
-| Đánh dấu Đạt hoặc Không đạt từng mục | Một phần | Ghi đè ItemStatus; chưa tách kết quả theo bộ phận |
+| Đánh dấu Đạt hoặc Không đạt từng mục | Một phần | Phòng tự chọn mục chưa `IsLocked`; không gán cứng mục↔bước; không đòi Đạt hết để chuyển bước |
 | Ghi nhận xét và lý do không đạt | Một phần | StepReviews từ UI, không qua lệnh Core |
-| Giữ kết quả theo lượt ReviewRound | Một phần | StepReviews có round; trạng thái mục dùng chung bị ghi đè |
+| Giữ kết quả theo lượt / khóa sau chốt | Một phần | Sau DECIDE PASS: `lockReviewedItems` (Pass/Fail). Core chưa mirror IsLocked |
 | Bổ sung tài liệu nội bộ của bộ phận | Một phần | Upload có; chưa tách DocsInternal và phạm vi phòng |
 | Giữ phiên bản khi thay tài liệu | Chưa có | Chưa quản lý IsCurrent và phiên bản cũ |
 | Nhân sự báo hoàn thành phần việc | Chưa có | Không có trạng thái phần việc riêng trưởng phòng |
@@ -123,7 +124,7 @@ Luồng tạo → Archiving: Core **1.0.0.12** (Activity + ACCEPT + CHAIR hai b�
 | RBAC tĩnh 23 list và thư viện | Đủ | PASS 23/23 theo ma trận V1.9.1 |
 | Chống chạy lại cùng một lệnh | Một phần | DedupeKey gắn command mới; chưa chặn replay |
 | Màn kiểm toán | Một phần | Khung AUDIT; ActivityInternal đã ghi khi Rejected/Failed — UI AUDIT chưa list |
-| Quyền động theo hồ sơ và pháp nhân | Chưa có | CHAIR, TCKT, USERS chưa có ACL theo hồ sơ |
+| Quyền động theo hồ sơ và pháp nhân | Một phần | Kit Dyn ACL V1 (`10.EMI_PAY_Dynamic_Permission_V1`); chưa hook Flow + UAT user-level |
 | Cổng lệnh không tin ActorUPN tự khai | Chưa có | Backlog kỹ thuật, mục trusted caller |
 | Nhật ký nghiệp vụ, phân công, hạn | Một phần | ActivityPublic + StepReviews trên timeline; phân công/gia hạn chưa có |
 

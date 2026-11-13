@@ -48,4 +48,6 @@ Không làm trong Phase 1. Làm lần lượt khi Flow CREATE→CONFIRM đã ổ
 
 ## Ngoài Core
 
-16. Dynamic Permission, Archive Manager (`ARCHIVE_RESULT`), Notification — Subflow sau; Core dừng ở `Archiving`
+16. **Dynamic Permission** — **Kit V1** trong `10.EMI_PAY_Dynamic_Permission_V1` (ma trận + PnP Apply/Validate theo RequestKey). Chưa gắn child Flow vào Core 1.0.0.12; DocsInternal/Archive ACL + reconcile remove = V1.1. Archive Manager (`ARCHIVE_RESULT`), Notification — Subflow sau; Core dừng ở `Archiving`
+17. **Checklist lock trên Core** — SPFx đã `lockReviewedItems` sau DECIDE PASS (BPCM2/3/TCKT_CHECK). Mirror trong Flow (MERGE IsLocked cho mục Pass/Fail) để cổng thật không phụ thuộc UI.
+18. **Dyn ACL Contribute Request (Draft/Returned)** — SPFx `patchRequestBusinessFields` cần Creator **Contribute** item Requests khi Nháp/Đã trả; Dyn V1 hiện chỉ Read.
