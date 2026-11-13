@@ -1,0 +1,4 @@
+"Action","Folder","User","Role","Mode"
+"EnsureFolder","EMI_PAY_DocsWorking/PAY-CMD-20261112162811-39705a","","","Validate"
+"ItemRead",,"admin@local",,"Validate"
+"FolderRole","EMI_PAY_DocsWorking/PAY-CMD-20261112162811-39705a","admin@local","Read","Validate"

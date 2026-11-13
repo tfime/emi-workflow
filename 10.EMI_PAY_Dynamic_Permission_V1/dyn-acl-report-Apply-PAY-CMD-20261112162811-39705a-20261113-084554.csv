@@ -1,0 +1,8 @@
+"Action","List","Id","Folder","User","Role","Mode","Error"
+"EnsureFolder","","","EMI_PAY_DocsWorking/PAY-CMD-20261112162811-39705a","","","Apply",""
+"ItemRead","EMI_PAY_Requests","","","tinh.pt@emi.com.vn","","Apply","Không thể tìm thấy mức độ cấp phép."
+"ItemRead","EMI_PAY_WorkItems","","","tinh.pt@emi.com.vn","","Apply","Không thể tìm thấy mức độ cấp phép."
+"ItemRead","EMI_PAY_ChecklistItems","","","tinh.pt@emi.com.vn","","Apply","Không thể tìm thấy mức độ cấp phép."
+"ItemRead","EMI_PAY_DocumentIndex","","","tinh.pt@emi.com.vn","","Apply","Không thể tìm thấy mức độ cấp phép."
+"ItemRead","EMI_PAY_ActivityPublic","","","tinh.pt@emi.com.vn","","Apply","Không thể tìm thấy mức độ cấp phép."
+"FolderRole","","","EMI_PAY_DocsWorking/PAY-CMD-20261112162811-39705a","tinh.pt@emi.com.vn","Read","Apply","Không thể tìm thấy mức độ cấp phép."
