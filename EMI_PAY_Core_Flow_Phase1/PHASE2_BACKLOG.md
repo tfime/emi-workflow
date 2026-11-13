@@ -40,6 +40,10 @@ Không làm trong Phase 1. Làm lần lượt khi Flow CREATE→CONFIRM đã ổ
 10b. **Perf CREATE** — **DONE in 1.0.0.14** (`PERF_GOI2_CREATE.md`): Title/Amount/Explanation/RoutePlanJson + seed ChecklistTemplates (foreach concurrency 4); fallback stub nếu thiếu seed.
 11. **Concurrency** — **DONE in 1.0.0.19**: Dedupe+ETag cho parallel HTTP; **không** `trigger.concurrency.runs` (xung đột sync Response)
 12. ~~**Đọc StepRecipients / WorkflowSteps**~~ — DONE trong Build Phase1 (SUBMIT/DECIDE đọc list; CREATE dùng `createdOUCode`)
+12b. **RoutePlan optional BPCM (user chọn 0/1/2)** — **CODED 13/11** (`ROUTE_PLAN_OPTIONAL_BPCM.md`, Core **1.0.0.22**)
+   - SPFx: «Không qua»; `_biz` object (không stringify lồng)
+   - Core: skip BPCM thiếu key; CREATE escape `\` rồi `"` cho RoutePlanJson
+   - Còn: Import ZIP **22** + UAT 4 case; chỉnh câu BA §03.4
 
 ## Dữ liệu / seed
 

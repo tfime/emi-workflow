@@ -17,7 +17,7 @@
       "OUCode": "OU_TONGHOP",
       "OUName": "Phòng Tổng hợp",
       "HomeLECode": "SPV",
-      "ManagerUPN": "TO_FILL",
+      "ManagerUPN": "tp.tonghop@emi.com.vn",
       "EntraGroupId": "",
       "IsActive": true
     },
@@ -68,6 +68,20 @@
       "MemberUPN": "tp.hcns@emi.com.vn",
       "MemberRole": "Manager",
       "Title": "Trưởng phòng HCNS (tạm)",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_TONGHOP",
+      "MemberUPN": "nv.tonghop@emi.com.vn",
+      "MemberRole": "Member",
+      "Title": "Thành viên Tổng hợp (tạm)",
+      "IsActive": true
+    },
+    {
+      "OUCode": "OU_TONGHOP",
+      "MemberUPN": "tp.tonghop@emi.com.vn",
+      "MemberRole": "Manager",
+      "Title": "Trưởng phòng Tổng hợp (tạm)",
       "IsActive": true
     },
     {

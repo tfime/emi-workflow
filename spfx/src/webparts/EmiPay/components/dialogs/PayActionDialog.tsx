@@ -51,7 +51,7 @@ const dialogTitleVi = (kind: DialogKind, uploadMode: 'checklist' | 'step'): stri
     case 'submit':
       return 'Trình trưởng phòng';
     case 'mgrApprove':
-      return 'Duyệt gửi sang BPCM2';
+      return 'Duyệt gửi bước kiểm tra tiếp';
     case 'forward':
       return 'Chuyển bước tiếp theo';
     case 'return':
@@ -193,8 +193,8 @@ const PayActionDialog: React.FC<IPayActionDialogProps> = (props) => {
           )}
           {props.dialog === 'mgrApprove' && (
             <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
-              Xác nhận duyệt gửi hồ sơ sang BPCM2. Không yêu cầu đánh giá Đạt hết checklist —
-              việc đó thuộc các bước kiểm tra sau.
+              Xác nhận duyệt gửi hồ sơ sang bước kiểm tra tiếp (theo RoutePlan đã pin — BPCM2/3
+              hoặc thẳng TCKT). Không yêu cầu đánh giá Đạt hết checklist.
             </Text>
           )}
           {props.dialog === 'forward' && (

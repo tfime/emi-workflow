@@ -182,7 +182,7 @@ export async function listRecentRequests(
   const rows = await getItems<Record<string, unknown>>(
     ctx,
     PAY_LISTS.Requests,
-    `${filter}$orderby=Created desc&$top=${top}`
+    `${filter}$select=Id,Title,RequestKey,RequestCode,Status,CurrentStepKey,CurrentStepInstanceKey,CurrentOUCode,ReviewRound,PaymentTypeCode,CreatorUPN,CreatedOUCode,Created,Explanation,Amount,PaymentDueAt,PaidAt,ArchiveStatus,IsLocked,RoutePlanJson&$orderby=Created desc&$top=${top}`
   );
   return rows.map(mapMaster);
 }

@@ -57,12 +57,16 @@ export function parsePartyBizFromRouteJson(
   }
 }
 
-/** Gắn / gỡ `_biz` trên RoutePlan (chỉ step keys là OU string). */
+/**
+ * Gắn / gỡ `_biz` trên RoutePlan.
+ * `_biz` phải là **object** (không stringify lồng) — tránh `\"` trong RoutePlanJson
+ * làm vỡ `@json(concat(...))` khi CREATE Master.
+ */
 export function withPartyBizOnRoute(
   plan: Record<string, string>,
   biz: IPartyBizInfo
-): Record<string, string> {
-  const next: Record<string, string> = { ...plan };
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...plan };
   delete next[PARTY_BIZ_ROUTE_KEY];
   if (!biz.partyKind) return next;
   const payload: Record<string, string> = { partyKind: biz.partyKind };
@@ -73,7 +77,7 @@ export function withPartyBizOnRoute(
     payload.currency = (biz.currency || '').trim();
     payload.paymentTimes = (biz.paymentTimes || '').trim();
   }
-  next[PARTY_BIZ_ROUTE_KEY] = JSON.stringify(payload);
+  next[PARTY_BIZ_ROUTE_KEY] = payload;
   return next;
 }
 

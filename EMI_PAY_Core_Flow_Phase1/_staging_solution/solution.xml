@@ -5,9 +5,9 @@
       <LocalizedName description="EMI_PAY_CORE_V1" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
-      <Description description="Core Orchestrator HTTP API 1.0.0.20: fix dual Response CLAIM_CONFLICT; terminal/Processing gates; AUTH" languagecode="1033" />
+      <Description description="Core Orchestrator HTTP API 1.0.0.22: CREATE RoutePlanJson escape fix (_biz); optional BPCM DECIDE" languagecode="1033" />
     </Descriptions>
-    <Version>1.0.0.20</Version>
+    <Version>1.0.0.22</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>tfime</UniqueName>

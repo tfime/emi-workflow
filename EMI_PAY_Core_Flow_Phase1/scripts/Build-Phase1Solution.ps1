@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) {
 $phaseRoot = Split-Path $PSScriptRoot -Parent
 $repoRoot = Split-Path $phaseRoot -Parent
 if ([string]::IsNullOrWhiteSpace($OutZip)) {
-    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_20.zip'
+    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_22.zip'
 }
 $staging = Join-Path $phaseRoot '_staging_solution'
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
@@ -32,9 +32,10 @@ $guidOrgMembers       = '58db4d66-1299-4edb-893e-50c8fe459253'
 $sysadmUpn            = 'tinh.pt@emi.com.vn'
 
 # CREATE Master: Title/Explanation/Amount/RoutePlanJson từ payload (Perf Gói 2).
-# Title/Explanation: thay " → ' . RoutePlanJson: escape " → \" để nhúng trong JSON string.
+# Title/Explanation: thay " → ' .
+# RoutePlanJson: escape \ rồi " (thứ tự bắt buộc) — tránh _biz / dấu \ làm vỡ json().
 $createMasterBody = @'
-@json(concat('{"Title":"', replace(string(coalesce(variables('Payload')?['title'], variables('RequestKey'))), '"', ''''), '","RequestKey":"', variables('RequestKey'), '","CreatedOUCode":"', coalesce(variables('Payload')?['createdOUCode'],''), '","CreatorUPN":"', coalesce(variables('Payload')?['creatorUPN'],'admin@local'), '","PaymentTypeCode":"', coalesce(variables('Payload')?['paymentTypeCode'],'SPV_PAYMENT'), '","WorkflowCode":"EMI_PAY_SPV","WorkflowVersion":1,"ChecklistVersion":', string(int(coalesce(variables('Payload')?['checklistVersion'], 1))), ',"ReviewRound":1,"CurrentStepKey":"BPCM1_PREPARE","CurrentStepInstanceKey":"', variables('StepInstanceKey'), '","CurrentOUCode":"', coalesce(variables('Payload')?['createdOUCode'],''), '","Status":"Draft","IsLocked":false,"ArchiveStatus":"NotStarted","Explanation":"', replace(string(coalesce(variables('Payload')?['explanation'], '')), '"', ''''), '","Amount":', string(coalesce(variables('Payload')?['amount'], 0)), ',"RoutePlanJson":"', replace(string(coalesce(variables('Payload')?['routePlanJson'], '{}')), '"', '\"'), '"}'))
+@json(concat('{"Title":"', replace(string(coalesce(variables('Payload')?['title'], variables('RequestKey'))), '"', ''''), '","RequestKey":"', variables('RequestKey'), '","CreatedOUCode":"', coalesce(variables('Payload')?['createdOUCode'],''), '","CreatorUPN":"', coalesce(variables('Payload')?['creatorUPN'],'admin@local'), '","PaymentTypeCode":"', coalesce(variables('Payload')?['paymentTypeCode'],'SPV_PAYMENT'), '","WorkflowCode":"EMI_PAY_SPV","WorkflowVersion":1,"ChecklistVersion":', string(int(coalesce(variables('Payload')?['checklistVersion'], 1))), ',"ReviewRound":1,"CurrentStepKey":"BPCM1_PREPARE","CurrentStepInstanceKey":"', variables('StepInstanceKey'), '","CurrentOUCode":"', coalesce(variables('Payload')?['createdOUCode'],''), '","Status":"Draft","IsLocked":false,"ArchiveStatus":"NotStarted","Explanation":"', replace(string(coalesce(variables('Payload')?['explanation'], '')), '"', ''''), '","Amount":', string(coalesce(variables('Payload')?['amount'], 0)), ',"RoutePlanJson":"', replace(replace(string(coalesce(variables('Payload')?['routePlanJson'], '{}')), '\', '\\'), '"', '\"'), '"}'))
 '@.Trim()
 
 function New-SpHttpGet([string]$UriExpr) {
@@ -983,13 +984,19 @@ $definition = [ordered]@{
                                                 runAfter = @{ HTTP_FindMaster_Decide = @('Succeeded') }
                                                 inputs   = "@first(body('HTTP_FindMaster_Decide')?['value'])?['CurrentStepKey']"
                                             }
+                                            # RoutePlan trước NextStep — BPCM2/3 vắng key = bỏ qua
+                                            COMPOSE_RoutePlan = [ordered]@{
+                                                type     = 'Compose'
+                                                runAfter = @{ COMPOSE_Next_Decide = @('Succeeded') }
+                                                inputs   = "@json(if(empty(coalesce(first(body('HTTP_FindMaster_Decide')?['value'])?['RoutePlanJson'],'')),'{}',coalesce(first(body('HTTP_FindMaster_Decide')?['value'])?['RoutePlanJson'],'{}')))"
+                                            }
                                             SET_Next_Decide = [ordered]@{
                                                 type     = 'SetVariable'
-                                                runAfter = @{ COMPOSE_Next_Decide = @('Succeeded') }
+                                                runAfter = @{ COMPOSE_RoutePlan = @('Succeeded') }
                                                 inputs   = [ordered]@{
                                                     name  = 'NextStepKey'
-                                                    # CHAIR: không paymentDueAt → giữ CHAIR (duyệt hồ sơ); có due → TCKT_PAY (duyệt TT)
-                                                    value = "@if(and(equals(first(body('HTTP_FindMaster_Decide')?['value'])?['Status'],'AwaitingManager'),equals(outputs('COMPOSE_Next_Decide'),'BPCM1_PREPARE')),'BPCM2_TECH',if(equals(outputs('COMPOSE_Next_Decide'),'BPCM2_TECH'),'BPCM3_PRICE',if(equals(outputs('COMPOSE_Next_Decide'),'BPCM3_PRICE'),'TCKT_CHECK',if(equals(outputs('COMPOSE_Next_Decide'),'TCKT_CHECK'),'CHAIR_APPROVE',if(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),if(empty(coalesce(variables('Payload')?['paymentDueAt'],'')),'CHAIR_APPROVE','TCKT_PAY'),'INVALID')))))"
+                                                    # Optional BPCM: có key trong RoutePlan mới qua; CHAIR hai bước giữ nguyên
+                                                    value = "@if(and(equals(first(body('HTTP_FindMaster_Decide')?['value'])?['Status'],'AwaitingManager'),equals(outputs('COMPOSE_Next_Decide'),'BPCM1_PREPARE')),if(not(empty(coalesce(outputs('COMPOSE_RoutePlan')?['BPCM2_TECH'],''))),'BPCM2_TECH',if(not(empty(coalesce(outputs('COMPOSE_RoutePlan')?['BPCM3_PRICE'],''))),'BPCM3_PRICE','TCKT_CHECK')),if(equals(outputs('COMPOSE_Next_Decide'),'BPCM2_TECH'),if(not(empty(coalesce(outputs('COMPOSE_RoutePlan')?['BPCM3_PRICE'],''))),'BPCM3_PRICE','TCKT_CHECK'),if(equals(outputs('COMPOSE_Next_Decide'),'BPCM3_PRICE'),'TCKT_CHECK',if(equals(outputs('COMPOSE_Next_Decide'),'TCKT_CHECK'),'CHAIR_APPROVE',if(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),if(empty(coalesce(variables('Payload')?['paymentDueAt'],'')),'CHAIR_APPROVE','TCKT_PAY'),'INVALID')))))"
                                                 }
                                             }
                                             HTTP_GetWS_Decide = [ordered]@{
@@ -1010,14 +1017,9 @@ $definition = [ordered]@{
                                                     authentication = "@parameters('`$authentication')"
                                                 }
                                             }
-                                            COMPOSE_RoutePlan = [ordered]@{
-                                                type     = 'Compose'
-                                                runAfter = @{ HTTP_GetWS_Decide = @('Succeeded') }
-                                                inputs   = "@json(if(empty(coalesce(first(body('HTTP_FindMaster_Decide')?['value'])?['RoutePlanJson'],'')),'{}',coalesce(first(body('HTTP_FindMaster_Decide')?['value'])?['RoutePlanJson'],'{}')))"
-                                            }
                                             SET_Meta_Decide = [ordered]@{
                                                 type     = 'Compose'
-                                                runAfter = @{ COMPOSE_RoutePlan = @('Succeeded') }
+                                                runAfter = @{ HTTP_GetWS_Decide = @('Succeeded') }
                                                 inputs   = [ordered]@{
                                                     order  = "@int(coalesce(first(body('HTTP_GetWS_Decide')?['value'])?['StepOrder'],0))"
                                                     kind   = "@if(equals(coalesce(first(body('HTTP_GetWS_Decide')?['value'])?['StepKind'],'Department'),'Initiator'),'Department',if(equals(coalesce(first(body('HTTP_GetWS_Decide')?['value'])?['StepKind'],''),'System'),'Payment',coalesce(first(body('HTTP_GetWS_Decide')?['value'])?['StepKind'],'Department')))"
@@ -2934,9 +2936,9 @@ $solution = @"
       <LocalizedName description="EMI_PAY_CORE_V1" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
-      <Description description="Core Orchestrator HTTP API 1.0.0.20: fix dual Response CLAIM_CONFLICT; terminal/Processing gates; AUTH" languagecode="1033" />
+      <Description description="Core Orchestrator HTTP API 1.0.0.22: CREATE RoutePlanJson escape fix (_biz); optional BPCM DECIDE" languagecode="1033" />
     </Descriptions>
-    <Version>1.0.0.20</Version>
+    <Version>1.0.0.22</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>tfime</UniqueName>

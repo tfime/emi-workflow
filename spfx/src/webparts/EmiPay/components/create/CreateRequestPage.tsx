@@ -26,6 +26,7 @@ import {
 } from '../detail/detailStyles';
 import PartyBizFields from '../forms/PartyBizFields';
 import SearchableSelect from '../forms/SearchableSelect';
+import { ROUTE_STEP_SKIP, isRouteStepSkipped } from '../../services/routePlan';
 import { amountError, formatAmountInput, parseAmountInput } from './amountValidate';
 import {
   createMultilineStyles,
@@ -229,30 +230,36 @@ const CreateRequestPage: React.FC<ICreateRequestPageProps> = (props) => {
 
           <Stack tokens={{ childrenGap: 8 }}>
             <Text variant="small" styles={groupLabel}>
-              Phòng nhận kiểm tra
+              Phòng nhận kiểm tra (tuỳ chọn)
             </Text>
             <div className={formGrid2Class}>
               {props.routeStepsUi.map((rs) => {
                 const opts = props.stepRecipients.filter((r) => r.stepKey === rs.key);
-                const selected =
-                  props.routePlan[rs.key] ||
-                  props.defaultOuForStep(rs.key, props.stepRecipients);
-                const options = opts.map((o) => {
-                  const ou = props.orgUnits.filter((u) => u.ouCode === o.ouCode)[0];
-                  return {
-                    value: o.ouCode,
-                    label: ou ? ou.ouName : o.ouCode,
-                    hint: o.ouCode
-                  };
-                });
+                const raw = props.routePlan[rs.key];
+                const selected = isRouteStepSkipped(raw) ? ROUTE_STEP_SKIP : raw;
+                const options = [
+                  {
+                    value: ROUTE_STEP_SKIP,
+                    label: 'Không qua bước này',
+                    hint: 'bỏ qua'
+                  },
+                  ...opts.map((o) => {
+                    const ou = props.orgUnits.filter((u) => u.ouCode === o.ouCode)[0];
+                    return {
+                      value: o.ouCode,
+                      label: ou ? ou.ouName : o.ouCode,
+                      hint: o.ouCode
+                    };
+                  })
+                ];
                 return (
                   <div key={rs.key} className={formCellClass}>
                     <SearchableSelect
                       label={rs.label}
                       options={options}
-                      value={selected}
+                      value={selected || ROUTE_STEP_SKIP}
                       disabled={props.busy}
-                      placeholder="Gõ để tìm phòng…"
+                      placeholder="Chọn phòng hoặc bỏ qua…"
                       emptyText="Không có phòng"
                       onChange={(v) => props.onRouteChange(rs.key, v)}
                     />
@@ -261,7 +268,7 @@ const CreateRequestPage: React.FC<ICreateRequestPageProps> = (props) => {
               })}
             </div>
             <Text variant="small" styles={hintText}>
-              TCKT / CT.HĐQT lấy mặc định từ cấu hình StepRecipients.
+              Có thể chọn BPCM2, BPCM3, một trong hai, hoặc không qua — TCKT / CT.HĐQT lấy mặc định.
             </Text>
           </Stack>
         </Stack>

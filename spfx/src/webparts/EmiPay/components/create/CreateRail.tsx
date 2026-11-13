@@ -13,6 +13,7 @@ export interface ICreateRailProps {
   actorUPN: string;
   partyKindLabel: string;
   nccSummary?: string;
+  inspectRoute?: string;
   templateCount: number;
   requiredCount: number;
 }
@@ -62,6 +63,7 @@ const CreateRail: React.FC<ICreateRailProps> = (props) => {
           {kv('Đối tượng', props.partyKindLabel || '—')}
           {!!props.nccSummary && kv('NCC', props.nccSummary)}
           {kv('Loại', props.typeTitle || '—')}
+          {kv('Tuyến kiểm tra', props.inspectRoute || '—')}
           {kv('Người tạo', props.actorUPN)}
           {kv('Checklist', `${props.templateCount} mục · ${props.requiredCount} bắt buộc`)}
         </Stack>

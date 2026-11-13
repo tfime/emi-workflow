@@ -50,9 +50,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "CommandId",
+                "value": "@int(coalesce(triggerBody()?['commandId'],0))",
                 "type": "integer",
-                "value": "@int(coalesce(triggerBody()?['commandId'],0))"
+                "name": "CommandId"
               }
             ]
           },
@@ -87,9 +87,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "CommandKey",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandKey'],'')",
                 "type": "string",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandKey'],'')"
+                "name": "CommandKey"
               }
             ]
           },
@@ -104,9 +104,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "CommandType",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandType'],'')",
                 "type": "string",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandType'],'')"
+                "name": "CommandType"
               }
             ]
           },
@@ -121,9 +121,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "RequestKey",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['RequestKey'],'')",
                 "type": "string",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['RequestKey'],'')"
+                "name": "RequestKey"
               }
             ]
           },
@@ -138,9 +138,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "Payload",
+                "value": "@json(if(empty(coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'')),'{}',coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'{}')))",
                 "type": "object",
-                "value": "@json(if(empty(coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'')),'{}',coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'{}')))"
+                "name": "Payload"
               }
             ]
           },
@@ -155,9 +155,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "NextStepKey",
+                "value": "",
                 "type": "string",
-                "value": ""
+                "name": "NextStepKey"
               }
             ]
           },
@@ -172,9 +172,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "NextStepOrder",
+                "value": 0,
                 "type": "integer",
-                "value": 0
+                "name": "NextStepOrder"
               }
             ]
           },
@@ -189,9 +189,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "NextStepKind",
+                "value": "Department",
                 "type": "string",
-                "value": "Department"
+                "name": "NextStepKind"
               }
             ]
           },
@@ -206,9 +206,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "NextReqStatus",
+                "value": "InReview",
                 "type": "string",
-                "value": "InReview"
+                "name": "NextReqStatus"
               }
             ]
           },
@@ -223,9 +223,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "NextWiState",
+                "value": "InReview",
                 "type": "string",
-                "value": "InReview"
+                "name": "NextWiState"
               }
             ]
           },
@@ -240,9 +240,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "NextOU",
+                "value": "",
                 "type": "string",
-                "value": ""
+                "name": "NextOU"
               }
             ]
           },
@@ -257,9 +257,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "StepInstanceKey",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['StepInstanceKey'],'')",
                 "type": "string",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['StepInstanceKey'],'')"
+                "name": "StepInstanceKey"
               }
             ]
           },
@@ -274,9 +274,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "MasterId",
+                "value": "",
                 "type": "string",
-                "value": ""
+                "name": "MasterId"
               }
             ]
           },
@@ -291,9 +291,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "WorkItemId",
+                "value": "",
                 "type": "string",
-                "value": ""
+                "name": "WorkItemId"
               }
             ]
           },
@@ -308,9 +308,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "ReviewRound",
+                "value": 1,
                 "type": "integer",
-                "value": 1
+                "name": "ReviewRound"
               }
             ]
           },
@@ -325,9 +325,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "ErrorMessage",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['ErrorMessage'],'')",
                 "type": "string",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['ErrorMessage'],'')"
+                "name": "ErrorMessage"
               }
             ]
           },
@@ -342,9 +342,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "AuthorEmail",
+                "value": "@toLower(trim(coalesce(body('HTTP_LoadCommand')?['Author']?['EMail'], body('HTTP_LoadCommand')?['Author']?['Email'], body('HTTP_LoadCommand')?['Author']?['Email'], '')))",
                 "type": "string",
-                "value": "@toLower(trim(coalesce(body('HTTP_LoadCommand')?['Author']?['EMail'], body('HTTP_LoadCommand')?['Author']?['Email'], body('HTTP_LoadCommand')?['Author']?['Email'], '')))"
+                "name": "AuthorEmail"
               }
             ]
           },
@@ -359,9 +359,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "EffectiveActorUPN",
+                "value": "",
                 "type": "string",
-                "value": ""
+                "name": "EffectiveActorUPN"
               }
             ]
           },
@@ -376,9 +376,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "AuthError",
+                "value": "",
                 "type": "string",
-                "value": ""
+                "name": "AuthError"
               }
             ]
           },
@@ -393,9 +393,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "DedupeKey",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['DedupeKey'],'')",
                 "type": "string",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['DedupeKey'],'')"
+                "name": "DedupeKey"
               }
             ]
           },
@@ -410,9 +410,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "CommandETag",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['@odata.etag'],'*')",
                 "type": "string",
-                "value": "@coalesce(body('HTTP_LoadCommand')?['@odata.etag'],'*')"
+                "name": "CommandETag"
               }
             ]
           },
@@ -427,9 +427,9 @@
           "inputs": {
             "variables": [
               {
-                "name": "MasterETag",
+                "value": "*",
                 "type": "string",
-                "value": "*"
+                "name": "MasterETag"
               }
             ]
           },
@@ -1577,7 +1577,7 @@
                                               "Accept": "application/json;odata=nometadata",
                                               "Content-Type": "application/json;odata=nometadata"
                                             },
-                                            "parameters/body": "@json(concat('{\"Title\":\"', replace(string(coalesce(variables('Payload')?['title'], variables('RequestKey'))), '\"', ''''), '\",\"RequestKey\":\"', variables('RequestKey'), '\",\"CreatedOUCode\":\"', coalesce(variables('Payload')?['createdOUCode'],''), '\",\"CreatorUPN\":\"', coalesce(variables('Payload')?['creatorUPN'],'admin@local'), '\",\"PaymentTypeCode\":\"', coalesce(variables('Payload')?['paymentTypeCode'],'SPV_PAYMENT'), '\",\"WorkflowCode\":\"EMI_PAY_SPV\",\"WorkflowVersion\":1,\"ChecklistVersion\":', string(int(coalesce(variables('Payload')?['checklistVersion'], 1))), ',\"ReviewRound\":1,\"CurrentStepKey\":\"BPCM1_PREPARE\",\"CurrentStepInstanceKey\":\"', variables('StepInstanceKey'), '\",\"CurrentOUCode\":\"', coalesce(variables('Payload')?['createdOUCode'],''), '\",\"Status\":\"Draft\",\"IsLocked\":false,\"ArchiveStatus\":\"NotStarted\",\"Explanation\":\"', replace(string(coalesce(variables('Payload')?['explanation'], '')), '\"', ''''), '\",\"Amount\":', string(coalesce(variables('Payload')?['amount'], 0)), ',\"RoutePlanJson\":\"', replace(string(coalesce(variables('Payload')?['routePlanJson'], '{}')), '\"', '\\\"'), '\"}'))"
+                                            "parameters/body": "@json(concat('{\"Title\":\"', replace(string(coalesce(variables('Payload')?['title'], variables('RequestKey'))), '\"', ''''), '\",\"RequestKey\":\"', variables('RequestKey'), '\",\"CreatedOUCode\":\"', coalesce(variables('Payload')?['createdOUCode'],''), '\",\"CreatorUPN\":\"', coalesce(variables('Payload')?['creatorUPN'],'admin@local'), '\",\"PaymentTypeCode\":\"', coalesce(variables('Payload')?['paymentTypeCode'],'SPV_PAYMENT'), '\",\"WorkflowCode\":\"EMI_PAY_SPV\",\"WorkflowVersion\":1,\"ChecklistVersion\":', string(int(coalesce(variables('Payload')?['checklistVersion'], 1))), ',\"ReviewRound\":1,\"CurrentStepKey\":\"BPCM1_PREPARE\",\"CurrentStepInstanceKey\":\"', variables('StepInstanceKey'), '\",\"CurrentOUCode\":\"', coalesce(variables('Payload')?['createdOUCode'],''), '\",\"Status\":\"Draft\",\"IsLocked\":false,\"ArchiveStatus\":\"NotStarted\",\"Explanation\":\"', replace(string(coalesce(variables('Payload')?['explanation'], '')), '\"', ''''), '\",\"Amount\":', string(coalesce(variables('Payload')?['amount'], 0)), ',\"RoutePlanJson\":\"', replace(replace(string(coalesce(variables('Payload')?['routePlanJson'], '{}')), '\\', '\\\\'), '\"', '\\\"'), '\"}'))"
                                           },
                                           "authentication": "@parameters('$authentication')"
                                         }
@@ -2242,16 +2242,25 @@
                                             },
                                             "inputs": "@first(body('HTTP_FindMaster_Decide')?['value'])?['CurrentStepKey']"
                                           },
-                                          "SET_Next_Decide": {
-                                            "type": "SetVariable",
+                                          "COMPOSE_RoutePlan": {
+                                            "type": "Compose",
                                             "runAfter": {
                                               "COMPOSE_Next_Decide": [
                                                 "Succeeded"
                                               ]
                                             },
+                                            "inputs": "@json(if(empty(coalesce(first(body('HTTP_FindMaster_Decide')?['value'])?['RoutePlanJson'],'')),'{}',coalesce(first(body('HTTP_FindMaster_Decide')?['value'])?['RoutePlanJson'],'{}')))"
+                                          },
+                                          "SET_Next_Decide": {
+                                            "type": "SetVariable",
+                                            "runAfter": {
+                                              "COMPOSE_RoutePlan": [
+                                                "Succeeded"
+                                              ]
+                                            },
                                             "inputs": {
                                               "name": "NextStepKey",
-                                              "value": "@if(and(equals(first(body('HTTP_FindMaster_Decide')?['value'])?['Status'],'AwaitingManager'),equals(outputs('COMPOSE_Next_Decide'),'BPCM1_PREPARE')),'BPCM2_TECH',if(equals(outputs('COMPOSE_Next_Decide'),'BPCM2_TECH'),'BPCM3_PRICE',if(equals(outputs('COMPOSE_Next_Decide'),'BPCM3_PRICE'),'TCKT_CHECK',if(equals(outputs('COMPOSE_Next_Decide'),'TCKT_CHECK'),'CHAIR_APPROVE',if(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),if(empty(coalesce(variables('Payload')?['paymentDueAt'],'')),'CHAIR_APPROVE','TCKT_PAY'),'INVALID')))))"
+                                              "value": "@if(and(equals(first(body('HTTP_FindMaster_Decide')?['value'])?['Status'],'AwaitingManager'),equals(outputs('COMPOSE_Next_Decide'),'BPCM1_PREPARE')),if(not(empty(coalesce(outputs('COMPOSE_RoutePlan')?['BPCM2_TECH'],''))),'BPCM2_TECH',if(not(empty(coalesce(outputs('COMPOSE_RoutePlan')?['BPCM3_PRICE'],''))),'BPCM3_PRICE','TCKT_CHECK')),if(equals(outputs('COMPOSE_Next_Decide'),'BPCM2_TECH'),if(not(empty(coalesce(outputs('COMPOSE_RoutePlan')?['BPCM3_PRICE'],''))),'BPCM3_PRICE','TCKT_CHECK'),if(equals(outputs('COMPOSE_Next_Decide'),'BPCM3_PRICE'),'TCKT_CHECK',if(equals(outputs('COMPOSE_Next_Decide'),'TCKT_CHECK'),'CHAIR_APPROVE',if(equals(outputs('COMPOSE_Next_Decide'),'CHAIR_APPROVE'),if(empty(coalesce(variables('Payload')?['paymentDueAt'],'')),'CHAIR_APPROVE','TCKT_PAY'),'INVALID')))))"
                                             }
                                           },
                                           "HTTP_GetWS_Decide": {
@@ -2278,19 +2287,10 @@
                                               "authentication": "@parameters('$authentication')"
                                             }
                                           },
-                                          "COMPOSE_RoutePlan": {
-                                            "type": "Compose",
-                                            "runAfter": {
-                                              "HTTP_GetWS_Decide": [
-                                                "Succeeded"
-                                              ]
-                                            },
-                                            "inputs": "@json(if(empty(coalesce(first(body('HTTP_FindMaster_Decide')?['value'])?['RoutePlanJson'],'')),'{}',coalesce(first(body('HTTP_FindMaster_Decide')?['value'])?['RoutePlanJson'],'{}')))"
-                                          },
                                           "SET_Meta_Decide": {
                                             "type": "Compose",
                                             "runAfter": {
-                                              "COMPOSE_RoutePlan": [
+                                              "HTTP_GetWS_Decide": [
                                                 "Succeeded"
                                               ]
                                             },

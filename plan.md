@@ -11,7 +11,7 @@
 - 5 lệnh: `CREATE_REQUEST` | `SUBMIT` | `ACCEPT` | `DECIDE` | `CONFIRM_PAYMENT`
 - AUTH OrgMembers (`AUTH_ORGMEMBERS_GATE.md`); CREATE đủ field + ChecklistTemplates (Gói 2)
 - Gói 3: Dedupe + Master ETag; `IF_AlreadyDone` (terminal) / `IF_AlreadyProcessing`; **không** trigger concurrency (sync Response); fix dual Response / CLAIM_CONFLICT
-- ZIP Import: **`EMI_PAY_CORE_V1_1_0_0_20.zip`** · docs: `PERF_GOI3.md`, `PERF_MEASURE.md`, `AUTH_ORGMEMBERS_GATE.md`
+- ZIP Import: **`EMI_PAY_CORE_V1_1_0_0_22.zip`** (optional BPCM + CREATE RoutePlanJson escape) · `ROUTE_PLAN_OPTIONAL_BPCM.md`
 
 ### UAT đã PASS (tenant CECM)
 - `09_UAT_Phase2_ActivityAccept.ps1` — Activity + ACCEPT gates
@@ -28,5 +28,15 @@
 ### Việc tiếp (ưu tiên)
 1. **Import `1.0.0.20`** + Flow On → UAT chuyển bước (SUBMIT/ACCEPT/DECIDE) + `11_PERF_Goi3_Concurrent.ps1`
 2. UAT AUTH OrgMembers (reject/pass theo `AUTH_ORGMEMBERS_GATE.md`)
-3. Dyn ACL: Apply PnP sau hồ sơ thật; child Flow / DocsInternal·Archive = V1.1
-4. Catch toàn cục Commands `Failed` (PHASE2 #8); Assignments sau
+3. **RoutePlan optional BPCM** — SPFx + Core **1.0.0.22** (fix CREATE: `_biz` object + escape `\` trước `"`). Import `EMI_PAY_CORE_V1_1_0_0_22.zip` + UAT 4 case.
+4. Dyn ACL: Apply PnP sau hồ sơ thật; child Flow / DocsInternal·Archive = V1.1
+5. Catch toàn cục Commands `Failed` (PHASE2 #8); Assignments sau
+
+### Flow nghiệp vụ (cùng 5 lệnh; BPCM trung gian do user pin)
+
+```
+CREATE → checklist → SUBMIT → TP DECIDE
+  → [BPCM2?] → [BPCM3?] → TCKT_CHECK → CHAIR → TCKT_PAY → Archiving
+```
+
+`RoutePlanJson`: có key BPCM2/3 = qua bước đó + OU; vắng key = bỏ qua. TCKT/CHAIR/TT luôn có.

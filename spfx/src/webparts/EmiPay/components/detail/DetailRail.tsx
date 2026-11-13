@@ -13,6 +13,7 @@ import {
   parsePartyBizFromRouteJson,
   partyKindLabel
 } from '../../services/partyBiz';
+import { routeInspectSummary } from '../../services/routePlan';
 import { chairStatusDetailVi, moneyVi, stepShortVi } from '../../services/viLabels';
 import { emiPayFluentTheme } from '../../theme/fluentPayTheme';
 import styles from '../EmiPay.module.scss';
@@ -114,7 +115,10 @@ const DetailRail: React.FC<IDetailRailProps> = (props) => {
             </>
           )}
           {kv('Loại', m.paymentTypeCode || '—')}
-          {kv('Đơn vị', m.currentOUCode || m.createdOUCode || '—')}
+          {kv('Đơn vị tạo', m.createdOUCode || '—')}
+          {m.status === 'AwaitingManager'
+            ? kv('Chờ duyệt bởi', `TP ${m.createdOUCode || '—'}`)
+            : kv('Đơn vị bước hiện tại', m.currentOUCode || '—')}
           {kv('Người tạo', m.creatorUPN || '—')}
           {kv('Trạng thái', status)}
           {kv('Bước', stepShortVi(m.currentStepKey))}
@@ -141,8 +145,23 @@ const DetailRail: React.FC<IDetailRailProps> = (props) => {
           <Text variant="mediumPlus" styles={{ root: { fontWeight: 600 } }}>
             Luồng duyệt
           </Text>
+          <Text variant="small" styles={{ root: { color: '#4b5563', lineHeight: 1.4 } }}>
+            {(() => {
+              try {
+                const p = m.routePlanJson
+                  ? (JSON.parse(m.routePlanJson) as Record<string, string>)
+                  : {};
+                return routeInspectSummary(p);
+              } catch {
+                return 'Chưa đọc được RoutePlan';
+              }
+            })()}
+          </Text>
           <ApprovalFlow
             currentStepKey={m.currentStepKey}
+            status={m.status}
+            createdOUCode={m.createdOUCode}
+            routePlanJson={m.routePlanJson}
             workItems={props.workItems}
             activities={props.activities}
           />

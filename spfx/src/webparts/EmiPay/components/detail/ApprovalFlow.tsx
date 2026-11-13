@@ -2,12 +2,15 @@ import * as React from 'react';
 import { Stack, Text } from '@fluentui/react';
 import { IActivityPublicRow } from '../../services/ActivityService';
 import { stepFlowFacts } from '../../services/flowFacts';
-import { CORE_STEPS } from '../../services/PayLists';
-import { IWorkItemRow, stepIndex } from '../../services/RequestService';
+import { routeStepIndex, stepsFromRoutePlan } from '../../services/routePlan';
+import { IWorkItemRow } from '../../services/RequestService';
 import { stepShortVi } from '../../services/viLabels';
 
 export interface IApprovalFlowProps {
   currentStepKey: string;
+  status?: string;
+  createdOUCode?: string;
+  routePlanJson?: string;
   workItems: IWorkItemRow[];
   activities: IActivityPublicRow[];
 }
@@ -25,18 +28,20 @@ function formatWhen(iso: string): string {
 }
 
 /**
- * Luồng duyệt: tên bước luôn hiện.
+ * Luồng duyệt theo RoutePlan đã pin (bỏ BPCM2/3 nếu không chọn).
  * Nhận / Xử lý / Chốt chỉ hiện khi bước đó đã có dữ liệu.
  */
 const ApprovalFlow: React.FC<IApprovalFlowProps> = (props) => {
-  const cur = stepIndex(props.currentStepKey);
+  const steps = stepsFromRoutePlan(props.routePlanJson);
+  const cur = routeStepIndex(props.currentStepKey, props.routePlanJson);
+
   return (
     <Stack tokens={{ childrenGap: 0 }}>
-      {CORE_STEPS.map((s, idx) => {
+      {steps.map((s, idx) => {
         const done = idx < cur;
         const now = idx === cur;
         const facts = stepFlowFacts(s, props.workItems, props.activities);
-        const last = idx === CORE_STEPS.length - 1;
+        const last = idx === steps.length - 1;
         return (
           <Stack
             key={s}
@@ -93,6 +98,15 @@ const ApprovalFlow: React.FC<IApprovalFlowProps> = (props) => {
               >
                 {stepShortVi(s)}
               </Text>
+              {now &&
+                s === 'BPCM1_PREPARE' &&
+                props.status === 'AwaitingManager' && (
+                  <Text variant="small" styles={{ root: { color: '#92400e', fontWeight: 600 } }}>
+                    Chờ trưởng phòng duyệt gửi
+                    {props.createdOUCode ? ` (${props.createdOUCode})` : ''} — chưa sang bước
+                    kiểm tra
+                  </Text>
+                )}
               {!!facts.receivedAt && (
                 <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
                   Nhận: {formatWhen(facts.receivedAt)}

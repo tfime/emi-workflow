@@ -78,7 +78,14 @@ import {
   parsePartyBizFromRouteJson,
   partyBizDenial,
   partyKindLabel,
-  withPartyBizOnRoute
+  withPartyBizOnRoute,
+  ROUTE_STEPS_UI,
+  buildRoutePlanForSave,
+  defaultOuForStep as defaultOuForStepFn,
+  defaultRoutePlan,
+  hydrateRoutePlanForEdit,
+  nextStepAfterManager,
+  routeInspectSummary
 } from '../services';
 import { perfLog, perfNow } from '../services/perfMark';
 import { payThemeStyle } from '../theme/payTokens';
@@ -118,12 +125,14 @@ function upnFromLogin(login: string): string {
   return parts[parts.length - 1] || login;
 }
 
-/** UI chỉ chọn BPCM2/BPCM3; TCKT/CHAIR/Archive auto từ StepRecipients default. */
-const ROUTE_STEPS_UI: { key: string; label: string }[] = [
-  { key: 'BPCM2_TECH', label: 'BPCM2' },
-  { key: 'BPCM3_PRICE', label: 'BPCM3' }
-];
-const ROUTE_STEPS_AUTO = ['TCKT_CHECK', 'CHAIR_APPROVE', 'TCKT_PAY', 'SYSTEM_ARCHIVE'];
+function parseRoutePlanSafe(json?: string): Record<string, string> {
+  if (!json) return {};
+  try {
+    return JSON.parse(json) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
 
 const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const bootRoute = React.useMemo(
@@ -243,29 +252,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   };
 
   const defaultOuForStep = React.useCallback(
-    (stepKey: string, recipients: IStepRecipient[]): string => {
-      const rows = recipients.filter((r) => r.stepKey === stepKey);
-      const def = rows.filter((r) => r.isDefault)[0] || rows[0];
-      return def ? def.ouCode : '';
-    },
+    (stepKey: string, recipients: IStepRecipient[]): string =>
+      defaultOuForStepFn(stepKey, recipients),
     []
-  );
-
-  const fillRoutePlanGaps = React.useCallback(
-    (
-      plan: Record<string, string>,
-      recipients: IStepRecipient[]
-    ): Record<string, string> => {
-      const next = { ...plan };
-      ROUTE_STEPS_UI.forEach((rs) => {
-        if (!next[rs.key]) next[rs.key] = defaultOuForStep(rs.key, recipients);
-      });
-      ROUTE_STEPS_AUTO.forEach((sk) => {
-        if (!next[sk]) next[sk] = defaultOuForStep(sk, recipients);
-      });
-      return next;
-    },
-    [defaultOuForStep]
   );
 
   const syncEditForm = (m: IRequestMaster, recipients: IStepRecipient[]): void => {
@@ -275,7 +264,6 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     );
     setEditExpl(m.explanation || '');
     setEditOu(m.createdOUCode || '');
-    // title đã được mapMaster tách khỏi RequestKey
     let plan: Record<string, string> = {};
     if (m.routePlanJson) {
       try {
@@ -284,8 +272,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         plan = {};
       }
     }
-    // RoutePlanJson thiếu / rỗng → điền mặc định IsDefault (tránh select value="" hiện option đầu nhưng state vẫn trống).
-    setEditRoutePlan(fillRoutePlanGaps(plan, recipients));
+    setEditRoutePlan(hydrateRoutePlanForEdit(plan, recipients));
     setEditPartyBiz(parsePartyBizFromRouteJson(m.routePlanJson));
   };
 
@@ -391,14 +378,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         const partyDeny = partyBizDenial(editPartyBiz);
         if (partyDeny) throw new Error(partyDeny);
         const fullRoute = withPartyBizOnRoute(
-          fillRoutePlanGaps({ ...editRoutePlan }, stepRecipients),
+          buildRoutePlanForSave({ ...editRoutePlan }, stepRecipients),
           editPartyBiz
         );
-        const missingUi = ROUTE_STEPS_UI.filter((rs) => !fullRoute[rs.key]);
-        if (missingUi.length) {
-          throw new Error(
-            `Chưa cấu hình phòng nhận ${missingUi.map((r) => r.label).join(', ')} (StepRecipients).`
-          );
+        if (!fullRoute.TCKT_CHECK) {
+          throw new Error('Chưa cấu hình phòng TCKT (StepRecipients).');
         }
         const title = editTitle.trim();
         if (!title) throw new Error('Nhập tiêu đề hồ sơ.');
@@ -460,13 +444,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       setOrgMembers(members);
       if (ous[0]) setCreateOu(ous[0].ouCode);
       setStepRecipients(srs);
-      const defaults: Record<string, string> = {};
-      [...ROUTE_STEPS_UI.map((r) => r.key), ...ROUTE_STEPS_AUTO].forEach((key) => {
-        const rows = srs.filter((r) => r.stepKey === key);
-        const def = rows.filter((r) => r.isDefault)[0] || rows[0];
-        if (def) defaults[key] = def.ouCode;
-      });
-      setRoutePlan(defaults);
+      setRoutePlan(defaultRoutePlan(srs));
       const tInbox = perfNow();
       await refreshInbox();
       perfLog('boot.inbox', tInbox, {});
@@ -661,17 +639,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         if (!title) throw new Error('Nhập tiêu đề hồ sơ.');
         const amount = amountParsed.value;
         const explanation = createExpl || 'Tạo từ giao diện EMI PAY';
-        const fullRoute: Record<string, string> = { ...routePlan };
-        ROUTE_STEPS_AUTO.forEach((sk) => {
-          if (!fullRoute[sk]) {
-            const rows = stepRecipients.filter((r) => r.stepKey === sk);
-            const def = rows.filter((r) => r.isDefault)[0] || rows[0];
-            if (def) fullRoute[sk] = def.ouCode;
-          }
-        });
-        const missingUi = ROUTE_STEPS_UI.filter((rs) => !fullRoute[rs.key]);
-        if (missingUi.length) {
-          throw new Error(`Chọn phòng: ${missingUi.map((r) => r.label).join(', ')}`);
+        const fullRoute = buildRoutePlanForSave({ ...routePlan }, stepRecipients);
+        if (!fullRoute.TCKT_CHECK) {
+          throw new Error('Chưa cấu hình phòng TCKT (StepRecipients).');
         }
         const routeWithBiz = withPartyBizOnRoute(fullRoute, createPartyBiz);
         const routePlanJson = JSON.stringify(routeWithBiz);
@@ -707,7 +677,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       {
         waiting: 'Đang tạo hồ sơ…',
         success:
-          'Đã tạo hồ sơ. Tải checklist rồi bấm «Trình trưởng phòng» (chưa sang BPCM2).',
+          'Đã tạo hồ sơ. Tải checklist rồi bấm «Trình trưởng phòng» (chưa sang bước kiểm tra).',
         refreshAfter: async () => {
           const tRef = perfNow();
           await refreshDetailAndInbox(createdKey, { skipReconcile: true });
@@ -1008,7 +978,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             decision: 'PASS',
             note:
               kind === 'mgrApprove'
-                ? 'Trưởng phòng duyệt gửi sang BPCM2'
+                ? `Trưởng phòng duyệt gửi sang ${nextStepAfterManager(
+                    parseRoutePlanSafe(master.routePlanJson)
+                  )}`
                 : kind === 'approvePay'
                   ? 'CT.HĐQT duyệt thanh toán'
                   : kind === 'approve'
@@ -1028,7 +1000,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               : kind === 'approve'
                 ? 'Đang phê duyệt hồ sơ…'
                 : kind === 'mgrApprove'
-                  ? 'Đang duyệt gửi sang BPCM2…'
+                  ? 'Đang duyệt gửi bước tiếp…'
                   : 'Đang chuyển bước tiếp theo…'
           );
           await enqueueAndRun(props.sp, 'DECIDE', payload, {
@@ -1057,7 +1029,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               : kind === 'approve'
                 ? 'Đã phê duyệt hồ sơ (chưa duyệt thanh toán).'
                 : kind === 'mgrApprove'
-                  ? 'Đã duyệt gửi sang BPCM2.'
+                  ? 'Đã duyệt gửi bước kiểm tra tiếp theo.'
                   : 'Đã chuyển bước tiếp theo.',
           refreshAfter: () => refreshDetailAndInbox(master.requestKey)
         }
@@ -1481,6 +1453,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                           .join(' · ')
                       : undefined
                   }
+                  inspectRoute={routeInspectSummary(routePlan)}
                   templateCount={templates.length}
                   requiredCount={requiredTplCount}
                 />

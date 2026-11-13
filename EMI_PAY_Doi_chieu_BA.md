@@ -4,7 +4,9 @@
 >
 > **Đủ trên live** nghĩa là lệnh hoặc màn hình đã nối dữ liệu thật. Dialog demo không tính là đã làm.
 >
-> **BA mới (đã chốt):** `SUBMIT` = trình TP (`AwaitingManager`); TP `DECIDE` PASS → BPCM2; `ACCEPT`+`DueAt` trước DECIDE ở bước phòng; OU từ `RoutePlanJson`.
+> **BA mới (đã chốt):** `SUBMIT` = trình TP (`AwaitingManager`); TP `DECIDE` PASS → bước kế theo **RoutePlan đã pin**; `ACCEPT`+`DueAt` trước DECIDE ở bước phòng; OU từ `RoutePlanJson`.
+>
+> **Chọn BPCM trung gian (chốt lại 13/11/2026):** Người tạo chọn BPCM2 và/hoặc BPCM3 (cả hai / một / không) — không gắn cố định theo loại hồ sơ. Spec: `ROUTE_PLAN_OPTIONAL_BPCM.md`. Phase1 vẫn bắt đủ BPCM2+3; chưa live.
 
 ## Kết quả
 
@@ -51,8 +53,9 @@ Luồng tạo → Archiving: Core **1.0.0.12** (Activity + ACCEPT + CHAIR hai b�
 | Chức năng | Trạng thái | Hiện trạng |
 |---|---|---|
 | Một Master Record xuyên suốt | Đủ | `CREATE_REQUEST` tạo `EMI_PAY_Requests` |
-| BPCM1 trình TP rồi mới ra BPCM2 | Một phần | Đang triển khai: Status `AwaitingManager` + RoutePlan; Flow/UI theo plan |
-| Pin RoutePlan StepKey→OU lúc tạo | Một phần | Schema `RoutePlanJson`; UI chọn từ StepRecipients |
+| BPCM1 trình TP rồi mới ra bước kiểm tra tiếp | Một phần | `AwaitingManager` + RoutePlan OK; Core vẫn luôn → BPCM2 |
+| Chọn BPCM2/3 tuỳ hồ sơ (0/1/2 bước) | Một phần | SPFx + Core 1.0.0.21 coded; chờ Import + UAT |
+| Pin RoutePlan StepKey→OU lúc tạo | Một phần | Key vắng = bỏ BPCM; AUTO TCKT/CHAIR vẫn default |
 | Chọn loại hồ sơ từ danh mục | Đủ | LivePayApp đọc PaymentTypes |
 | Chặn gửi khi thiếu chứng từ bắt buộc | Đủ | Gate UI và Flow trước `SUBMIT` |
 | Nhập đề nghị, pháp nhân, dự án | Một phần | Title, số tiền, diễn giải vá sau CREATE; chưa có trường pháp nhân và dự án |
@@ -65,7 +68,7 @@ Luồng tạo → Archiving: Core **1.0.0.12** (Activity + ACCEPT + CHAIR hai b�
 
 | Chức năng | Trạng thái | Hiện trạng |
 |---|---|---|
-| Chuyển BPCM2, BPCM3, TCKT kiểm tra, CT.HĐQT, TCKT thanh toán | Đủ | `DECIDE` PASS, Core 1.0.0.9 |
+| Chuyển BPCM2, BPCM3, TCKT kiểm tra, CT.HĐQT, TCKT thanh toán | Một phần | `DECIDE` PASS hardcode luôn BPCM2→BPCM3; chưa skip theo RoutePlan |
 | Không đạt hoặc không duyệt thì trả về BPCM1 | Đủ | REJECT từ mọi bước kiểm tra và CT.HĐQT |
 | Gửi lại cùng hồ sơ, tăng ReviewRound, vào lại BPCM2 | Đủ | `SUBMIT` từ Returned |
 | CT.HĐQT cập nhật hạn thanh toán khi duyệt | Đủ | Core 1.0.0.12: duyệt hồ sơ (giữ CHAIR) rồi «Duyệt thanh toán» + `paymentDueAt` → TCKT_PAY |

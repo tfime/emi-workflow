@@ -6,6 +6,7 @@ import {
   requiredChecklistReady
 } from './ChecklistService';
 import { IRequestMaster, IWorkItemRow, isWorkItemAccepted } from './RequestService';
+import { nextStepAfterManager } from './routePlan';
 
 /** Bước bắt buộc ACCEPT (+DueAt) trước DECIDE / đánh giá / ghi chú. */
 export const ACCEPT_STEPS = ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK', 'TCKT_PAY'];
@@ -85,10 +86,19 @@ export function liveActionsFor(
     });
 
   if (step === 'BPCM1_PREPARE' && status === 'AwaitingManager') {
+    let plan: Record<string, string> = {};
+    if (master.routePlanJson) {
+      try {
+        plan = JSON.parse(master.routePlanJson) as Record<string, string>;
+      } catch {
+        plan = {};
+      }
+    }
+    const nextLabel = nextStepAfterManager(plan);
     return allow([
       {
         id: 'mgrApprove',
-        label: 'Duyệt gửi sang BPCM2',
+        label: `Duyệt gửi sang ${nextLabel}`,
         primary: true,
         command: 'DECIDE',
         dialog: 'mgrApprove'

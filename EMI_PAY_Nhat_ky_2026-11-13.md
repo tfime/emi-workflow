@@ -1,6 +1,6 @@
 # Nhật ký làm việc — 2026-11-13
 
-Tóm tắt một ngày trên CECM / repo `emi-workflow`: quyền OrgMembers, đo perf, Perf Gói 3 (Core), Fluent SPFx, và các vòng Import Flow.
+Tóm tắt một ngày trên CECM / repo `emi-workflow`: quyền OrgMembers, đo perf, Perf Gói 3 (Core), Fluent SPFx, RoutePlan optional BPCM, seed Tổng hợp.
 
 ---
 
@@ -34,36 +34,43 @@ Tóm tắt một ngày trên CECM / repo `emi-workflow`: quyền OrgMembers, đo
 | 1.0.0.18–19 | Trigger `concurrency.runs` + sync `Response` | Bỏ concurrency control trên trigger |
 | 1.0.0.19 runtime | `CLAIM_CONFLICT` + dual Response (`RESP_Api` + nhánh Claim-fail) | **1.0.0.20**: bỏ nhánh Claim-fail Response; `RESP_Api` không `Skipped`; Claim `IF-MATCH *`; siết `IF_AlreadyDone` (terminal) / `IF_AlreadyProcessing` |
 
-- ZIP hiện tại cần Import: **`EMI_PAY_CORE_V1_1_0_0_20.zip`**
 - Build có bước validate (concurrency / Until / SetVariable self-ref) trước khi đóng ZIP.
 
 ### 5. SPFx Fluent
 - Tách `LivePayApp` → shell / detail / create rail / audit / dialogs + `fluentPayTheme`.
-- Commit sớm trong ngày: `b9cdbe0` (tới 1.0.0.19 + Fluent); tiếp theo commit kèm 1.0.0.20 + nhật ký này.
+- Form tạo: hierarchy Fluent (tiêu đề + số tiền lên đầu); ComboBox border theo `semanticColors` / `::after` (không viền đen).
 
-### 6. Git
-- Đã push `master` (commit Gói 3 + Fluent tới 1.0.0.19).
-- Cập nhật `plan.md` + nhật ký + ZIP 1.0.0.20 (commit cùng lượt nếu chưa push).
+### 6. RoutePlan — chọn BPCM2/3 tuỳ hồ sơ (chốt lại cuối ngày)
+- **Không** gắn bỏ BPCM theo `PaymentTypes.WorkflowCode` (huỷ hướng `ROUTE_BY_PAYMENT_TYPE.md`).
+- Người tạo pin RoutePlan: BPCM2 và/hoặc BPCM3 — cả hai, một, hoặc không (TP → thẳng TCKT). Spec: `ROUTE_PLAN_OPTIONAL_BPCM.md`.
+- SPFx: `routePlan.ts`; UI «Không qua bước này»; mặc định opt-in (bỏ qua); `ApprovalFlow` / rail theo RoutePlan; `_biz` lưu **object** (không stringify lồng).
+- Core **1.0.0.22**: `COMPOSE_RoutePlan` trước `SET_Next_Decide`; skip BPCM thiếu key; CREATE escape `\` rồi `"` cho `RoutePlanJson`.
+- ZIP Import: **`EMI_PAY_CORE_V1_1_0_0_22.zip`** (21 trung gian, dùng 22).
+- UAT nhanh: hồ sơ bỏ BPCM vẫn **AwaitingManager** tại BPCM1 — phải TP **đơn vị tạo** duyệt (vd. tạo từ TCKT → đóng vai `tp.tckt`). Rail dễ nhầm vì `CurrentOU=OU_TCKT` — đã tách «Đơn vị tạo» / «Chờ duyệt bởi TP …».
+
+### 7. Seed Phòng Tổng hợp (CECM)
+- Seed trước thiếu: `ManagerUPN=TO_FILL`, không có OrgMembers.
+- `seed-config.json` + upsert tenant: `tp.tonghop@emi.com.vn` (Manager), `nv.tonghop@emi.com.vn` (Member).
+
+### 8. Git
+- Push cuối ngày: RoutePlan optional BPCM + Core 1.0.0.22 + nhật ký + seed Tổng hợp.
 
 ---
 
 ## Chưa làm / còn mở
 
-1. **Import Core `1.0.0.20`** trên Power Automate (Environment đúng) → Flow On → gắn lại connection SharePoint nếu cần.
-2. **UAT chuyển bước** sau Import: SUBMIT → ACCEPT → DECIDE (và happy path ngắn) — xác nhận hết `CLAIM_CONFLICT` / dual Response.
-3. **UAT AUTH** OrgMembers: reject payload UPN lệch; Member không DECIDE; Manager/SYSADM pass (`AUTH_ORGMEMBERS_GATE.md`).
-4. Lặp **`11_PERF_Goi3_Concurrent.ps1`** sau khi 1.0.0.20 On.
-5. **Dyn ACL**: chạy Apply PnP theo RequestKey thật; child Flow sau Response / DocsInternal·Archive = V1.1.
-6. PHASE2 còn lại: Catch → Commands `Failed` (#8); Assignments; seed drift `EMI_PAY_SPV` vs gói 9 nếu còn.
-7. UAT UI end-to-end trên EMI-Pay.aspx (toàn quy trình user) — Core UAT cũ PASS, UI còn điểm lẻ.
+1. **Import Core `1.0.0.22`** (nếu tenant còn 20/21) → Flow On → UAT AUTH + chuyển bước + 4 case RoutePlan (cả hai / chỉ 2 / chỉ 3 / không BPCM).
+2. Lặp **`11_PERF_Goi3_Concurrent.ps1`** sau Import mới.
+3. **Dyn ACL**: Apply PnP theo RequestKey thật; child Flow / DocsInternal·Archive = V1.1.
+4. PHASE2: Catch → Commands `Failed` (#8); Assignments; chỉnh câu BA §03.4 (chọn subset BPCM).
+5. UAT UI end-to-end trên EMI-Pay.aspx.
 
 ---
 
 ## File / artifact chính trong ngày
 
-- `EMI_PAY_CORE_V1_1_0_0_20.zip` (Import)
-- `EMI_PAY_Core_Flow_Phase1/scripts/Build-Phase1Solution.ps1`
-- `EMI_PAY_Core_Flow_Phase1/PERF_GOI3.md`, `PERF_MEASURE.md`
-- `EMI_PAY_Core_Flow_Phase1/scripts/10_PERF_Measure_Create.ps1`, `11_PERF_Goi3_Concurrent.ps1`
-- `spfx/.../perfMark.ts`, `CommandService.ts` (`buildDedupeKey`), Fluent components
-- `plan.md` (đã cập nhật trạng thái 1.0.0.20)
+- `EMI_PAY_CORE_V1_1_0_0_20.zip` … **`22.zip`** (Import ưu tiên 22)
+- `EMI_PAY_Core_Flow_Phase1/ROUTE_PLAN_OPTIONAL_BPCM.md`, `Build-Phase1Solution.ps1`
+- `spfx/.../routePlan.ts`, ApprovalFlow / Create / partyBiz
+- `9.EMI_PAY_Core_Orchestrator_V1/config/seed-config.json` (OU_TONGHOP)
+- `plan.md`, `EMI_PAY_Doi_chieu_BA.md`, nhật ký này
