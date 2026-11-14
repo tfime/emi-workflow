@@ -18,7 +18,6 @@ import {
   parsePartyBizFromRouteJson,
   partyKindLabel
 } from '../../services/partyBiz';
-import { routeInspectSummary } from '../../services/routePlan';
 import {
   chairStatusDetailVi,
   moneyVi,
@@ -106,16 +105,6 @@ const DetailRail: React.FC<IDetailRailProps> = (props) => {
   const typeName = paymentTypeLabel(m.paymentTypeCode, types);
   const creatorName = personLabel(m.creatorUPN, members);
 
-  let routeHint = 'Chưa đọc được RoutePlan';
-  try {
-    const p = m.routePlanJson
-      ? (JSON.parse(m.routePlanJson) as Record<string, string>)
-      : {};
-    routeHint = routeInspectSummary(p, (code) => ouLabel(code, units));
-  } catch {
-    /* keep default */
-  }
-
   return (
     <ThemeProvider theme={emiPayFluentTheme} style={themeHostStyle}>
       <Stack tokens={{ childrenGap: 12 }} styles={fillStack}>
@@ -189,17 +178,12 @@ const DetailRail: React.FC<IDetailRailProps> = (props) => {
         </Stack>
 
         <Stack tokens={{ childrenGap: 10 }} styles={cardStack}>
-          <Stack tokens={{ childrenGap: 4 }}>
-            <Text variant="mediumPlus" styles={{ root: { fontWeight: 600 } }}>
-              Luồng duyệt
-            </Text>
-            <Text
-              variant="small"
-              styles={{ root: { color: '#4b5563', lineHeight: 1.4 } }}
-            >
-              {routeHint}
-            </Text>
-          </Stack>
+          <Text
+            variant="mediumPlus"
+            styles={{ root: { fontWeight: 600, display: 'block' } }}
+          >
+            Luồng duyệt
+          </Text>
           <ApprovalFlow
             currentStepKey={m.currentStepKey}
             status={m.status}

@@ -95,13 +95,13 @@ export function nextStepAfterManager(plan: Record<string, string>): string {
 }
 
 /**
- * Tóm tắt tuyến kiểm tra — dùng tên phòng nếu có `ouLabel`.
- * Không truyền resolver thì vẫn hiện mã (create preview trước khi load OU).
+ * Các đoạn tuyến BPCM (tên phòng nếu có `ouLabel`).
+ * Rỗng = thẳng TCKT, không qua BPCM2/3.
  */
-export function routeInspectSummary(
+export function routeInspectLines(
   plan: Record<string, string>,
   ouLabelFn?: (ouCode: string) => string
-): string {
+): string[] {
   const lab = (code: string): string =>
     ouLabelFn ? ouLabelFn(code) : code;
   const parts: string[] = [];
@@ -111,6 +111,17 @@ export function routeInspectSummary(
   if (!isRouteStepSkipped(plan.BPCM3_PRICE) && plan.BPCM3_PRICE) {
     parts.push(`KT giá · ${lab(plan.BPCM3_PRICE)}`);
   }
+  return parts;
+}
+
+/**
+ * Tóm tắt một dòng (create preview). Rail detail dùng `routeInspectLines`.
+ */
+export function routeInspectSummary(
+  plan: Record<string, string>,
+  ouLabelFn?: (ouCode: string) => string
+): string {
+  const parts = routeInspectLines(plan, ouLabelFn);
   if (!parts.length) return 'Thẳng TCKT kiểm tra (không qua BPCM2/3)';
   return parts.join(' → ') + ' → TCKT kiểm tra';
 }

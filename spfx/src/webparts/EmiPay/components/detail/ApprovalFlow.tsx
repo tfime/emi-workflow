@@ -73,14 +73,42 @@ const ApprovalFlow: React.FC<IApprovalFlowProps> = (props) => {
   return (
     <Stack tokens={{ childrenGap: 12 }}>
       <Stack tokens={{ childrenGap: 6 }}>
-        <Stack horizontal horizontalAlign="space-between" verticalAlign="center">
+        <Stack
+          horizontal
+          horizontalAlign="space-between"
+          verticalAlign="center"
+          tokens={{ childrenGap: 8 }}
+          styles={{ root: { minWidth: 0 } }}
+        >
           <Text
+            as="span"
             variant="small"
-            styles={{ root: { fontWeight: 600, color: payTokens.brandDark } }}
+            styles={{
+              root: {
+                fontWeight: 600,
+                color: payTokens.brandDark,
+                flexShrink: 0,
+                lineHeight: '18px'
+              }
+            }}
           >
             Bước {Math.min(cur + 1, steps.length)}/{steps.length}
           </Text>
-          <Text variant="small" styles={{ root: { color: payTokens.muted } }}>
+          <Text
+            as="span"
+            variant="small"
+            styles={{
+              root: {
+                color: payTokens.muted,
+                lineHeight: '18px',
+                textAlign: 'right',
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }
+            }}
+          >
             {currentLabel}
           </Text>
         </Stack>
