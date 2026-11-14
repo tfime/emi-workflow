@@ -25,12 +25,34 @@ export interface IChecklistItemRow {
   isLocked: boolean;
 }
 
+/** Bắt buộc trước, tuỳ chọn sau; cùng nhóm thì theo nhãn. */
+export function sortChecklistRequiredFirst<T extends { isRequired: boolean; itemLabel?: string }>(
+  items: T[]
+): T[] {
+  return items.slice().sort((a, b) => {
+    const ar = a.isRequired ? 0 : 1;
+    const br = b.isRequired ? 0 : 1;
+    if (ar !== br) return ar - br;
+    return (a.itemLabel || '').localeCompare(b.itemLabel || '', 'vi');
+  });
+}
+
 function choiceVal(v: unknown): string {
   if (v === null || v === undefined) return '';
   if (typeof v === 'object' && v && 'Value' in (v as object)) {
     return String((v as { Value?: string }).Value || '');
   }
   return String(v);
+}
+
+function boolVal(v: unknown): boolean {
+  if (v === true || v === 1) return true;
+  if (v === false || v === 0 || v === null || v === undefined) return false;
+  if (typeof v === 'object' && v && 'Value' in (v as object)) {
+    return boolVal((v as { Value?: unknown }).Value);
+  }
+  const s = String(v).trim().toLowerCase();
+  return s === '1' || s === 'true' || s === 'yes' || s === 'có';
 }
 
 function mapRow(r: Record<string, unknown>): IChecklistItemRow {
@@ -40,11 +62,11 @@ function mapRow(r: Record<string, unknown>): IChecklistItemRow {
     checklistItemKey: String(r.ChecklistItemKey || ''),
     itemCode: String(r.ItemCode || ''),
     itemLabel: String(r.ItemLabel || r.ItemCode || ''),
-    isRequired: !!r.IsRequired,
+    isRequired: boolVal(r.IsRequired),
     minFileCount: Number(r.MinFileCount || 0),
     uploadedCount: Number(r.UploadedCount || 0),
     itemStatus: choiceVal(r.ItemStatus) || 'Missing',
-    isLocked: !!r.IsLocked
+    isLocked: boolVal(r.IsLocked)
   };
 }
 
@@ -57,7 +79,7 @@ export async function listChecklistItems(
     PAY_LISTS.ChecklistItems,
     `$filter=RequestKey eq '${escapeOData(requestKey)}'&$top=50`
   );
-  return rows.map(mapRow).sort((a, b) => a.id - b.id);
+  return sortChecklistRequiredFirst(rows.map(mapRow));
 }
 
 /**

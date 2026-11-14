@@ -50,8 +50,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "@int(coalesce(triggerBody()?['commandId'],0))",
                 "type": "integer",
+                "value": "@int(coalesce(triggerBody()?['commandId'],0))",
                 "name": "CommandId"
               }
             ]
@@ -87,8 +87,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandKey'],'')",
                 "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandKey'],'')",
                 "name": "CommandKey"
               }
             ]
@@ -104,8 +104,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandType'],'')",
                 "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['CommandType'],'')",
                 "name": "CommandType"
               }
             ]
@@ -121,8 +121,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "@coalesce(body('HTTP_LoadCommand')?['RequestKey'],'')",
                 "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['RequestKey'],'')",
                 "name": "RequestKey"
               }
             ]
@@ -138,8 +138,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "@json(if(empty(coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'')),'{}',coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'{}')))",
                 "type": "object",
+                "value": "@json(if(empty(coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'')),'{}',coalesce(body('HTTP_LoadCommand')?['PayloadJson'],'{}')))",
                 "name": "Payload"
               }
             ]
@@ -155,8 +155,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "",
                 "type": "string",
+                "value": "",
                 "name": "NextStepKey"
               }
             ]
@@ -172,8 +172,8 @@
           "inputs": {
             "variables": [
               {
-                "value": 0,
                 "type": "integer",
+                "value": 0,
                 "name": "NextStepOrder"
               }
             ]
@@ -189,8 +189,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "Department",
                 "type": "string",
+                "value": "Department",
                 "name": "NextStepKind"
               }
             ]
@@ -206,8 +206,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "InReview",
                 "type": "string",
+                "value": "InReview",
                 "name": "NextReqStatus"
               }
             ]
@@ -223,8 +223,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "InReview",
                 "type": "string",
+                "value": "InReview",
                 "name": "NextWiState"
               }
             ]
@@ -240,8 +240,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "",
                 "type": "string",
+                "value": "",
                 "name": "NextOU"
               }
             ]
@@ -257,8 +257,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "@coalesce(body('HTTP_LoadCommand')?['StepInstanceKey'],'')",
                 "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['StepInstanceKey'],'')",
                 "name": "StepInstanceKey"
               }
             ]
@@ -274,8 +274,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "",
                 "type": "string",
+                "value": "",
                 "name": "MasterId"
               }
             ]
@@ -291,8 +291,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "",
                 "type": "string",
+                "value": "",
                 "name": "WorkItemId"
               }
             ]
@@ -308,8 +308,8 @@
           "inputs": {
             "variables": [
               {
-                "value": 1,
                 "type": "integer",
+                "value": 1,
                 "name": "ReviewRound"
               }
             ]
@@ -325,8 +325,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "@coalesce(body('HTTP_LoadCommand')?['ErrorMessage'],'')",
                 "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['ErrorMessage'],'')",
                 "name": "ErrorMessage"
               }
             ]
@@ -342,8 +342,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "@toLower(trim(coalesce(body('HTTP_LoadCommand')?['Author']?['EMail'], body('HTTP_LoadCommand')?['Author']?['Email'], body('HTTP_LoadCommand')?['Author']?['Email'], '')))",
                 "type": "string",
+                "value": "@toLower(trim(coalesce(body('HTTP_LoadCommand')?['Author']?['EMail'], body('HTTP_LoadCommand')?['Author']?['Email'], body('HTTP_LoadCommand')?['Author']?['Email'], '')))",
                 "name": "AuthorEmail"
               }
             ]
@@ -359,8 +359,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "",
                 "type": "string",
+                "value": "",
                 "name": "EffectiveActorUPN"
               }
             ]
@@ -376,8 +376,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "",
                 "type": "string",
+                "value": "",
                 "name": "AuthError"
               }
             ]
@@ -393,8 +393,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "@coalesce(body('HTTP_LoadCommand')?['DedupeKey'],'')",
                 "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['DedupeKey'],'')",
                 "name": "DedupeKey"
               }
             ]
@@ -410,8 +410,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "@coalesce(body('HTTP_LoadCommand')?['@odata.etag'],'*')",
                 "type": "string",
+                "value": "@coalesce(body('HTTP_LoadCommand')?['@odata.etag'],'*')",
                 "name": "CommandETag"
               }
             ]
@@ -427,8 +427,8 @@
           "inputs": {
             "variables": [
               {
-                "value": "*",
                 "type": "string",
+                "value": "*",
                 "name": "MasterETag"
               }
             ]
@@ -867,68 +867,7 @@
                                       }
                                     },
                                     "else": {
-                                      "actions": {
-                                        "IF_AUTH_CREATE_SYS": {
-                                          "type": "If",
-                                          "expression": {
-                                            "equals": [
-                                              "@variables('AuthorEmail')",
-                                              "tinh.pt@emi.com.vn"
-                                            ]
-                                          },
-                                          "actions": {},
-                                          "else": {
-                                            "actions": {
-                                              "HTTP_Auth_Org_CREATE": {
-                                                "type": "OpenApiConnection",
-                                                "inputs": {
-                                                  "host": {
-                                                    "connectionName": "shared_sharepointonline",
-                                                    "operationId": "HttpRequest",
-                                                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline"
-                                                  },
-                                                  "parameters": {
-                                                    "dataset": "https://emicomvn.sharepoint.com/sites/cecm",
-                                                    "parameters/method": "GET",
-                                                    "parameters/uri": "@concat('_api/web/lists(guid''58db4d66-1299-4edb-893e-50c8fe459253'')/items?$filter=MemberUPN eq ''', replace(variables('EffectiveActorUPN'),'''',''''''), ''' and OUCode eq ''', replace(string(variables('Payload')?['createdOUCode']),'''',''''''), ''' and IsActive eq 1&$select=Id,MemberUPN,OUCode,MemberRole,IsActive&$top=5')",
-                                                    "parameters/headers": {
-                                                      "Accept": "application/json;odata=nometadata"
-                                                    }
-                                                  },
-                                                  "authentication": "@parameters('$authentication')"
-                                                },
-                                                "runAfter": {}
-                                              },
-                                              "IF_AUTH_CREATE_MEM": {
-                                                "type": "If",
-                                                "runAfter": {
-                                                  "HTTP_Auth_Org_CREATE": [
-                                                    "Succeeded"
-                                                  ]
-                                                },
-                                                "expression": {
-                                                  "equals": [
-                                                    "@length(body('HTTP_Auth_Org_CREATE')?['value'])",
-                                                    0
-                                                  ]
-                                                },
-                                                "actions": {
-                                                  "SET_AuthError_CREATE_MEM": {
-                                                    "type": "SetVariable",
-                                                    "inputs": {
-                                                      "name": "AuthError",
-                                                      "value": "AUTH: not OrgMember of createdOU"
-                                                    }
-                                                  }
-                                                },
-                                                "else": {
-                                                  "actions": {}
-                                                }
-                                              }
-                                            }
-                                          }
-                                        }
-                                      }
+                                      "actions": {}
                                     }
                                   }
                                 }

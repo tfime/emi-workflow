@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) {
 $phaseRoot = Split-Path $PSScriptRoot -Parent
 $repoRoot = Split-Path $phaseRoot -Parent
 if ([string]::IsNullOrWhiteSpace($OutZip)) {
-    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_22.zip'
+    $OutZip = Join-Path $repoRoot 'EMI_PAY_CORE_V1_1_0_0_23.zip'
 }
 $staging = Join-Path $phaseRoot '_staging_solution'
 if (Test-Path $staging) { Remove-Item $staging -Recurse -Force }
@@ -2364,7 +2364,6 @@ $newElse['IF_AuthPayloadMismatch'] = [ordered]@{
 }
 
 $orgFilterMgr = "@concat('_api/web/lists(guid''$guidOrgMembers'')/items?`$filter=MemberUPN eq ''', replace(variables('EffectiveActorUPN'),'''',''''''), ''' and OUCode eq ''', replace(variables('NextOU'),'''',''''''), ''' and IsActive eq 1&`$select=Id,MemberUPN,OUCode,MemberRole,IsActive&`$top=5')"
-$orgFilterAny = "@concat('_api/web/lists(guid''$guidOrgMembers'')/items?`$filter=MemberUPN eq ''', replace(variables('EffectiveActorUPN'),'''',''''''), ''' and OUCode eq ''', replace(string(variables('Payload')?['createdOUCode']),'''',''''''), ''' and IsActive eq 1&`$select=Id,MemberUPN,OUCode,MemberRole,IsActive&`$top=5')"
 $masterFilter = "@concat('_api/web/lists(guid''$guidRequests'')/items?`$filter=RequestKey eq ''', replace(variables('RequestKey'),'''',''''''), '''&`$select=Id,RequestKey,Status,CurrentStepKey,CurrentOUCode,CreatedOUCode,CreatorUPN&`$top=2')"
 
 $swAuth = [ordered]@{
@@ -2372,6 +2371,7 @@ $swAuth = [ordered]@{
     expression = "@variables('CommandType')"
     runAfter   = @{ IF_AuthPayloadMismatch = @('Succeeded', 'Failed', 'Skipped') }
     cases      = [ordered]@{
+        # 1.0.0.23: CREATE mở — chỉ cần createdOUCode; không đòi OrgMember đúng OU.
         Case_AUTH_CREATE = [ordered]@{
             case    = 'CREATE_REQUEST'
             actions = [ordered]@{
@@ -2382,27 +2382,7 @@ $swAuth = [ordered]@{
                         SET_AuthError_CREATE_OU = New-SetVar 'AuthError' 'string' 'AUTH: createdOUCode required'
                     }
                     else       = [ordered]@{
-                        actions = [ordered]@{
-                            IF_AUTH_CREATE_SYS = [ordered]@{
-                                type       = 'If'
-                                expression = [ordered]@{ equals = @("@variables('AuthorEmail')", $sysadmUpn) }
-                                actions    = [ordered]@{}
-                                else       = [ordered]@{
-                                    actions = [ordered]@{
-                                        HTTP_Auth_Org_CREATE = New-SpHttpGet $orgFilterAny
-                                        IF_AUTH_CREATE_MEM = [ordered]@{
-                                            type       = 'If'
-                                            runAfter   = @{ HTTP_Auth_Org_CREATE = @('Succeeded') }
-                                            expression = [ordered]@{ equals = @("@length(body('HTTP_Auth_Org_CREATE')?['value'])", 0) }
-                                            actions    = [ordered]@{
-                                                SET_AuthError_CREATE_MEM = New-SetVar 'AuthError' 'string' 'AUTH: not OrgMember of createdOU'
-                                            }
-                                            else       = [ordered]@{ actions = [ordered]@{} }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        actions = [ordered]@{}
                     }
                 }
             }
@@ -2607,8 +2587,6 @@ $swAuth.cases.Case_AUTH_ACCEPT.actions.IF_AUTH_ACCEPT_STEP.actions.HTTP_Auth_Org
 $swAuth.cases.Case_AUTH_DECIDE.actions.IF_AUTH_DECIDE_MASTER.actions.IF_AUTH_DECIDE_MGR_ROUTE.actions.HTTP_Auth_Org_DECIDE.runAfter = @{ SET_OU_DECIDE_CREATED = @('Succeeded') }
 $swAuth.cases.Case_AUTH_DECIDE.actions.IF_AUTH_DECIDE_MASTER.actions.IF_AUTH_DECIDE_MGR_ROUTE.else.actions.HTTP_Auth_Org_DECIDE2.runAfter = @{ SET_OU_DECIDE_CURRENT = @('Succeeded') }
 $swAuth.cases.Case_AUTH_CONFIRM.actions.IF_AUTH_CONFIRM.actions.HTTP_Auth_Org_CONFIRM.runAfter = @{ SET_OU_CONFIRM = @('Succeeded') }
-$swAuth.cases.Case_AUTH_CREATE.actions.IF_AUTH_CREATE_OU.else.actions.IF_AUTH_CREATE_SYS.else.actions.HTTP_Auth_Org_CREATE.runAfter = @{}
-
 $newElse['SW_AuthGate'] = $swAuth
 
 $swCommand.runAfter = @{}
@@ -2936,9 +2914,9 @@ $solution = @"
       <LocalizedName description="EMI_PAY_CORE_V1" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
-      <Description description="Core Orchestrator HTTP API 1.0.0.22: CREATE RoutePlanJson escape fix (_biz); optional BPCM DECIDE" languagecode="1033" />
+      <Description description="Core Orchestrator HTTP API 1.0.0.23: CREATE open (any Author + createdOUCode); OrgMembers only ACCEPT/DECIDE/CONFIRM" languagecode="1033" />
     </Descriptions>
-    <Version>1.0.0.22</Version>
+    <Version>1.0.0.23</Version>
     <Managed>0</Managed>
     <Publisher>
       <UniqueName>tfime</UniqueName>

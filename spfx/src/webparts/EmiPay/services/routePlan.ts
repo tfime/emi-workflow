@@ -94,16 +94,25 @@ export function nextStepAfterManager(plan: Record<string, string>): string {
   return 'TCKT';
 }
 
-export function routeInspectSummary(plan: Record<string, string>): string {
+/**
+ * Tóm tắt tuyến kiểm tra — dùng tên phòng nếu có `ouLabel`.
+ * Không truyền resolver thì vẫn hiện mã (create preview trước khi load OU).
+ */
+export function routeInspectSummary(
+  plan: Record<string, string>,
+  ouLabelFn?: (ouCode: string) => string
+): string {
+  const lab = (code: string): string =>
+    ouLabelFn ? ouLabelFn(code) : code;
   const parts: string[] = [];
   if (!isRouteStepSkipped(plan.BPCM2_TECH) && plan.BPCM2_TECH) {
-    parts.push(`BPCM2 (${plan.BPCM2_TECH})`);
+    parts.push(`KT kỹ thuật · ${lab(plan.BPCM2_TECH)}`);
   }
   if (!isRouteStepSkipped(plan.BPCM3_PRICE) && plan.BPCM3_PRICE) {
-    parts.push(`BPCM3 (${plan.BPCM3_PRICE})`);
+    parts.push(`KT giá · ${lab(plan.BPCM3_PRICE)}`);
   }
-  if (!parts.length) return 'Thẳng TCKT (không qua BPCM2/3)';
-  return parts.join(' → ') + ' → TCKT';
+  if (!parts.length) return 'Thẳng TCKT kiểm tra (không qua BPCM2/3)';
+  return parts.join(' → ') + ' → TCKT kiểm tra';
 }
 
 function parsePlanRecord(routePlanJson?: string): Record<string, unknown> | undefined {

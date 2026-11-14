@@ -12,11 +12,15 @@ import {
   Stack,
   Text
 } from '@fluentui/react';
-import { IChecklistItemRow } from '../../services/ChecklistService';
+import {
+  IChecklistItemRow,
+  sortChecklistRequiredFirst
+} from '../../services/ChecklistService';
 import { IDocumentIndexRow } from '../../services/UploadService';
 import { IRequestMaster } from '../../services/RequestService';
 import { docClassVi } from '../../services/DocPreview';
 import { checklistStatusVi, shortFileName } from '../../services/viLabels';
+import { payTokens } from '../../theme/payTokens';
 import { actionBtnStyles, cardStack, compactBtnStyles } from './detailStyles';
 
 export type DocsTabKey = 'checklist' | 'files';
@@ -68,7 +72,14 @@ const DocsPanel: React.FC<IDocsPanelProps> = (props) => {
           <Stack tokens={{ childrenGap: 2 }}>
             <Text styles={{ root: { fontWeight: 600 } }}>{c.itemLabel}</Text>
             <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
-              {c.isRequired ? 'Bắt buộc' : 'Tuỳ chọn'}
+              <span
+                style={{
+                  fontWeight: 700,
+                  color: c.isRequired ? payTokens.danger : payTokens.muted
+                }}
+              >
+                {c.isRequired ? 'Bắt buộc' : 'Tuỳ chọn'}
+              </span>
               {` · ${c.uploadedCount}/${min} tệp`}
             </Text>
           </Stack>
@@ -309,8 +320,12 @@ const DocsPanel: React.FC<IDocsPanelProps> = (props) => {
           ) : (
             <div style={listWrap}>
               <DetailsList
-                items={props.checklist}
+                items={sortChecklistRequiredFirst(props.checklist)}
                 columns={checklistColumns}
+                getKey={(item: IChecklistItemRow) => String(item.id || item.itemCode)}
+                setKey={`chk-${props.checklist
+                  .map((c) => `${c.id}:${c.isRequired ? 1 : 0}`)
+                  .join('|')}`}
                 selectionMode={SelectionMode.none}
                 layoutMode={DetailsListLayoutMode.justified}
                 compact={true}

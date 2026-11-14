@@ -10,6 +10,12 @@ import { IRequestMaster } from './RequestService';
  */
 export const SYSADM_UPN = 'tinh.pt@emi.com.vn';
 
+/**
+ * Đóng vai tạm (chỉ SYSADM): góc nhìn người tạo hồ sơ công khai —
+ * không OrgMembers, chọn phòng tự do, chỉ CREATE/SUBMIT hồ sơ mình.
+ */
+export const ACT_AS_REQUESTER = '__REQUESTER__';
+
 export type CommandKind =
   | 'CREATE_REQUEST'
   | 'SUBMIT'
@@ -86,6 +92,22 @@ function fromMember(m: IOrgMember, acting: boolean): ICommandActor {
   };
 }
 
+/** Vai đóng tạm «Người tạo hồ sơ» (không cần dòng OrgMembers). */
+export function isActAsRequester(actAsKey: string): boolean {
+  return (actAsKey || '').trim() === ACT_AS_REQUESTER;
+}
+
+function requesterActor(signedIn: string, acting: boolean): ICommandActor {
+  return {
+    upn: signedIn,
+    displayName: acting ? 'Người tạo hồ sơ (tạm)' : signedIn,
+    ouCode: '',
+    memberRole: 'Member',
+    acting,
+    known: false
+  };
+}
+
 /** SYSADM + actAsKey = đóng vai. User thường = đúng dòng OrgMembers của họ. */
 export function resolveActor(
   signedInUPN: string,
@@ -94,20 +116,17 @@ export function resolveActor(
 ): ICommandActor {
   const active = members.filter((m) => m.isActive && m.memberUPN && m.ouCode);
   if (isSysAdmin(signedInUPN)) {
+    if (isActAsRequester(actAsKey)) {
+      return requesterActor(signedInUPN, true);
+    }
     const hit = actAsKey ? active.filter((m) => memberKey(m) === actAsKey)[0] : undefined;
     return hit ? fromMember(hit, true) : sysAdminActor(signedInUPN);
   }
   const mine = active.filter((m) => sameUpn(m.memberUPN, signedInUPN));
   const hit = (actAsKey && mine.filter((m) => memberKey(m) === actAsKey)[0]) || mine[0];
   if (!hit) {
-    return {
-      upn: signedInUPN,
-      displayName: signedInUPN,
-      ouCode: '',
-      memberRole: 'Member',
-      acting: false,
-      known: false
-    };
+    // Người tạo hồ sơ công khai — không cần OrgMembers; chỉ CREATE/SUBMIT hồ sơ mình.
+    return requesterActor(signedInUPN, false);
   }
   return fromMember(hit, false);
 }
@@ -116,8 +135,13 @@ export function actorLabel(actor: ICommandActor, ouName?: string): string {
   if (actor.memberRole === 'SysAdmin') {
     return 'Quản trị — tạo/trình được; đóng vai để duyệt xử lý';
   }
+  if (!actor.known) {
+    return actor.acting
+      ? 'Đóng vai người tạo — chọn phòng khi tạo; không duyệt/chốt'
+      : 'Người tạo hồ sơ — chọn phòng khi tạo';
+  }
   const ou = ouName || actor.ouCode;
-  const role = actor.memberRole === 'Manager' ? 'Trưởng phòng' : 'Thành viên';
+  const role = actor.memberRole === 'Manager' ? 'Trưởng phòng' : 'Thành viên kiểm tra';
   return `${role} · ${ou}`;
 }
 
@@ -146,7 +170,8 @@ export function canReviewAtStep(actor: ICommandActor, master: IRequestMaster): b
 
 /**
  * Rỗng = được enqueue. Có chữ = lý do chặn.
- * CREATE/SUBMIT: mọi nhân sự (kể cả SysAdmin) — vai trò chỉ siết ACCEPT/DECIDE/CONFIRM.
+ * CREATE/SUBMIT: mọi user đăng nhập (kể cả chưa OrgMembers) — chọn phòng tự do.
+ * ACCEPT/DECIDE/CONFIRM: chỉ Manager trong OrgMembers (hoặc SysAdmin đóng vai).
  */
 export function commandDenial(
   actor: ICommandActor,
@@ -154,9 +179,8 @@ export function commandDenial(
   master?: IRequestMaster,
   createdOu?: string
 ): string {
-  if (!actor.known) return 'Tài khoản chưa có trong danh sách nhân sự phòng ban.';
-
   const isCreateOrSubmit = command === 'CREATE_REQUEST' || command === 'SUBMIT';
+
   if (actor.memberRole === 'SysAdmin' && !isCreateOrSubmit) {
     return 'Hãy đóng vai trưởng phòng / nhân sự bước xử lý trước khi duyệt hoặc chốt.';
   }
@@ -164,12 +188,6 @@ export function commandDenial(
   if (command === 'CREATE_REQUEST') {
     if (!(createdOu || '').trim()) {
       return 'Chọn đơn vị khởi tạo.';
-    }
-    if (actor.memberRole === 'SysAdmin') {
-      return '';
-    }
-    if (!actor.ouCode || !sameOu(actor.ouCode, createdOu || '')) {
-      return 'Chỉ tạo hồ sơ cho đúng phòng của nhân sự đang dùng.';
     }
     return '';
   }
@@ -180,13 +198,13 @@ export function commandDenial(
       master.currentStepKey === 'BPCM1_PREPARE' &&
       (master.status === 'Draft' || master.status === 'Returned') &&
       sameUpn(actor.upn, master.creatorUPN);
-    if (!stepOk) {
-      return 'Chỉ người tạo hồ sơ, khi nháp hoặc bị trả, được trình trưởng phòng.';
-    }
-    if (actor.memberRole !== 'SysAdmin' && !sameOu(actor.ouCode, master.createdOUCode)) {
-      return 'Chỉ người tạo hồ sơ, khi nháp hoặc bị trả, được trình trưởng phòng.';
-    }
-    return '';
+    return stepOk
+      ? ''
+      : 'Chỉ người tạo hồ sơ, khi nháp hoặc bị trả, được trình trưởng phòng.';
+  }
+
+  if (!actor.known) {
+    return 'Chỉ nhân sự phòng kiểm tra/duyệt (OrgMembers) được thao tác lệnh này.';
   }
 
   if (command === 'DECIDE' && master.status === 'AwaitingManager' && master.currentStepKey === 'BPCM1_PREPARE') {
@@ -217,13 +235,9 @@ export function commandDenial(
   return 'Lệnh không nằm trong quyền của nhân sự đang đóng vai.';
 }
 
-/** Mọi nhân sự (Member/Manager) và SysAdmin được tạo hồ sơ. */
-export function canCreateInOu(actor: ICommandActor, ouCodes: string[]): boolean {
-  if (!actor.known) return false;
-  if (actor.memberRole === 'SysAdmin') {
-    return ouCodes.length > 0;
-  }
-  return !!actor.ouCode;
+/** Mọi user đăng nhập được tạo khi đã có danh mục phòng. */
+export function canCreateInOu(_actor: ICommandActor, ouCodes: string[]): boolean {
+  return ouCodes.length > 0;
 }
 
 export function isRequestCreator(actor: ICommandActor, master: IRequestMaster): boolean {
@@ -231,27 +245,34 @@ export function isRequestCreator(actor: ICommandActor, master: IRequestMaster): 
 }
 
 /**
+ * Quyền cộng dồn (UI):
+ * - Nền: mọi user → «Hồ sơ của tôi» + «Tạo hồ sơ».
+ * - + OrgMembers Member/Manager → thêm «Việc của tôi» (hàng đợi kiểm tra/duyệt).
+ * - + Manager/SysAdmin → thêm «Tổng quan» (và SysADM: nhật ký).
+ */
+export function canSeeWorkQueue(actor: ICommandActor): boolean {
+  if (actor.memberRole === 'SysAdmin' && !actor.acting) return true;
+  return actor.known;
+}
+
+/**
  * Inbox / dashboard: SYSADM thấy mọi hồ sơ.
- * Còn lại chỉ thấy hồ sơ mình tạo hoặc đang phải xử lý (todo).
- * Cùng phòng nhưng không phải việc của mình / chưa phân công → không thấy.
- * (Assignments Core chưa live — Member không được mở rộng theo currentOU.)
+ * Người tạo thấy hồ sơ mình (kể cả chưa OrgMembers).
+ * Manager/Member OrgMembers: thêm việc phải xử lý (todo).
  */
 export function requestVisibleTo(actor: ICommandActor, item: IRequestMaster): boolean {
   if (actor.memberRole === 'SysAdmin') return true;
-  if (!actor.known) return false;
   if (sameUpn(actor.upn, item.creatorUPN)) return true;
+  if (!actor.known) return false;
   return isActorTodo(actor, item);
 }
 
+/**
+ * Hàng đợi kiểm tra/duyệt — không gồm nháp/trả về của người tạo
+ * (nháp nằm ở «Hồ sơ của tôi»).
+ */
 export function isActorTodo(actor: ICommandActor, item: IRequestMaster): boolean {
   if (!actor.known) return false;
-  if (
-    sameUpn(actor.upn, item.creatorUPN) &&
-    item.currentStepKey === 'BPCM1_PREPARE' &&
-    (item.status === 'Draft' || item.status === 'Returned')
-  ) {
-    return true;
-  }
   if (actor.memberRole === 'SysAdmin') return false;
   if (
     managerOf(actor, item.createdOUCode) &&

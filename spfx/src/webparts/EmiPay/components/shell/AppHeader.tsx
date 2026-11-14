@@ -7,7 +7,11 @@ import {
   ThemeProvider
 } from '@fluentui/react';
 import { IOrgMember, IOrgUnit } from '../../services/ConfigService';
-import { SYSADM_UPN, memberKey } from '../../services/actorAuth';
+import {
+  ACT_AS_REQUESTER,
+  SYSADM_UPN,
+  memberKey
+} from '../../services/actorAuth';
 import { emiPayFluentTheme } from '../../theme/fluentPayTheme';
 import { themeHostStyle } from '../detail/detailStyles';
 
@@ -26,9 +30,13 @@ const AppHeader: React.FC<IAppHeaderProps> = (props) => {
       key: '',
       text: `Quản trị (${SYSADM_UPN}) — không thao tác hồ sơ`
     },
+    {
+      key: ACT_AS_REQUESTER,
+      text: 'Người tạo hồ sơ (tạm) — chọn phòng, không duyệt/chốt'
+    },
     ...props.orgMembers.map((m) => {
       const ou = props.orgUnits.filter((u) => u.ouCode === m.ouCode)[0];
-      const role = m.memberRole === 'Manager' ? 'Trưởng phòng' : 'Thành viên';
+      const role = m.memberRole === 'Manager' ? 'Trưởng phòng' : 'Thành viên kiểm tra';
       return {
         key: memberKey(m),
         text: `${m.displayName} · ${role} · ${ou ? ou.ouName : m.ouCode}`

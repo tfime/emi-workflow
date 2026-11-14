@@ -1,5 +1,41 @@
 /** Nhãn tiếng Việt có dấu — hiển thị UI (không đổi giá trị API/Choice). */
 
+/** Tên phòng: ưu tiên ouName, fallback mã. */
+export function ouLabel(ouCode: string | undefined, units: { ouCode: string; ouName: string }[]): string {
+  const code = (ouCode || '').trim();
+  if (!code) return '—';
+  const hit = units.filter(
+    (u) => (u.ouCode || '').trim().toLowerCase() === code.toLowerCase()
+  )[0];
+  return hit && hit.ouName ? hit.ouName : code;
+}
+
+/** Tên loại hồ sơ: Title PaymentTypes, fallback mã. */
+export function paymentTypeLabel(
+  code: string | undefined,
+  types: { code: string; title: string }[]
+): string {
+  const c = (code || '').trim();
+  if (!c) return '—';
+  const hit = types.filter(
+    (t) => (t.code || '').trim().toLowerCase() === c.toLowerCase()
+  )[0];
+  return hit && hit.title ? hit.title : c;
+}
+
+/** Tên người: DisplayName OrgMembers, fallback UPN. */
+export function personLabel(
+  upn: string | undefined,
+  members: { memberUPN: string; displayName: string }[]
+): string {
+  const u = (upn || '').trim();
+  if (!u) return '—';
+  const hit = members.filter(
+    (m) => (m.memberUPN || '').trim().toLowerCase() === u.toLowerCase()
+  )[0];
+  return hit && hit.displayName ? hit.displayName : u;
+}
+
 export function statusVi(status: string): string {
   const map: Record<string, string> = {
     Draft: 'Nháp',

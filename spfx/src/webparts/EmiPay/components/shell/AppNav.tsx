@@ -1,6 +1,10 @@
 import * as React from 'react';
 import { Persona, PersonaSize, Stack, Text, ThemeProvider } from '@fluentui/react';
-import { ICommandActor, actorLabel } from '../../services/actorAuth';
+import {
+  ICommandActor,
+  actorLabel,
+  canSeeWorkQueue
+} from '../../services/actorAuth';
 import { PayInboxFilter } from '../../services/payRoute';
 import { emiPayFluentTheme } from '../../theme/fluentPayTheme';
 import { PayView } from '../types';
@@ -25,20 +29,29 @@ export interface IAppNavProps {
 const AppNav: React.FC<IAppNavProps> = (props) => {
   const showDash =
     props.actor.memberRole === 'SysAdmin' || props.actor.memberRole === 'Manager';
+  // Cộng quyền: chỉ Member/Manager (OrgMembers) hoặc SysADM mới có hàng đợi «Việc của tôi».
+  const showWorkQueue = canSeeWorkQueue(props.actor);
 
-  const note = props.actor.acting
-    ? 'Đang đóng vai nhân sự tạm. Nút và người ghi trên lệnh theo người này. User thật sau chỉ đổi UPN trong OrgMembers.'
-    : props.actor.memberRole === 'SysAdmin'
-      ? 'Quản trị tạo/trình hồ sơ được. Đóng vai để duyệt và xử lý theo bước.'
-      : 'Mọi nhân sự tạo được hồ sơ; duyệt/chốt theo trưởng phòng bước đó.';
+  const note = props.actor.acting && !props.actor.known
+    ? 'Đang đóng vai người tạo hồ sơ (tạm). Chỉ «Hồ sơ của tôi» + tạo/trình; không hàng đợi duyệt.'
+    : props.actor.acting
+      ? 'Đang đóng vai nhân sự tạm. Nút và người ghi trên lệnh theo người này.'
+      : props.actor.memberRole === 'SysAdmin'
+        ? 'Quản trị tạo/trình được. Đóng vai Manager để duyệt, hoặc «Người tạo hồ sơ (tạm)» để xem UI tạo.'
+        : !props.actor.known
+          ? 'Người tạo: «Hồ sơ của tôi» + tạo hồ sơ. Có thêm OrgMembers thì mới thấy «Việc của tôi».'
+          : props.actor.memberRole === 'Manager'
+            ? 'Trưởng phòng: «Việc của tôi» (duyệt/tiếp nhận/chốt) + hồ sơ mình tạo.'
+            : 'Thành viên kiểm tra: «Việc của tôi» khi được giao + hồ sơ mình tạo.';
 
   const navClass = (active: boolean): string =>
     `${styles.navBtn} ${active ? styles.navBtnActive : ''}`.trim();
 
-  // «Cần tôi xử lý» đã gộp vào «Việc của tôi» — hash cũ filter=todo vẫn coi là home.
-  const inboxHomeActive =
+  const workQueueActive =
     props.view === 'inbox' &&
     (props.inboxFilter === 'all' || props.inboxFilter === 'todo');
+  const mineActive =
+    props.view === 'inbox' && props.inboxFilter === 'mine';
 
   return (
     <ThemeProvider
@@ -66,18 +79,18 @@ const AppNav: React.FC<IAppNavProps> = (props) => {
               Tổng quan
             </button>
           )}
+          {showWorkQueue && (
+            <button
+              type="button"
+              className={navClass(workQueueActive)}
+              onClick={() => props.onGoInbox('all')}
+            >
+              Việc của tôi
+            </button>
+          )}
           <button
             type="button"
-            className={navClass(inboxHomeActive)}
-            onClick={() => props.onGoInbox('all')}
-          >
-            Việc của tôi
-          </button>
-          <button
-            type="button"
-            className={navClass(
-              props.view === 'inbox' && props.inboxFilter === 'mine'
-            )}
+            className={navClass(mineActive)}
             onClick={() => props.onGoInbox('mine')}
           >
             Hồ sơ của tôi

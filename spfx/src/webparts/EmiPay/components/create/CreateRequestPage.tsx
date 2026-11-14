@@ -75,8 +75,9 @@ export interface ICreateRequestPageProps {
 const CreateRequestPage: React.FC<ICreateRequestPageProps> = (props) => {
   const amountCheck = parseAmountInput(props.createAmount);
   const amountMsg = amountError(props.createAmount);
-  const lockedOu = !!props.actorOuCode;
-  const createOuCode = props.actorOuCode || props.createOu;
+  // Cách 2 (công khai): mọi người chọn phòng tự do — không khóa theo OrgMembers.
+  const lockedOu = false;
+  const createOuCode = props.createOu || props.actorOuCode;
   const requiredTplCount = props.templates.filter((t) => t.isRequired).length;
   const totalTplCount = props.templates.length;
   const sortedTemplates = props.templates.slice().sort((a, b) => {
@@ -353,8 +354,10 @@ const CreateRequestPage: React.FC<ICreateRequestPageProps> = (props) => {
                       root: {
                         flexShrink: 0,
                         fontWeight: 600,
-                        color: t.isRequired ? payTokens.warn : payTokens.muted,
-                        background: t.isRequired ? payTokens.warnSoft : payTokens.surface,
+                        color: t.isRequired ? payTokens.danger : payTokens.muted,
+                        background: t.isRequired
+                          ? payTokens.dangerSoft
+                          : payTokens.surface,
                         borderRadius: 4,
                         padding: '2px 8px'
                       }

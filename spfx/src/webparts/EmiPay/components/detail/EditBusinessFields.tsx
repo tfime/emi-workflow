@@ -98,7 +98,7 @@ const EditBusinessFields: React.FC<IEditBusinessFieldsProps> = (props) => {
             label="Đơn vị khởi tạo"
             options={ouOptions}
             value={props.editOu}
-            disabled={props.busy || !!props.actorOuCode}
+            disabled={props.busy}
             placeholder="Gõ tên phòng…"
             emptyText="Không tìm thấy phòng"
             onChange={props.onOuChange}

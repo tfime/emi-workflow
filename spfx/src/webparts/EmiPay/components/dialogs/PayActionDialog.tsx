@@ -14,7 +14,10 @@ import {
   TextField,
   ThemeProvider
 } from '@fluentui/react';
-import { IChecklistItemRow } from '../../services/ChecklistService';
+import {
+  IChecklistItemRow,
+  sortChecklistRequiredFirst
+} from '../../services/ChecklistService';
 import { IDocumentIndexRow } from '../../services/UploadService';
 import { stepShortVi } from '../../services/viLabels';
 import { emiPayFluentTheme } from '../../theme/fluentPayTheme';
@@ -94,9 +97,11 @@ function toIsoDate(d: Date | null | undefined): string {
 }
 
 const PayActionDialog: React.FC<IPayActionDialogProps> = (props) => {
-  const checklistOpts: IDropdownOption[] = props.checklist.map((c) => ({
+  const checklistOpts: IDropdownOption[] = sortChecklistRequiredFirst(
+    props.checklist
+  ).map((c) => ({
     key: c.itemCode,
-    text: c.itemLabel
+    text: c.isRequired ? `${c.itemLabel} (bắt buộc)` : c.itemLabel
   }));
   const reviewItemLabel =
     (props.checklist.filter((c) => c.itemCode === props.reviewItemCode)[0] || {})

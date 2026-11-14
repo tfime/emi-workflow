@@ -57,7 +57,9 @@ import {
   readActAsKey,
   writeActAsKey,
   memberKey,
+  isActAsRequester,
   canCreateInOu,
+  canSeeWorkQueue,
   canReviewAtStep,
   isRequestCreator,
   requestVisibleTo,
@@ -142,7 +144,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const signedInUPN = upnFromLogin(props.userLoginName);
   const [orgMembers, setOrgMembers] = React.useState<IOrgMember[]>([]);
   const [actAsKey, setActAsKey] = React.useState(readActAsKey);
-  const actor = resolveActor(signedInUPN, orgMembers, actAsKey);
+  const actorResolved = resolveActor(signedInUPN, orgMembers, actAsKey);
+  const actor: typeof actorResolved =
+    !actorResolved.known && props.userDisplayName
+      ? { ...actorResolved, displayName: props.userDisplayName }
+      : actorResolved;
   const actorUPN = actor.upn;
   const [view, setView] = React.useState<PayView>(bootRoute.view);
   const [inboxFilter, setInboxFilter] = React.useState<PayInboxFilter>(
@@ -545,6 +551,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
 
   React.useEffect(() => {
     if (!actAsKey || !orgMembers.length) return;
+    // Vai tạm «Người tạo hồ sơ» không cần dòng OrgMembers.
+    if (isActAsRequester(actAsKey)) return;
     const still = orgMembers.some((m) => memberKey(m) === actAsKey);
     if (!still) {
       writeActAsKey('');
@@ -1197,10 +1205,25 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     .join('')
     .toUpperCase() || 'U';
 
-  const goInbox = (filter: PayInboxFilter = 'all'): void => {
-    setInboxFilter(filter);
+  const homeInboxFilter = (): PayInboxFilter =>
+    canSeeWorkQueue(actor) ? 'all' : 'mine';
+
+  const goInbox = (filter?: PayInboxFilter): void => {
+    const next = filter || homeInboxFilter();
+    // Người tạo thuần không có hàng đợi «Việc của tôi».
+    if (!canSeeWorkQueue(actor) && (next === 'all' || next === 'todo')) {
+      setInboxFilter('mine');
+    } else {
+      setInboxFilter(next);
+    }
     setView('inbox');
   };
+
+  React.useEffect(() => {
+    if (!canSeeWorkQueue(actor) && (inboxFilter === 'all' || inboxFilter === 'todo')) {
+      setInboxFilter('mine');
+    }
+  }, [actor.known, actor.memberRole, actor.acting, inboxFilter]);
 
   const visibleInbox = inbox.filter((item) => requestVisibleTo(actor, item));
   const todoRows = visibleInbox.filter((item) => isActorTodo(actor, item));
@@ -1229,15 +1252,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
       <AppHeader
         title={props.title || 'EMI PAY'}
         isSysAdmin={isSysAdmin(signedInUPN)}
-        actAsValue={
-          actor.acting
-            ? memberKey({
-                memberUPN: actor.upn,
-                ouCode: actor.ouCode,
-                memberRole: actor.memberRole === 'Manager' ? 'Manager' : 'Member'
-              })
-            : ''
-        }
+        actAsValue={actAsKey}
         orgMembers={orgMembers}
         orgUnits={orgUnits}
         onActAsChange={(next) => {
@@ -1256,7 +1271,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             setUncDocs([]);
             setDocs([]);
             setView('inbox');
-            setInboxFilter('all');
+            setInboxFilter(canSeeWorkQueue(nextActor) ? 'all' : 'mine');
             showNotice(
               'warning',
               'Hồ sơ đang mở không thuộc quyền của vai đang đóng. Đã quay lại hộp thư.'
@@ -1265,6 +1280,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           }
           if (view === 'audit' || view === 'create') {
             setView('inbox');
+          }
+          if (!canSeeWorkQueue(nextActor) && (inboxFilter === 'all' || inboxFilter === 'todo')) {
+            setInboxFilter('mine');
           }
         }}
       />
@@ -1288,7 +1306,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                 'warning',
                 'Không có hồ sơ đang mở trong quyền của vai hiện tại.'
               );
-              goInbox('all');
+              goInbox();
               return;
             }
             setView('detail');
@@ -1367,7 +1385,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
               onRouteChange={(stepKey, ouCode) =>
                 setRoutePlan((prev) => ({ ...prev, [stepKey]: ouCode }))
               }
-              onBack={() => goInbox('all')}
+              onBack={() => goInbox()}
               onCreate={onCreate}
             />
           )}
@@ -1471,8 +1489,13 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                   typeTitle={selectedTypeMeta ? selectedTypeMeta.title : ''}
                   title={createTitle}
                   amountDisplay={moneyVi(parseAmountInput(createAmount).value)}
-                  ouCode={actor.ouCode || createOu}
-                  actorUPN={actorUPN}
+                  ouCode={
+                    orgUnits.filter((u) => u.ouCode === (actor.ouCode || createOu))[0]
+                      ?.ouName ||
+                    actor.ouCode ||
+                    createOu
+                  }
+                  actorUPN={actor.displayName || actorUPN}
                   partyKindLabel={partyKindLabel(createPartyBiz.partyKind)}
                   nccSummary={
                     createPartyBiz.partyKind === 'NCC'
@@ -1486,7 +1509,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                           .join(' · ')
                       : undefined
                   }
-                  inspectRoute={routeInspectSummary(routePlan)}
+                  inspectRoute={routeInspectSummary(routePlan, (code) =>
+                    orgUnits.filter((u) => u.ouCode === code)[0]?.ouName || code
+                  )}
                   templateCount={templates.length}
                   requiredCount={requiredTplCount}
                 />
@@ -1498,6 +1523,9 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
                   workItems={workItems}
                   activities={activities}
                   uncDocs={uncDocs}
+                  orgUnits={orgUnits}
+                  orgMembers={orgMembers}
+                  paymentTypes={paymentTypes}
                 />
               )}
             </aside>

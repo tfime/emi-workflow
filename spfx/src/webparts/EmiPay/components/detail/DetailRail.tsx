@@ -3,6 +3,11 @@ import { Stack, Text, ThemeProvider } from '@fluentui/react';
 import { IActivityPublicRow } from '../../services/ActivityService';
 import { IChecklistItemRow, requiredChecklistReady } from '../../services/ChecklistService';
 import {
+  IOrgMember,
+  IOrgUnit,
+  IPaymentType
+} from '../../services/ConfigService';
+import {
   displayRequestTitle,
   IRequestMaster,
   IWorkItemRow
@@ -14,7 +19,14 @@ import {
   partyKindLabel
 } from '../../services/partyBiz';
 import { routeInspectSummary } from '../../services/routePlan';
-import { chairStatusDetailVi, moneyVi, stepShortVi } from '../../services/viLabels';
+import {
+  chairStatusDetailVi,
+  moneyVi,
+  ouLabel,
+  paymentTypeLabel,
+  personLabel,
+  stepShortVi
+} from '../../services/viLabels';
 import { emiPayFluentTheme } from '../../theme/fluentPayTheme';
 import styles from '../EmiPay.module.scss';
 import ApprovalFlow from './ApprovalFlow';
@@ -26,6 +38,9 @@ export interface IDetailRailProps {
   workItems: IWorkItemRow[];
   activities: IActivityPublicRow[];
   uncDocs: IDocumentIndexRow[];
+  orgUnits: IOrgUnit[];
+  orgMembers: IOrgMember[];
+  paymentTypes: IPaymentType[];
 }
 
 const kv = (label: string, value: React.ReactNode): React.ReactNode => (
@@ -45,7 +60,14 @@ const kv = (label: string, value: React.ReactNode): React.ReactNode => (
     </Text>
     <Text
       variant="small"
-      styles={{ root: { textAlign: 'right', maxWidth: '62%', wordBreak: 'break-word' } }}
+      styles={{
+        root: {
+          textAlign: 'right',
+          maxWidth: '62%',
+          wordBreak: 'break-word',
+          fontWeight: 600
+        }
+      }}
     >
       {value}
     </Text>
@@ -69,6 +91,9 @@ const DetailRail: React.FC<IDetailRailProps> = (props) => {
   }
 
   const m = props.master;
+  const units = props.orgUnits || [];
+  const members = props.orgMembers || [];
+  const types = props.paymentTypes || [];
   const party = parsePartyBizFromRouteJson(m.routePlanJson);
   const status = chairStatusDetailVi(
     m.currentStepKey,
@@ -76,6 +101,20 @@ const DetailRail: React.FC<IDetailRailProps> = (props) => {
     m.paymentDueAt,
     isChairDossierApproved(m, props.workItems)
   );
+  const createdOu = ouLabel(m.createdOUCode, units);
+  const currentOu = ouLabel(m.currentOUCode, units);
+  const typeName = paymentTypeLabel(m.paymentTypeCode, types);
+  const creatorName = personLabel(m.creatorUPN, members);
+
+  let routeHint = 'Chưa đọc được RoutePlan';
+  try {
+    const p = m.routePlanJson
+      ? (JSON.parse(m.routePlanJson) as Record<string, string>)
+      : {};
+    routeHint = routeInspectSummary(p, (code) => ouLabel(code, units));
+  } catch {
+    /* keep default */
+  }
 
   return (
     <ThemeProvider theme={emiPayFluentTheme} style={themeHostStyle}>
@@ -114,24 +153,32 @@ const DetailRail: React.FC<IDetailRailProps> = (props) => {
               {kv('Lần thanh toán', party.paymentTimes || '—')}
             </>
           )}
-          {kv('Loại', m.paymentTypeCode || '—')}
-          {kv('Đơn vị tạo', m.createdOUCode || '—')}
+          {kv('Loại', typeName)}
+          {kv('Đơn vị tạo', createdOu)}
           {m.status === 'AwaitingManager'
-            ? kv('Chờ duyệt bởi', `TP ${m.createdOUCode || '—'}`)
-            : kv('Đơn vị bước hiện tại', m.currentOUCode || '—')}
-          {kv('Người tạo', m.creatorUPN || '—')}
+            ? kv('Chờ duyệt bởi', `Trưởng phòng · ${createdOu}`)
+            : kv('Đơn vị bước hiện tại', currentOu)}
+          {kv('Người tạo', creatorName)}
           {kv('Trạng thái', status)}
-          {kv('Bước', stepShortVi(m.currentStepKey))}
+          {kv('Bước hiện tại', stepShortVi(m.currentStepKey))}
           {kv('Lượt', String(m.reviewRound))}
-          {kv('Checklist', requiredChecklistReady(props.checklist) ? 'Đã đủ' : 'Còn thiếu')}
+          {kv(
+            'Checklist',
+            requiredChecklistReady(props.checklist) ? 'Đã đủ' : 'Còn thiếu'
+          )}
           {kv(
             'Thời hạn TT',
-            m.paymentDueAt ? new Date(m.paymentDueAt).toLocaleDateString('vi-VN') : '—'
+            m.paymentDueAt
+              ? new Date(m.paymentDueAt).toLocaleDateString('vi-VN')
+              : '—'
           )}
           {kv('UNC', props.uncDocs[0] ? props.uncDocs[0].fileName : 'Chưa có')}
           {!!m.explanation && (
             <Stack tokens={{ childrenGap: 4 }} styles={{ root: { marginTop: 8 } }}>
-              <Text variant="small" styles={{ root: { color: '#4b5563', fontWeight: 500 } }}>
+              <Text
+                variant="small"
+                styles={{ root: { color: '#4b5563', fontWeight: 500 } }}
+              >
                 Diễn giải
               </Text>
               <Text variant="small" styles={{ root: { wordBreak: 'break-word' } }}>
@@ -141,22 +188,18 @@ const DetailRail: React.FC<IDetailRailProps> = (props) => {
           )}
         </Stack>
 
-        <Stack tokens={{ childrenGap: 8 }} styles={cardStack}>
-          <Text variant="mediumPlus" styles={{ root: { fontWeight: 600 } }}>
-            Luồng duyệt
-          </Text>
-          <Text variant="small" styles={{ root: { color: '#4b5563', lineHeight: 1.4 } }}>
-            {(() => {
-              try {
-                const p = m.routePlanJson
-                  ? (JSON.parse(m.routePlanJson) as Record<string, string>)
-                  : {};
-                return routeInspectSummary(p);
-              } catch {
-                return 'Chưa đọc được RoutePlan';
-              }
-            })()}
-          </Text>
+        <Stack tokens={{ childrenGap: 10 }} styles={cardStack}>
+          <Stack tokens={{ childrenGap: 4 }}>
+            <Text variant="mediumPlus" styles={{ root: { fontWeight: 600 } }}>
+              Luồng duyệt
+            </Text>
+            <Text
+              variant="small"
+              styles={{ root: { color: '#4b5563', lineHeight: 1.4 } }}
+            >
+              {routeHint}
+            </Text>
+          </Stack>
           <ApprovalFlow
             currentStepKey={m.currentStepKey}
             status={m.status}
@@ -164,6 +207,8 @@ const DetailRail: React.FC<IDetailRailProps> = (props) => {
             routePlanJson={m.routePlanJson}
             workItems={props.workItems}
             activities={props.activities}
+            orgUnits={units}
+            orgMembers={members}
           />
         </Stack>
       </Stack>
