@@ -36,6 +36,12 @@ Cùng quy tắc với SPFx `actorAuth.ts`. UI chỉ hỗ trợ UX; **Flow phải
 
 Member OrgMembers **không** ACCEPT / DECIDE / CONFIRM (chỉ checklist/ghi chú/đính kèm qua SP REST khi được cấp item).
 
+## UI visibility (SPFx, không đổi lệnh Flow)
+
+- **Todo / «Việc của tôi»**: Manager của `CurrentOU` (và TP đơn vị tạo lúc `AwaitingManager`).
+- **TCKT theo dõi CT.HĐQT**: khi `CurrentStepKey = CHAIR_APPROVE`, Manager phòng gắn `TCKT_CHECK` hoặc `TCKT_PAY` trong RoutePlan vẫn thấy hồ sơ (phối hợp thúc đẩy) — **không** được DECIDE bước Chair.
+- Sau lệnh thành công, nếu hồ sơ không còn trong quyền xem của vai hiện tại → đóng detail + làm mới inbox (không báo «không có quyền xem»).
+
 ## Reject
 
 `Commands.State = Rejected`, `ErrorMessage` ngắn (vd. `AUTH: not Manager of CurrentOU`), ghi `ActivityInternal`, HTTP Response cùng state — **không** MERGE Requests/WorkItems.

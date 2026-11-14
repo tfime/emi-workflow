@@ -22,8 +22,7 @@ import {
   canEditRequestBusinessFields,
   displayRequestTitle,
   IRequestMaster,
-  IWorkItemRow,
-  isWorkItemAccepted
+  IWorkItemRow
 } from '../../services/RequestService';
 import { IDocumentIndexRow } from '../../services/UploadService';
 import { isChairDossierApproved } from '../../services/liveActions';
@@ -95,8 +94,6 @@ function statusBarType(master: IRequestMaster, workItems: IWorkItemRow[]): Messa
   if (isChairDossierApproved(master, workItems)) return MessageBarType.success;
   return MessageBarType.info;
 }
-
-const NEED_ACCEPT = ['BPCM2_TECH', 'BPCM3_PRICE', 'TCKT_CHECK', 'TCKT_PAY'];
 
 const chipStyle = {
   root: {
@@ -269,7 +266,7 @@ const RequestDetailPage: React.FC<IRequestDetailPageProps> = (props) => {
             </MessageBar>
           )}
 
-        {NEED_ACCEPT.indexOf(master.currentStepKey) >= 0 && !isWorkItemAccepted(activeWi) && (
+        {props.acceptBlocked && (
           <MessageBar messageBarType={MessageBarType.warning}>
             <strong>Chưa tiếp nhận bước.</strong> Cần «Tiếp nhận và đặt hạn» trước khi đánh giá
             checklist / chuyển bước / xác nhận thanh toán.

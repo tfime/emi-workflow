@@ -1,5 +1,6 @@
 import { IOrgMember } from './ConfigService';
 import { IRequestMaster } from './RequestService';
+import { isRouteStepSkipped } from './routePlan';
 
 /**
  * Quyền lệnh theo OrgMembers (phòng + MemberRole + bước hồ sơ).
@@ -267,6 +268,29 @@ export function requestVisibleTo(actor: ICommandActor, item: IRequestMaster): bo
   return isActorTodo(actor, item);
 }
 
+/** OU pin trong RoutePlan cho một StepKey (bỏ sentinel skip). */
+function routeOuForStep(routePlanJson: string | undefined, stepKey: string): string {
+  if (!routePlanJson || !String(routePlanJson).trim()) return '';
+  try {
+    const plan = JSON.parse(routePlanJson) as Record<string, unknown>;
+    const v = plan[stepKey];
+    if (typeof v === 'string' && !isRouteStepSkipped(v)) return v;
+  } catch {
+    /* ignore */
+  }
+  return '';
+}
+
+/** TP phòng TCKT (kiểm tra và/hoặc thanh toán) theo RoutePlan hồ sơ. */
+function isTcktRouteManager(actor: ICommandActor, item: IRequestMaster): boolean {
+  if (!managerOf(actor, actor.ouCode)) return false;
+  const checkOu = routeOuForStep(item.routePlanJson, 'TCKT_CHECK');
+  const payOu = routeOuForStep(item.routePlanJson, 'TCKT_PAY');
+  return (
+    (!!checkOu && managerOf(actor, checkOu)) || (!!payOu && managerOf(actor, payOu))
+  );
+}
+
 /**
  * Hàng đợi kiểm tra/duyệt — không gồm nháp/trả về của người tạo
  * (nháp nằm ở «Hồ sơ của tôi»).
@@ -286,6 +310,14 @@ export function isActorTodo(actor: ICommandActor, item: IRequestMaster): boolean
     managerOf(actor, item.currentOUCode) &&
     item.currentStepKey !== 'BPCM1_PREPARE' &&
     TERMINAL.indexOf(item.status) < 0
+  ) {
+    return true;
+  }
+  // TCKT theo dõi hồ sơ đang ở CT.HĐQT — phối hợp thúc đẩy (chưa tới TCKT_PAY).
+  if (
+    item.currentStepKey === 'CHAIR_APPROVE' &&
+    TERMINAL.indexOf(item.status) < 0 &&
+    isTcktRouteManager(actor, item)
   ) {
     return true;
   }

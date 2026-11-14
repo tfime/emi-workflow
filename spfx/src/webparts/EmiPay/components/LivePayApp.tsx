@@ -50,7 +50,7 @@ import {
   latestRejectNote,
   notesForDocument,
   addUserNote,
-  needsAcceptFirst,
+  actorMustAcceptFirst,
   canAddUserNote,
   commandDenial,
   resolveActor,
@@ -366,11 +366,35 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     });
   };
 
+  const clearOpenDetail = (): void => {
+    setMaster(undefined);
+    setRequestKey('');
+    setChecklist([]);
+    setWorkItems([]);
+    setActivities([]);
+    setStepReviews([]);
+    setTimeline([]);
+    setUncDocs([]);
+    setDocs([]);
+  };
+
+  /**
+   * Sau lệnh Core: làm mới inbox; nếu hồ sơ đã ra khỏi quyền xem của vai hiện tại
+   * (vd. TCKT chốt → sang CHAIR) thì đóng detail, không ném lỗi «không có quyền».
+   */
   const refreshDetailAndInbox = async (
     key: string,
     opts?: { skipReconcile?: boolean }
   ): Promise<void> => {
-    await Promise.all([loadDetail(key, opts), refreshInbox()]);
+    await refreshInbox();
+    const m = await getRequestByKey(props.sp, key);
+    if (!m || !requestVisibleTo(actor, m)) {
+      clearOpenDetail();
+      setView('inbox');
+      setInboxFilter(canSeeWorkQueue(actor) ? 'all' : 'mine');
+      return;
+    }
+    await loadDetail(key, opts);
   };
 
   const onSaveBusinessFields = (): void => {
@@ -711,8 +735,8 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     ? liveActionsFor(master, checklist, uncDocs.length > 0, actor, activeWi, workItems)
     : [];
 
-  const acceptBlocked = needsAcceptFirst(master, activeWi, workItems);
-  const notesAllowed = canAddUserNote(master, activeWi, workItems);
+  const acceptBlocked = actorMustAcceptFirst(actor, master, activeWi, workItems);
+  const notesAllowed = canAddUserNote(master, activeWi, workItems, actor);
 
   const canReviewDocs = !!(
     master &&
@@ -725,11 +749,15 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
   const rejectNote = latestRejectNote(activities);
 
   const openReview = (itemCode: string): void => {
-    if (acceptBlocked || !canReviewDocs) {
+    if (acceptBlocked) {
       showNotice(
         'warning',
         'Cần «Tiếp nhận và đặt hạn» trước khi đánh giá checklist.'
       );
+      return;
+    }
+    if (!canReviewDocs) {
+      showNotice('warning', 'Chỉ phòng đang đánh giá bước này được chấm checklist.');
       return;
     }
     setReviewItemCode(itemCode);
@@ -1112,8 +1140,11 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     if (kind === 'review') {
       void run(
         async () => {
-          if (needsAcceptFirst(master, activeWi, workItems)) {
+          if (actorMustAcceptFirst(actor, master, activeWi, workItems)) {
             throw new Error('Cần «Tiếp nhận và đặt hạn» trước khi đánh giá checklist.');
+          }
+          if (!canReviewAtStep(actor, master)) {
+            throw new Error('Chỉ phòng đang đánh giá bước này được chấm checklist.');
           }
           const item =
             checklist.filter((c) => c.itemCode === reviewItemCode)[0] || checklist[0];

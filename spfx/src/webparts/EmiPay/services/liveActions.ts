@@ -32,20 +32,39 @@ export function needsAcceptFirst(
 }
 
 /**
- * Gửi ghi chú: chặn hồ sơ đóng; tại BPCM2/3/TCKT phải đã ACCEPT.
+ * UX «chặn / nhắc tiếp nhận»: chỉ với vai được ACCEPT bước hiện tại.
+ * Người tạo / theo dõi hồ sơ không bị nhắc (họ không tiếp nhận được).
+ */
+export function actorMustAcceptFirst(
+  actor: ICommandActor,
+  master: IRequestMaster | undefined,
+  currentWi?: IWorkItemRow,
+  workItems?: IWorkItemRow[]
+): boolean {
+  if (!master || !needsAcceptFirst(master, currentWi, workItems)) return false;
+  return !commandDenial(actor, 'ACCEPT', master);
+}
+
+/**
+ * Gửi ghi chú: chặn hồ sơ đóng.
+ * Tại BPCM2/3/TCKT: chỉ chặn người phải ACCEPT trước; người tạo / theo dõi vẫn ghi chú được.
  * BPCM1 / AwaitingManager / CHAIR: được ghi chú (nếu chưa đóng).
  */
 export function canAddUserNote(
   master: IRequestMaster | undefined,
   currentWi?: IWorkItemRow,
-  workItems?: IWorkItemRow[]
+  workItems?: IWorkItemRow[],
+  actor?: ICommandActor
 ): boolean {
   if (!master) return false;
   const st = master.status || '';
   if (st === 'Completed' || st === 'Cancelled' || st === 'CancellationArchiving') {
     return false;
   }
-  if (needsAcceptFirst(master, currentWi, workItems)) return false;
+  if (needsAcceptFirst(master, currentWi, workItems)) {
+    if (!actor) return false;
+    return !!commandDenial(actor, 'ACCEPT', master);
+  }
   return true;
 }
 
