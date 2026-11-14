@@ -45,6 +45,10 @@ export function parsePayHash(hash: string): IPayRoute {
 
   if (viewRaw === 'inbox') {
     const f = (parts[2] || 'all').toLowerCase();
+    // «todo» gộp vào «Việc của tôi» (all) — giữ parse cũ để bookmark không gãy.
+    if (f === 'todo') {
+      return { view: 'inbox', inboxFilter: 'all' };
+    }
     return {
       view: 'inbox',
       inboxFilter: isInboxFilter(f) ? f : 'all'

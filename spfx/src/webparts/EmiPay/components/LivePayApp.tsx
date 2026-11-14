@@ -1228,8 +1228,6 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
     <div className={styles.app} style={payThemeStyle}>
       <AppHeader
         title={props.title || 'EMI PAY'}
-        userDisplayName={props.userDisplayName}
-        avatarLetters={avatarLetters}
         isSysAdmin={isSysAdmin(signedInUPN)}
         actAsValue={
           actor.acting
@@ -1245,7 +1243,29 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
         onActAsChange={(next) => {
           writeActAsKey(next);
           setActAsKey(next);
-          if (view === 'audit' || view === 'create') setView('inbox');
+          const nextActor = resolveActor(signedInUPN, orgMembers, next);
+          // Đóng «Hồ sơ đang mở» nếu vai mới không được xem (vd. Draft của tinh.pt khi đóng vai khác).
+          if (master && !requestVisibleTo(nextActor, master)) {
+            setMaster(undefined);
+            setRequestKey('');
+            setChecklist([]);
+            setWorkItems([]);
+            setActivities([]);
+            setStepReviews([]);
+            setTimeline([]);
+            setUncDocs([]);
+            setDocs([]);
+            setView('inbox');
+            setInboxFilter('all');
+            showNotice(
+              'warning',
+              'Hồ sơ đang mở không thuộc quyền của vai đang đóng. Đã quay lại hộp thư.'
+            );
+            return;
+          }
+          if (view === 'audit' || view === 'create') {
+            setView('inbox');
+          }
         }}
       />
 
@@ -1257,12 +1277,22 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
           ouName={orgUnits.filter((u) => u.ouCode === actor.ouCode)[0]?.ouName}
           avatarLetters={avatarLetters}
           mayCreate={mayCreate}
-          hasMaster={!!master}
+          hasMaster={!!master && requestVisibleTo(actor, master)}
           canAudit={!actor.acting && isSysAdmin(signedInUPN)}
           onGoDashboard={() => setView('dashboard')}
           onGoInbox={goInbox}
           onGoCreate={() => setView('create')}
-          onGoDetail={() => setView('detail')}
+          onGoDetail={() => {
+            if (!master || !requestVisibleTo(actor, master)) {
+              showNotice(
+                'warning',
+                'Không có hồ sơ đang mở trong quyền của vai hiện tại.'
+              );
+              goInbox('all');
+              return;
+            }
+            setView('detail');
+          }}
           onGoAudit={() => setView('audit')}
         />
 
@@ -1342,7 +1372,7 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             />
           )}
 
-          {view === 'detail' && master && (
+          {view === 'detail' && master && requestVisibleTo(actor, master) && (
             <RequestDetailPage
               master={master}
               actor={actor}
@@ -1414,9 +1444,12 @@ const LivePayApp: React.FC<ILivePayAppProps> = (props) => {
             />
           )}
 
-          {view === 'detail' && !master && (
+          {view === 'detail' &&
+            (!master || !requestVisibleTo(actor, master)) && (
             <div style={{ padding: 16, color: '#4b5563', fontSize: 14 }}>
-              Chưa chọn hồ sơ. Vào «Việc của tôi» hoặc «Tạo hồ sơ».
+              {master
+                ? 'Hồ sơ này không thuộc quyền của vai đang đóng. Chọn lại từ hộp thư.'
+                : 'Chưa chọn hồ sơ. Vào «Việc của tôi» hoặc «Tạo hồ sơ».'}
               {requestKey ? ` (${requestKey})` : ''}
             </div>
           )}

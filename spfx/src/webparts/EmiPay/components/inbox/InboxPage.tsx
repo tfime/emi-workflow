@@ -252,7 +252,8 @@ const InboxPage: React.FC<IInboxPageProps> = (props) => {
           </Stack>
         )}
 
-        {(props.inboxFilter === 'all' || props.inboxFilter === 'mine') && (
+        {/* «Đang theo dõi» (relatedRows khi filter=all) tạm ẩn — chưa chốt nghiệp vụ; giữ code relatedRows. */}
+        {props.inboxFilter === 'mine' && (
           <Stack tokens={{ childrenGap: 10 }} styles={cardStack}>
             <Stack horizontal horizontalAlign="space-between" verticalAlign="center">
               <Text variant="large" styles={{ root: { fontWeight: 600 } }}>

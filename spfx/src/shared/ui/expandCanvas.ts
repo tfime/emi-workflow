@@ -121,11 +121,40 @@ function ensureSpacer(domElement: HTMLElement): HTMLElement {
   return spacer;
 }
 
+/** Đáy chrome SP/Workbench dính phía trên — tránh pin host dưới suite/command bar che tên app. */
+function stickyChromeBottom(): number {
+  const selectors = [
+    '#SuiteNavWrapper',
+    '#spSiteHeader',
+    '#spCommandBar',
+    '[data-automationid="TopBar"]',
+    '[data-automation-id="TopBar"]',
+    '[data-automation-id="pageCommandBar"]',
+    '.spAppBar',
+    '[class*="commandBarWrapper"]',
+    '[class*="simpleHeader"]'
+  ];
+  let bottom = 0;
+  for (let i = 0; i < selectors.length; i++) {
+    const nodes = document.querySelectorAll(selectors[i]);
+    for (let j = 0; j < nodes.length; j++) {
+      const el = nodes[j] as HTMLElement;
+      const r = el.getBoundingClientRect();
+      if (r.height < 8 || r.width < 40) continue;
+      // Chỉ tính thanh nằm sát mép trên viewport.
+      if (r.top > 8 || r.bottom > 200) continue;
+      if (r.bottom > bottom) bottom = r.bottom;
+    }
+  }
+  return Math.round(bottom);
+}
+
 function pinHostToRegion(domElement: HTMLElement, region: HTMLElement): void {
   domElement.classList.add('emiPayHost');
 
   const rect = region.getBoundingClientRect();
-  const top = Math.max(0, Math.round(rect.top));
+  const chrome = stickyChromeBottom();
+  const top = Math.max(0, Math.round(Math.max(rect.top, chrome)));
   const left = Math.max(0, Math.round(rect.left));
   const width = Math.max(320, Math.round(rect.width));
   const height = Math.max(280, Math.round(Math.min(rect.bottom, window.innerHeight) - top));
@@ -200,13 +229,22 @@ export function expandCanvasParents(domElement: HTMLElement): void {
 
   const region = findContentScrollRegion(domElement);
   if (!region) {
-    // Fallback: fill tới đáy viewport
-    const top = Math.max(0, Math.round(domElement.getBoundingClientRect().top));
+    // Fallback: fill tới đáy viewport, dưới chrome SP nếu có.
+    const chrome = stickyChromeBottom();
+    const top = Math.max(
+      chrome,
+      Math.round(domElement.getBoundingClientRect().top)
+    );
     const h = Math.max(280, Math.round(window.innerHeight - top));
     domElement.classList.add('emiPayHost');
+    domElement.style.setProperty('position', 'fixed', 'important');
+    domElement.style.setProperty('top', `${top}px`, 'important');
+    domElement.style.setProperty('left', '0', 'important');
+    domElement.style.setProperty('width', '100%', 'important');
     domElement.style.setProperty('height', `${h}px`, 'important');
     domElement.style.setProperty('max-height', `${h}px`, 'important');
     domElement.style.setProperty('overflow', 'hidden', 'important');
+    domElement.style.setProperty('--emi-sp-top', `${top}px`);
     return;
   }
 

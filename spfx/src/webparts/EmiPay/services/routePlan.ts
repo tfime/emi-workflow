@@ -1,6 +1,5 @@
 import { IStepRecipient } from './ConfigService';
 import { CORE_STEPS } from './PayLists';
-import { PARTY_BIZ_ROUTE_KEY } from './partyBiz';
 
 /** UI chọn BPCM trung gian — có thể bỏ qua. */
 export const ROUTE_STEPS_UI: { key: string; label: string }[] = [

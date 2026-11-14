@@ -2,8 +2,6 @@ import * as React from 'react';
 import {
   Dropdown,
   IDropdownOption,
-  Persona,
-  PersonaSize,
   Stack,
   Text,
   ThemeProvider
@@ -15,8 +13,6 @@ import { themeHostStyle } from '../detail/detailStyles';
 
 export interface IAppHeaderProps {
   title: string;
-  userDisplayName: string;
-  avatarLetters: string;
   isSysAdmin: boolean;
   actAsValue: string;
   orgMembers: IOrgMember[];
@@ -78,62 +74,51 @@ const AppHeader: React.FC<IAppHeaderProps> = (props) => {
           >
             PAY
           </Stack>
-          <Stack tokens={{ childrenGap: 0 }} styles={{ root: { minWidth: 0 } }}>
+          <Stack tokens={{ childrenGap: 2 }} styles={{ root: { minWidth: 0 } }}>
             <Text
               styles={{
                 root: {
                   fontWeight: 700,
                   fontSize: 16,
-                  lineHeight: 1.2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
+                  lineHeight: '22px',
+                  color: '#111111',
                   whiteSpace: 'nowrap'
                 }
               }}
             >
               {props.title || 'EMI PAY'}
             </Text>
-            <Text variant="small" styles={{ root: { color: '#4b5563' } }}>
+            <Text
+              variant="small"
+              styles={{ root: { color: '#4b5563', lineHeight: '16px' } }}
+            >
               Hồ sơ thanh toán
             </Text>
           </Stack>
         </Stack>
 
-        <Stack
-          horizontal
-          verticalAlign="center"
-          tokens={{ childrenGap: 12 }}
-          styles={{ root: { flexShrink: 0, minWidth: 0 } }}
-        >
-          {props.isSysAdmin && (
-            <Stack
-              horizontal
-              verticalAlign="center"
-              tokens={{ childrenGap: 8 }}
-              styles={{ root: { minWidth: 0 } }}
-            >
-              <Text variant="small" styles={{ root: { color: '#4b5563', whiteSpace: 'nowrap' } }}>
-                Đóng vai
-              </Text>
-              <Dropdown
-                id="emiPayActAs"
-                selectedKey={props.actAsValue}
-                options={options}
-                onChange={(_, opt) => props.onActAsChange(opt ? String(opt.key) : '')}
-                styles={{
-                  root: { minWidth: 220, maxWidth: 360 },
-                  dropdown: { borderRadius: 4 }
-                }}
-              />
-            </Stack>
-          )}
-          <Persona
-            text={props.userDisplayName || 'Người dùng'}
-            imageInitials={props.avatarLetters}
-            size={PersonaSize.size32}
-            hidePersonaDetails={true}
-          />
-        </Stack>
+        {props.isSysAdmin && (
+          <Stack
+            horizontal
+            verticalAlign="center"
+            tokens={{ childrenGap: 8 }}
+            styles={{ root: { flexShrink: 0, minWidth: 0 } }}
+          >
+            <Text variant="small" styles={{ root: { color: '#4b5563', whiteSpace: 'nowrap' } }}>
+              Đóng vai
+            </Text>
+            <Dropdown
+              id="emiPayActAs"
+              selectedKey={props.actAsValue}
+              options={options}
+              onChange={(_, opt) => props.onActAsChange(opt ? String(opt.key) : '')}
+              styles={{
+                root: { minWidth: 220, maxWidth: 360 },
+                dropdown: { borderRadius: 4 }
+              }}
+            />
+          </Stack>
+        )}
       </Stack>
     </ThemeProvider>
   );

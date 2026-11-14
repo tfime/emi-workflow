@@ -76,5 +76,5 @@ Schema: **không** thêm cột. Dùng `RoutePlanJson` + `StepRecipients` có s�
 
 1. ~~SPFx~~ — DONE (`routePlan.ts`, form tạo/sửa «Không qua», rail tuyến kiểm tra).
 2. ~~Core~~ — DONE **1.0.0.22** (skip BPCM + fix CREATE `RoutePlanJson`/`_biz`). ZIP: `EMI_PAY_CORE_V1_1_0_0_22.zip`.
-3. **Còn:** Import tenant + UAT 4 case (cả hai / chỉ 2 / chỉ 3 / không BPCM).
+3. ~~Import tenant~~ — DONE 14/11. **Còn:** UAT 4 case (cả hai / chỉ 2 / chỉ 3 / không BPCM).
 4. Cập nhật câu chữ BA §03.4 cho khớp (PROCADM / BA owner).

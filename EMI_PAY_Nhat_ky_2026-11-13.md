@@ -59,8 +59,8 @@ Tóm tắt một ngày trên CECM / repo `emi-workflow`: quyền OrgMembers, đo
 
 ## Chưa làm / còn mở
 
-1. **Import Core `1.0.0.22`** (nếu tenant còn 20/21) → Flow On → UAT AUTH + chuyển bước + 4 case RoutePlan (cả hai / chỉ 2 / chỉ 3 / không BPCM).
-2. Lặp **`11_PERF_Goi3_Concurrent.ps1`** sau Import mới.
+1. ~~Import Core `1.0.0.22`~~ — **DONE 14/11** (anh đã Import trên tenant). Còn: Flow On + UAT AUTH + chuyển bước + **4 case RoutePlan** (cả hai / chỉ 2 / chỉ 3 / không BPCM).
+2. Lặp **`11_PERF_Goi3_Concurrent.ps1`** sau Import 22.
 3. **Dyn ACL**: Apply PnP theo RequestKey thật; child Flow / DocsInternal·Archive = V1.1.
 4. PHASE2: Catch → Commands `Failed` (#8); Assignments; chỉnh câu BA §03.4 (chọn subset BPCM).
 5. UAT UI end-to-end trên EMI-Pay.aspx.

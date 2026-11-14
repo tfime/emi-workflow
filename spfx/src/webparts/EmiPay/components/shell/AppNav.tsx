@@ -35,6 +35,11 @@ const AppNav: React.FC<IAppNavProps> = (props) => {
   const navClass = (active: boolean): string =>
     `${styles.navBtn} ${active ? styles.navBtnActive : ''}`.trim();
 
+  // «Cần tôi xử lý» đã gộp vào «Việc của tôi» — hash cũ filter=todo vẫn coi là home.
+  const inboxHomeActive =
+    props.view === 'inbox' &&
+    (props.inboxFilter === 'all' || props.inboxFilter === 'todo');
+
   return (
     <ThemeProvider
       theme={emiPayFluentTheme}
@@ -63,53 +68,47 @@ const AppNav: React.FC<IAppNavProps> = (props) => {
           )}
           <button
             type="button"
-            className={navClass(props.view === 'inbox' && props.inboxFilter === 'all')}
+            className={navClass(inboxHomeActive)}
             onClick={() => props.onGoInbox('all')}
           >
             Việc của tôi
           </button>
           <button
             type="button"
-            className={navClass(props.view === 'create')}
-            onClick={props.onGoCreate}
-            disabled={!props.mayCreate}
-          >
-            Tạo hồ sơ
-          </button>
-          <button
-            type="button"
-            className={navClass(props.view === 'detail')}
-            onClick={props.onGoDetail}
-            disabled={!props.hasMaster}
-          >
-            Hồ sơ đang mở
-          </button>
-
-          <div className={styles.navGroup}>Theo vai trò</div>
-          <button
-            type="button"
-            className={navClass(props.view === 'inbox' && props.inboxFilter === 'todo')}
-            onClick={() => props.onGoInbox('todo')}
-          >
-            Cần tôi xử lý
-          </button>
-          <button
-            type="button"
-            className={navClass(props.view === 'inbox' && props.inboxFilter === 'mine')}
+            className={navClass(
+              props.view === 'inbox' && props.inboxFilter === 'mine'
+            )}
             onClick={() => props.onGoInbox('mine')}
           >
             Hồ sơ của tôi
           </button>
-
-          <div className={styles.navGroup}>Kiểm toán</div>
-          <button
-            type="button"
-            className={navClass(props.view === 'audit')}
-            onClick={props.onGoAudit}
-            disabled={!props.canAudit}
-          >
-            Nhật ký nội bộ
-          </button>
+          {props.mayCreate && (
+            <button
+              type="button"
+              className={navClass(props.view === 'create')}
+              onClick={props.onGoCreate}
+            >
+              Tạo hồ sơ
+            </button>
+          )}
+          {props.hasMaster && (
+            <button
+              type="button"
+              className={navClass(props.view === 'detail')}
+              onClick={props.onGoDetail}
+            >
+              Hồ sơ đang mở
+            </button>
+          )}
+          {props.canAudit && (
+            <button
+              type="button"
+              className={navClass(props.view === 'audit')}
+              onClick={props.onGoAudit}
+            >
+              Nhật ký nội bộ
+            </button>
+          )}
         </div>
 
         <div className={styles.navFooter}>
