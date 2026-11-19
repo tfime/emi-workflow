@@ -1,0 +1,253 @@
+{
+  "phases": [
+    {
+      "order": 1,
+      "folderUrl": "01-Khoi tao",
+      "displayName": "01. Khởi tạo",
+      "choiceValue": "Khởi tạo"
+    },
+    {
+      "order": 2,
+      "folderUrl": "02-Ke hoach",
+      "displayName": "02. Kế hoạch",
+      "choiceValue": "Kế hoạch"
+    },
+    {
+      "order": 3,
+      "folderUrl": "03-Thuc hien",
+      "displayName": "03. Thực hiện",
+      "choiceValue": "Thực hiện"
+    },
+    {
+      "order": 4,
+      "folderUrl": "04-Nghiem thu-Dong",
+      "displayName": "04. Nghiệm thu & Đóng",
+      "choiceValue": "Nghiệm thu & Đóng"
+    }
+  ],
+  "metadataFields": [
+    {
+      "internalName": "EMI_ProjectCode",
+      "displayName": "Mã dự án",
+      "type": "Text"
+    },
+    {
+      "internalName": "EMI_Phase",
+      "displayName": "Giai đoạn",
+      "type": "Choice",
+      "choices": ["Khởi tạo", "Kế hoạch", "Thực hiện", "Nghiệm thu & Đóng"]
+    },
+    {
+      "internalName": "EMI_DocCategory",
+      "displayName": "Loại tài liệu",
+      "type": "Choice",
+      "choices": ["Tờ trình", "Kế hoạch", "Biên bản", "Deliverable", "Báo cáo", "Khác"]
+    },
+    {
+      "internalName": "EMI_DocStatus",
+      "displayName": "Trạng thái",
+      "type": "Choice",
+      "choices": ["Dự thảo", "Đang xử lý", "Hoàn thành", "Đã ban hành"]
+    },
+    {
+      "internalName": "EMI_Year",
+      "displayName": "Năm",
+      "type": "Number"
+    },
+    {
+      "internalName": "EMI_IsDemo",
+      "displayName": "Dữ liệu demo",
+      "type": "Boolean"
+    }
+  ],
+  "libraries": [
+    {
+      "urlName": "DA-CDS-Portal-2026",
+      "title": "DA — Cổng thông tin CĐS 2026",
+      "projectCode": "DA-CDS-Portal-2026",
+      "description": "Dự án chuyển đổi số cổng thông tin (DEMO)"
+    },
+    {
+      "urlName": "DA-ISO-DGNB-2026",
+      "title": "DA — Đánh giá nội bộ ISO 2026",
+      "projectCode": "DA-ISO-DGNB-2026",
+      "description": "Dự án đánh giá nội bộ ISO (DEMO)"
+    },
+    {
+      "urlName": "DA-Infra-Wifi-2026",
+      "title": "DA — Hạ tầng Wi-Fi 2026",
+      "projectCode": "DA-Infra-Wifi-2026",
+      "description": "Dự án hạ tầng Wi-Fi (DEMO)"
+    }
+  ],
+  "files": [
+    {
+      "library": "DA-CDS-Portal-2026",
+      "phaseFolder": "01-Khoi tao",
+      "localFile": "projects/CDS-To trinh mo du an.docx",
+      "remoteName": "To trinh mo du an.docx",
+      "values": {
+        "EMI_ProjectCode": "DA-CDS-Portal-2026",
+        "EMI_Phase": "Khởi tạo",
+        "EMI_DocCategory": "Tờ trình",
+        "EMI_DocStatus": "Hoàn thành",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "DA-CDS-Portal-2026",
+      "phaseFolder": "02-Ke hoach",
+      "localFile": "projects/CDS-Ke hoach tong the.docx",
+      "remoteName": "Ke hoach tong the.docx",
+      "values": {
+        "EMI_ProjectCode": "DA-CDS-Portal-2026",
+        "EMI_Phase": "Kế hoạch",
+        "EMI_DocCategory": "Kế hoạch",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "DA-CDS-Portal-2026",
+      "phaseFolder": "03-Thuc hien",
+      "localFile": "projects/CDS-Bao cao tien do.xlsx",
+      "remoteName": "Bao cao tien do.xlsx",
+      "values": {
+        "EMI_ProjectCode": "DA-CDS-Portal-2026",
+        "EMI_Phase": "Thực hiện",
+        "EMI_DocCategory": "Báo cáo",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "DA-CDS-Portal-2026",
+      "phaseFolder": "04-Nghiem thu-Dong",
+      "localFile": "projects/CDS-Bien ban nghiem thu.docx",
+      "remoteName": "Bien ban nghiem thu.docx",
+      "values": {
+        "EMI_ProjectCode": "DA-CDS-Portal-2026",
+        "EMI_Phase": "Nghiệm thu & Đóng",
+        "EMI_DocCategory": "Biên bản",
+        "EMI_DocStatus": "Dự thảo",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "DA-ISO-DGNB-2026",
+      "phaseFolder": "01-Khoi tao",
+      "localFile": "projects/ISO-Pham vi danh gia.docx",
+      "remoteName": "Pham vi danh gia.docx",
+      "values": {
+        "EMI_ProjectCode": "DA-ISO-DGNB-2026",
+        "EMI_Phase": "Khởi tạo",
+        "EMI_DocCategory": "Tờ trình",
+        "EMI_DocStatus": "Hoàn thành",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "DA-ISO-DGNB-2026",
+      "phaseFolder": "02-Ke hoach",
+      "localFile": "projects/ISO-Ke hoach danh gia.docx",
+      "remoteName": "Ke hoach danh gia.docx",
+      "values": {
+        "EMI_ProjectCode": "DA-ISO-DGNB-2026",
+        "EMI_Phase": "Kế hoạch",
+        "EMI_DocCategory": "Kế hoạch",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "DA-ISO-DGNB-2026",
+      "phaseFolder": "03-Thuc hien",
+      "localFile": "projects/ISO-Checklist thuc hien.xlsx",
+      "remoteName": "Checklist thuc hien.xlsx",
+      "values": {
+        "EMI_ProjectCode": "DA-ISO-DGNB-2026",
+        "EMI_Phase": "Thực hiện",
+        "EMI_DocCategory": "Deliverable",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "DA-ISO-DGNB-2026",
+      "phaseFolder": "04-Nghiem thu-Dong",
+      "localFile": "projects/ISO-Bao cao ket thuc.docx",
+      "remoteName": "Bao cao ket thuc.docx",
+      "values": {
+        "EMI_ProjectCode": "DA-ISO-DGNB-2026",
+        "EMI_Phase": "Nghiệm thu & Đóng",
+        "EMI_DocCategory": "Báo cáo",
+        "EMI_DocStatus": "Dự thảo",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "DA-Infra-Wifi-2026",
+      "phaseFolder": "01-Khoi tao",
+      "localFile": "projects/WIFI-Yeu cau dau tu.docx",
+      "remoteName": "Yeu cau dau tu.docx",
+      "values": {
+        "EMI_ProjectCode": "DA-Infra-Wifi-2026",
+        "EMI_Phase": "Khởi tạo",
+        "EMI_DocCategory": "Tờ trình",
+        "EMI_DocStatus": "Hoàn thành",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "DA-Infra-Wifi-2026",
+      "phaseFolder": "02-Ke hoach",
+      "localFile": "projects/WIFI-Ke hoach trien khai.docx",
+      "remoteName": "Ke hoach trien khai.docx",
+      "values": {
+        "EMI_ProjectCode": "DA-Infra-Wifi-2026",
+        "EMI_Phase": "Kế hoạch",
+        "EMI_DocCategory": "Kế hoạch",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "DA-Infra-Wifi-2026",
+      "phaseFolder": "03-Thuc hien",
+      "localFile": "projects/WIFI-Danh muc thiet bi.xlsx",
+      "remoteName": "Danh muc thiet bi.xlsx",
+      "values": {
+        "EMI_ProjectCode": "DA-Infra-Wifi-2026",
+        "EMI_Phase": "Thực hiện",
+        "EMI_DocCategory": "Deliverable",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "DA-Infra-Wifi-2026",
+      "phaseFolder": "04-Nghiem thu-Dong",
+      "localFile": "projects/WIFI-Bien ban ban giao.docx",
+      "remoteName": "Bien ban ban giao.docx",
+      "values": {
+        "EMI_ProjectCode": "DA-Infra-Wifi-2026",
+        "EMI_Phase": "Nghiệm thu & Đóng",
+        "EMI_DocCategory": "Biên bản",
+        "EMI_DocStatus": "Dự thảo",
+        "EMI_Year": 2026,
+        "EMI_IsDemo": true
+      }
+    }
+  ]
+}

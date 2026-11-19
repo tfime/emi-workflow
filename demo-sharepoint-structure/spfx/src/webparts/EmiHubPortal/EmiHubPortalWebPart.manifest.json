@@ -1,0 +1,29 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json",
+  "id": "7e4a91c2-3f8b-4d6e-9a1c-2b5d8e0f4a67",
+  "alias": "EmiHubPortalWebPart",
+  "componentType": "WebPart",
+  "version": "*",
+  "manifestVersion": 2,
+  "requiresCustomScript": false,
+  "supportedHosts": ["SharePointWebPart", "SharePointFullPage"],
+  "supportsFullBleed": true,
+  "supportsThemeVariants": true,
+  "preconfiguredEntries": [
+    {
+      "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
+      "group": { "default": "EMI Hub" },
+      "title": { "default": "EMI Hub Portal" },
+      "description": {
+        "default": "Cổng truy cập tài liệu dùng chung, Phòng Tổng hợp và dự án (DnDemo)."
+      },
+      "officeFabricIconFontName": "EMMDashboard",
+      "properties": {
+        "title": "EMI Hub",
+        "hubSiteUrl": "https://emicomvn.sharepoint.com/sites/eecm-demo",
+        "emiSiteUrl": "https://emicomvn.sharepoint.com/sites/cecm",
+        "projectSiteUrl": "https://emicomvn.sharepoint.com/sites/DnDemo"
+      }
+    }
+  ]
+}

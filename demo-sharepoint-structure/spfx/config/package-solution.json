@@ -1,0 +1,39 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "emi-hub-portal-client-side-solution",
+    "id": "a8c3e2f1-4b5d-6e7a-8c9d-0e1f2a3b4c5d",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "developer": {
+      "name": "EMI",
+      "websiteUrl": "https://emicomvn.sharepoint.com/sites/eecm-demo",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.24.1"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "EMI Hub Portal — cổng truy cập tài liệu & dự án"
+      },
+      "longDescription": {
+        "default": "SPFx portal trên EMI Hub: tài liệu dùng chung, Phòng Tổng hợp (cecm), dự án DnDemo theo 4 giai đoạn."
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "EMI Hub Portal Feature",
+        "description": "Activates EMI Hub Portal Web Part.",
+        "id": "b9d4f3e2-5c6a-7b8d-9e0f-1a2b3c4d5e6f",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/emi-hub-portal.sppkg"
+  }
+}

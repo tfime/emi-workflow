@@ -1,0 +1,83 @@
+{
+  "danhMucHoSo": [
+    {
+      "Title": "Đào tạo CĐS 2026",
+      "EMI_DemoCode": "CDS-DT-2026-01",
+      "EMI_Function": "CĐS",
+      "EMI_Year": 2026,
+      "EMI_DocStatus": "Đã phát hành",
+      "EMI_SourceUrl": { "Url": "", "Description": "Folder Dao tao CDS 2026 (điền sau seed)" },
+      "EMI_PublishedUrl": { "Url": "", "Description": "Bản phát hành Hub (điền sau seed)" },
+      "EMI_IsDemo": true
+    },
+    {
+      "Title": "Đánh giá nội bộ ISO 2026-01",
+      "EMI_DemoCode": "ISO-DGNB-2026-01",
+      "EMI_Function": "ISO",
+      "EMI_Year": 2026,
+      "EMI_DocStatus": "Đang xử lý",
+      "EMI_SourceUrl": { "Url": "", "Description": "Document Set ISO-DGNB-2026-01" },
+      "EMI_PublishedUrl": null,
+      "EMI_IsDemo": true
+    },
+    {
+      "Title": "Kế hoạch công tác Phòng Tổng hợp 2026",
+      "EMI_DemoCode": "TH-KH-2026",
+      "EMI_Function": "Dùng chung",
+      "EMI_Year": 2026,
+      "EMI_DocStatus": "Đang xử lý",
+      "EMI_SourceUrl": { "Url": "", "Description": "TH-Shared" },
+      "EMI_PublishedUrl": null,
+      "EMI_IsDemo": true
+    },
+    {
+      "Title": "Rà soát hợp đồng DEMO",
+      "EMI_DemoCode": "PL-HD-2026-01",
+      "EMI_Function": "Pháp lý",
+      "EMI_Year": 2026,
+      "EMI_DocStatus": "Dự thảo",
+      "EMI_SourceUrl": { "Url": "", "Description": "TH-Legal" },
+      "EMI_PublishedUrl": null,
+      "EMI_IsDemo": true
+    },
+    {
+      "Title": "Kế hoạch bảo trì hệ thống DEMO",
+      "EMI_DemoCode": "CN-BT-2026",
+      "EMI_Function": "Công nghệ",
+      "EMI_Year": 2026,
+      "EMI_DocStatus": "Dự thảo",
+      "EMI_SourceUrl": { "Url": "", "Description": "TH-Tech" },
+      "EMI_PublishedUrl": null,
+      "EMI_IsDemo": true
+    }
+  ],
+  "danhMucChung": [
+    {
+      "Title": "Hướng dẫn sử dụng SharePoint EMI",
+      "EMI_DemoCode": "HUB-HD-SP-2026",
+      "EMI_DocCategory": "Hướng dẫn",
+      "EMI_Library": "EMI - Tài liệu dùng chung",
+      "EMI_OfficialUrl": { "Url": "", "Description": "Huong dan su dung SharePoint EMI.docx" },
+      "EMI_Year": 2026,
+      "EMI_IsDemo": true
+    },
+    {
+      "Title": "Tài liệu đào tạo CĐS 2026 — Bản phát hành",
+      "EMI_DemoCode": "CDS-DT-2026-01-PUB",
+      "EMI_DocCategory": "Đào tạo",
+      "EMI_Library": "EMI - Tài liệu dùng chung",
+      "EMI_OfficialUrl": { "Url": "", "Description": "Tai lieu dao tao CDS 2026 - Ban phat hanh.docx" },
+      "EMI_Year": 2026,
+      "EMI_IsDemo": true
+    },
+    {
+      "Title": "Quy trình quản lý tài liệu DEMO",
+      "EMI_DemoCode": "HUB-ISO-QLTL-2026",
+      "EMI_DocCategory": "ISO",
+      "EMI_Library": "EMI - Quy trình ISO chuẩn",
+      "EMI_OfficialUrl": { "Url": "", "Description": "Quy trinh quan ly tai lieu DEMO.docx" },
+      "EMI_Year": 2026,
+      "EMI_IsDemo": true
+    }
+  ]
+}

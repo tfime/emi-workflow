@@ -1,0 +1,54 @@
+{
+  "cecmGroups": [
+    { "title": "GR-E-TH-LEAD-READ", "description": "Lãnh đạo phòng Tổng hợp — Read tất cả Library TH (demo)", "memberKey": "th_lead" },
+    { "title": "GR-E-TH-SHARED-EDIT", "description": "Sửa TH - Dùng chung", "memberKey": "shared_edit" },
+    { "title": "GR-E-TH-CDS-EDIT", "description": "Sửa TH - Chuyển đổi số", "memberKey": "cds_user" },
+    { "title": "GR-E-TH-ISO-EDIT", "description": "Sửa TH - ISO thực hiện", "memberKey": "iso_user" },
+    { "title": "GR-E-TH-LEGAL-EDIT", "description": "Sửa TH - Pháp lý", "memberKey": "legal_user" },
+    { "title": "GR-E-TH-TECH-EDIT", "description": "Sửa TH - Công nghệ", "memberKey": "tech_user" }
+  ],
+  "hubGroups": [
+    { "title": "GR-EMI-ALL-READ", "description": "Đọc tài liệu dùng chung Hub (demo — chưa gán toàn EMI)", "memberKey": "emi_all_read_group" },
+    { "title": "GR-EMI-HUB-PUBLISH", "description": "Phát hành tài liệu Hub (Contribute)", "memberKey": "hub_publisher" }
+  ],
+  "cecmAcl": {
+    "TH-Shared": [
+      { "group": "GR-E-TH-LEAD-READ", "role": "Read" },
+      { "group": "GR-E-TH-SHARED-EDIT", "role": "Contribute" },
+      { "group": "GR-E-TH-CDS-EDIT", "role": "Read" },
+      { "group": "GR-E-TH-ISO-EDIT", "role": "Read" },
+      { "group": "GR-E-TH-LEGAL-EDIT", "role": "Read" },
+      { "group": "GR-E-TH-TECH-EDIT", "role": "Read" }
+    ],
+    "TH-Digital": [
+      { "group": "GR-E-TH-LEAD-READ", "role": "Read" },
+      { "group": "GR-E-TH-CDS-EDIT", "role": "Contribute" }
+    ],
+    "TH-ISO": [
+      { "group": "GR-E-TH-LEAD-READ", "role": "Read" },
+      { "group": "GR-E-TH-ISO-EDIT", "role": "Contribute" }
+    ],
+    "TH-Legal": [
+      { "group": "GR-E-TH-LEAD-READ", "role": "Read" },
+      { "group": "GR-E-TH-LEGAL-EDIT", "role": "Contribute" }
+    ],
+    "TH-Tech": [
+      { "group": "GR-E-TH-LEAD-READ", "role": "Read" },
+      { "group": "GR-E-TH-TECH-EDIT", "role": "Contribute" }
+    ]
+  },
+  "hubAcl": {
+    "EMI-SharedDocs": [
+      { "group": "GR-EMI-ALL-READ", "role": "Read" },
+      { "group": "GR-EMI-HUB-PUBLISH", "role": "Contribute" }
+    ],
+    "EMI-ISO-Standards": [
+      { "group": "GR-EMI-ALL-READ", "role": "Read" },
+      { "group": "GR-EMI-HUB-PUBLISH", "role": "Contribute" }
+    ],
+    "EMI-Templates": [
+      { "group": "GR-EMI-ALL-READ", "role": "Read" },
+      { "group": "GR-EMI-HUB-PUBLISH", "role": "Contribute" }
+    ]
+  }
+}

@@ -1,0 +1,274 @@
+{
+  "hub": [
+    {
+      "library": "EMI-SharedDocs",
+      "localFile": "hub/Huong dan su dung SharePoint EMI.docx",
+      "remoteName": "Huong dan su dung SharePoint EMI.docx",
+      "values": {
+        "EMI_DemoCode": "HUB-HD-SP-2026",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "Dùng chung",
+        "EMI_DocCategory": "Hướng dẫn",
+        "EMI_DocStatus": "Đã phát hành",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Dùng chung",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "EMI-SharedDocs",
+      "localFile": "hub/Tai lieu dao tao CDS 2026 - Ban phat hanh.docx",
+      "remoteName": "Tai lieu dao tao CDS 2026 - Ban phat hanh.docx",
+      "values": {
+        "EMI_DemoCode": "CDS-DT-2026-01-PUB",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "CĐS",
+        "EMI_DocCategory": "Đào tạo",
+        "EMI_DocStatus": "Đã phát hành",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Dùng chung",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "EMI-ISO-Standards",
+      "localFile": "hub/Quy trinh quan ly tai lieu DEMO.docx",
+      "remoteName": "Quy trinh quan ly tai lieu DEMO.docx",
+      "values": {
+        "EMI_DemoCode": "HUB-ISO-QLTL-2026",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "ISO",
+        "EMI_DocCategory": "Đánh giá nội bộ",
+        "EMI_DocStatus": "Đã phát hành",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Dùng chung",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "EMI-Templates",
+      "localFile": "hub/Bieu mau bien ban hop DEMO.docx",
+      "remoteName": "Bieu mau bien ban hop DEMO.docx",
+      "values": {
+        "EMI_DemoCode": "HUB-BM-BBH-2026",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "Dùng chung",
+        "EMI_DocCategory": "Biểu mẫu",
+        "EMI_DocStatus": "Đã phát hành",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Dùng chung",
+        "EMI_IsDemo": true
+      }
+    }
+  ],
+  "cecm": [
+    {
+      "library": "TH-Shared",
+      "folder": "",
+      "localFile": "cecm/Ke hoach cong tac phong Tong hop 2026.docx",
+      "remoteName": "Ke hoach cong tac phong Tong hop 2026.docx",
+      "values": {
+        "EMI_DemoCode": "TH-KH-2026",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "Dùng chung",
+        "EMI_DocCategory": "Kế hoạch",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Nội bộ",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-Shared",
+      "folder": "",
+      "localFile": "cecm/Bao cao tong hop thang 11-2026.docx",
+      "remoteName": "Bao cao tong hop thang 11-2026.docx",
+      "values": {
+        "EMI_DemoCode": "TH-BC-2026-11",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "Dùng chung",
+        "EMI_DocCategory": "Báo cáo",
+        "EMI_DocStatus": "Hoàn thành",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Nội bộ",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-Digital",
+      "folder": "Dao tao/Dao tao CDS 2026",
+      "localFile": "cecm/Ke hoach dao tao CDS 2026.docx",
+      "remoteName": "Ke hoach dao tao CDS 2026.docx",
+      "values": {
+        "EMI_DemoCode": "CDS-DT-2026-01",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "CĐS",
+        "EMI_DocCategory": "Đào tạo",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Nội bộ",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-Digital",
+      "folder": "Dao tao/Dao tao CDS 2026",
+      "localFile": "cecm/Danh sach tham du DEMO.xlsx",
+      "remoteName": "Danh sach tham du DEMO.xlsx",
+      "values": {
+        "EMI_DemoCode": "CDS-DT-2026-01-DS",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "CĐS",
+        "EMI_DocCategory": "Đào tạo",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Hạn chế",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-Digital",
+      "folder": "Dao tao/Dao tao CDS 2026",
+      "localFile": "cecm/Tai lieu huong dan noi bo.docx",
+      "remoteName": "Tai lieu huong dan noi bo.docx",
+      "values": {
+        "EMI_DemoCode": "CDS-DT-2026-01-HD",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "CĐS",
+        "EMI_DocCategory": "Đào tạo",
+        "EMI_DocStatus": "Dự thảo",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Nội bộ",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-Digital",
+      "folder": "",
+      "localFile": "cecm/Danh muc sang kien CDS.xlsx",
+      "remoteName": "Danh muc sang kien CDS.xlsx",
+      "values": {
+        "EMI_DemoCode": "CDS-SK-2026",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "CĐS",
+        "EMI_DocCategory": "Kế hoạch",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Nội bộ",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-ISO",
+      "documentSet": "ISO-DGNB-2026-01",
+      "localFile": "cecm/Ke hoach danh gia noi bo.docx",
+      "remoteName": "Ke hoach danh gia noi bo.docx",
+      "values": {
+        "EMI_DemoCode": "ISO-DGNB-2026-01",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "ISO",
+        "EMI_DocCategory": "Đánh giá nội bộ",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Nội bộ",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-ISO",
+      "documentSet": "ISO-DGNB-2026-01",
+      "localFile": "cecm/Checklist danh gia.xlsx",
+      "remoteName": "Checklist danh gia.xlsx",
+      "values": {
+        "EMI_DemoCode": "ISO-DGNB-2026-01",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "ISO",
+        "EMI_DocCategory": "Đánh giá nội bộ",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Nội bộ",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-ISO",
+      "documentSet": "ISO-DGNB-2026-01",
+      "localFile": "cecm/Bao cao danh gia.docx",
+      "remoteName": "Bao cao danh gia.docx",
+      "values": {
+        "EMI_DemoCode": "ISO-DGNB-2026-01",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "ISO",
+        "EMI_DocCategory": "Đánh giá nội bộ",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Nội bộ",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-Legal",
+      "folder": "",
+      "localFile": "cecm/Danh muc van ban phap ly DEMO.xlsx",
+      "remoteName": "Danh muc van ban phap ly DEMO.xlsx",
+      "values": {
+        "EMI_DemoCode": "PL-DM-2026",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "Pháp lý",
+        "EMI_DocCategory": "Pháp lý",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Hạn chế",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-Legal",
+      "folder": "",
+      "localFile": "cecm/Phieu ra soat hop dong DEMO.docx",
+      "remoteName": "Phieu ra soat hop dong DEMO.docx",
+      "values": {
+        "EMI_DemoCode": "PL-HD-2026-01",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "Pháp lý",
+        "EMI_DocCategory": "Pháp lý",
+        "EMI_DocStatus": "Dự thảo",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Hạn chế",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-Tech",
+      "folder": "",
+      "localFile": "cecm/Danh muc ung dung DEMO.xlsx",
+      "remoteName": "Danh muc ung dung DEMO.xlsx",
+      "values": {
+        "EMI_DemoCode": "CN-UD-2026",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "Công nghệ",
+        "EMI_DocCategory": "Công nghệ",
+        "EMI_DocStatus": "Đang xử lý",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Nội bộ",
+        "EMI_IsDemo": true
+      }
+    },
+    {
+      "library": "TH-Tech",
+      "folder": "",
+      "localFile": "cecm/Ke hoach bao tri he thong DEMO.docx",
+      "remoteName": "Ke hoach bao tri he thong DEMO.docx",
+      "values": {
+        "EMI_DemoCode": "CN-BT-2026",
+        "EMI_Department": "Tổng hợp",
+        "EMI_Function": "Công nghệ",
+        "EMI_DocCategory": "Công nghệ",
+        "EMI_DocStatus": "Dự thảo",
+        "EMI_Year": 2026,
+        "EMI_DataClass": "Nội bộ",
+        "EMI_IsDemo": true
+      }
+    }
+  ]
+}

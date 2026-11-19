@@ -1,0 +1,135 @@
+{
+  "hub": [
+    {
+      "title": "EMI - Tài liệu dùng chung",
+      "urlName": "EMI-SharedDocs",
+      "kind": "DocumentLibrary",
+      "purpose": "Tài liệu phát hành toàn hệ thống"
+    },
+    {
+      "title": "EMI - Quy trình ISO chuẩn",
+      "urlName": "EMI-ISO-Standards",
+      "kind": "DocumentLibrary",
+      "purpose": "Quy trình ISO chuẩn phiên bản chính thức"
+    },
+    {
+      "title": "EMI - Biểu mẫu chuẩn",
+      "urlName": "EMI-Templates",
+      "kind": "DocumentLibrary",
+      "purpose": "Biểu mẫu thống nhất"
+    },
+    {
+      "title": "EMI_DEMO_DanhMucChung",
+      "urlName": "Lists/EMI_DEMO_DanhMucChung",
+      "kind": "GenericList",
+      "purpose": "Danh mục tài liệu dùng chung (demo)"
+    }
+  ],
+  "cecm": [
+    {
+      "title": "TH - Dùng chung",
+      "urlName": "TH-Shared",
+      "kind": "DocumentLibrary",
+      "function": "Dùng chung",
+      "editGroup": "GR-E-TH-SHARED-EDIT"
+    },
+    {
+      "title": "TH - Chuyển đổi số",
+      "urlName": "TH-Digital",
+      "kind": "DocumentLibrary",
+      "function": "CĐS",
+      "editGroup": "GR-E-TH-CDS-EDIT"
+    },
+    {
+      "title": "TH - ISO thực hiện",
+      "urlName": "TH-ISO",
+      "kind": "DocumentLibrary",
+      "function": "ISO",
+      "editGroup": "GR-E-TH-ISO-EDIT"
+    },
+    {
+      "title": "TH - Pháp lý",
+      "urlName": "TH-Legal",
+      "kind": "DocumentLibrary",
+      "function": "Pháp lý",
+      "editGroup": "GR-E-TH-LEGAL-EDIT"
+    },
+    {
+      "title": "TH - Công nghệ",
+      "urlName": "TH-Tech",
+      "kind": "DocumentLibrary",
+      "function": "Công nghệ",
+      "editGroup": "GR-E-TH-TECH-EDIT"
+    },
+    {
+      "title": "EMI_DEMO_DanhMucHoSo",
+      "urlName": "Lists/EMI_DEMO_DanhMucHoSo",
+      "kind": "GenericList",
+      "purpose": "Đăng ký bộ hồ sơ mẫu"
+    }
+  ],
+  "metadataFields": [
+    {
+      "internalName": "EMI_DemoCode",
+      "displayName": "Mã hồ sơ/tài liệu",
+      "type": "Text"
+    },
+    {
+      "internalName": "EMI_Department",
+      "displayName": "Phòng ban",
+      "type": "Choice",
+      "choices": ["Tổng hợp"]
+    },
+    {
+      "internalName": "EMI_Function",
+      "displayName": "Bộ phận",
+      "type": "Choice",
+      "choices": ["Dùng chung", "CĐS", "ISO", "Pháp lý", "Công nghệ"]
+    },
+    {
+      "internalName": "EMI_DocCategory",
+      "displayName": "Loại hồ sơ",
+      "type": "Choice",
+      "choices": ["Đào tạo", "Đánh giá nội bộ", "Kế hoạch", "Pháp lý", "Công nghệ", "Báo cáo", "Biểu mẫu", "Hướng dẫn"]
+    },
+    {
+      "internalName": "EMI_DocStatus",
+      "displayName": "Trạng thái hồ sơ",
+      "type": "Choice",
+      "choices": ["Dự thảo", "Đang xử lý", "Hoàn thành", "Đã phát hành"]
+    },
+    {
+      "internalName": "EMI_Year",
+      "displayName": "Năm",
+      "type": "Number"
+    },
+    {
+      "internalName": "EMI_DataClass",
+      "displayName": "Mức độ tài liệu",
+      "type": "Choice",
+      "choices": ["Nội bộ", "Dùng chung", "Hạn chế"]
+    },
+    {
+      "internalName": "EMI_IsDemo",
+      "displayName": "Dữ liệu demo",
+      "type": "Boolean"
+    }
+  ],
+  "listFieldsDanhMucHoSo": [
+    { "internalName": "EMI_DemoCode", "displayName": "Mã hồ sơ", "type": "Text" },
+    { "internalName": "EMI_Function", "displayName": "Bộ phận", "type": "Choice", "choices": ["Dùng chung", "CĐS", "ISO", "Pháp lý", "Công nghệ"] },
+    { "internalName": "EMI_Year", "displayName": "Năm", "type": "Number" },
+    { "internalName": "EMI_DocStatus", "displayName": "Trạng thái", "type": "Choice", "choices": ["Dự thảo", "Đang xử lý", "Hoàn thành", "Đã phát hành"] },
+    { "internalName": "EMI_SourceUrl", "displayName": "URL nguồn", "type": "URL" },
+    { "internalName": "EMI_PublishedUrl", "displayName": "URL phát hành", "type": "URL" },
+    { "internalName": "EMI_IsDemo", "displayName": "Dữ liệu demo", "type": "Boolean" }
+  ],
+  "listFieldsDanhMucChung": [
+    { "internalName": "EMI_DemoCode", "displayName": "Mã tài liệu", "type": "Text" },
+    { "internalName": "EMI_DocCategory", "displayName": "Loại tài liệu", "type": "Choice", "choices": ["Hướng dẫn", "ISO", "Biểu mẫu", "Đào tạo"] },
+    { "internalName": "EMI_Library", "displayName": "Thư viện chính thức", "type": "Text" },
+    { "internalName": "EMI_OfficialUrl", "displayName": "URL file chính thức", "type": "URL" },
+    { "internalName": "EMI_Year", "displayName": "Năm", "type": "Number" },
+    { "internalName": "EMI_IsDemo", "displayName": "Dữ liệu demo", "type": "Boolean" }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "hubSiteUrl": "https://emicomvn.sharepoint.com/sites/eecm-demo",
+  "emiSiteUrl": "https://emicomvn.sharepoint.com/sites/cecm",
+  "projectSiteUrl": "https://emicomvn.sharepoint.com/sites/DnDemo",
+  "clientId": "REPLACE_WITH_APPROVED_ENTRA_APP_CLIENT_ID",
+  "mode": "DryRun",
+  "createNewSites": false,
+  "changeHubRegistration": false,
+  "changeHubAssociation": false,
+  "enableFolderShareDemo": false,
+  "preserveExistingObjects": true,
+  "seedPrefix": "EMI-DEMO-2026"
+}

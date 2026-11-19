@@ -1,0 +1,10 @@
+node_modules/
+dist/
+lib/
+release/
+temp/
+*.sppkg
+.heft/
+*.log
+sharepoint/solution/debug/
+**/*.module.scss.ts
